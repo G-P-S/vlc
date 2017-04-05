@@ -30,6 +30,12 @@
  * This file defines functions, structures and macros for handling arrays in vlc
  */
 
+#include <sys/types.h>  /* for ssize_t */
+#ifdef _WINDOWS
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 /* realloc() that never fails *if* downsizing */
 static inline void *realloc_down( void *ptr, size_t size )
 {

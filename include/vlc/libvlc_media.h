@@ -26,6 +26,12 @@
 #ifndef VLC_LIBVLC_MEDIA_H
 #define VLC_LIBVLC_MEDIA_H 1
 
+#include <sys/types.h>  /* for ssize_t */
+#ifdef _WINDOWS
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 # ifdef __cplusplus
 extern "C" {
 # endif
