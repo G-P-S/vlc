@@ -27,6 +27,8 @@
 
 #include "dxgi_fmt.h"
 
+DEFINE_GUID(GUID_CONTEXT_MUTEX, 0x472e8835, 0x3f8e, 0x4f93, 0xa0, 0xcb, 0x25, 0x79, 0x77, 0x6c, 0xed, 0x86);
+
 /* VLC_CODEC_D3D11_OPAQUE */
 struct picture_sys_t
 {
@@ -37,7 +39,7 @@ struct picture_sys_t
     };
     ID3D11DeviceContext           *context;
     unsigned                      slice_index;
-    ID3D11VideoProcessorInputView *inputView; /* when used as processor input */
+    ID3D11VideoProcessorInputView *processorInput; /* when used as processor input */
     ID3D11ShaderResourceView      *resourceView[D3D11_MAX_SHADER_VIEW];
     DXGI_FORMAT                   formatTexture;
 };

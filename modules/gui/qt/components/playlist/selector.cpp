@@ -171,7 +171,7 @@ PLSelector::~PLSelector()
         {
             QTreeWidgetItem *item = podcastsParent->child(i);
             input_item_t *p_input = item->data( 0, IN_ITEM_ROLE ).value<input_item_t*>();
-            vlc_gc_decref( p_input );
+            input_item_Release( p_input );
         }
     }
 }
@@ -438,7 +438,7 @@ PLSelItem * PLSelector::addItem (
 
 PLSelItem *PLSelector::addPodcastItem( playlist_item_t *p_item )
 {
-    vlc_gc_incref( p_item->p_input );
+    input_item_Hold( p_item->p_input );
 
     char *psz_name = input_item_GetName( p_item->p_input );
     PLSelItem *item = addItem( PL_ITEM_TYPE,  psz_name, false, false, podcastsParent );
@@ -546,7 +546,7 @@ void PLSelector::plItemRemoved( int id )
         {
             input_item_t *p_input = item->data( 0, IN_ITEM_ROLE ).value<input_item_t*>();
             //msg_Dbg( p_intf, "Removing podcast: (%d) %s", id, p_input->psz_uri );
-            vlc_gc_decref( p_input );
+            input_item_Release( p_input );
             delete item;
             return;
         }

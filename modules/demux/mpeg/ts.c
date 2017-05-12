@@ -257,7 +257,7 @@ static int DetectPVRHeadersAndHeaderSize( demux_t *p_demux, unsigned *pi_header_
         return -1;
 
     if( memcmp( p_peek, "TFrc", 4 ) == 0 &&
-        p_peek[6] == 0 && memcmp( &p_peek[53], "\x80\x00\x00", 4 ) == 0 &&
+        p_peek[6] == 0 && ((GetDWBE(&p_peek[53]) & 0x7FFFFF00U) == 0x00) &&
         vlc_stream_Peek( p_demux->s, &p_peek, TOPFIELD_HEADER_SIZE + TS_PACKET_SIZE_MAX )
             == TOPFIELD_HEADER_SIZE + TS_PACKET_SIZE_MAX )
     {
@@ -686,6 +686,7 @@ static int Demux( demux_t *p_demux )
             {
                 msg_Dbg( p_demux, "Creating delayed ES" );
                 AddAndCreateES( p_demux, p_pid, true );
+                UpdatePESFilters( p_demux, p_sys->b_es_all );
             }
 
             /* Emulate HW filter */
@@ -880,7 +881,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         return VLC_SUCCESS;
 
     case DEMUX_GET_POSITION:
-        pf = (double*) va_arg( args, double* );
+        pf = va_arg( args, double * );
 
         /* Access control test is because EPG for recordings is not relevant */
         if( p_sys->b_access_control )
@@ -919,8 +920,8 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         break;
 
     case DEMUX_SET_POSITION:
-        f = (double) va_arg( args, double );
-        b_bool = (int) va_arg( args, int ); /* precise */
+        f = va_arg( args, double );
+        b_bool = (bool) va_arg( args, int ); /* precise */
 
         if(!p_sys->b_canseek)
             break;
@@ -967,7 +968,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         break;
 
     case DEMUX_SET_TIME:
-        i64 = (int64_t)va_arg( args, int64_t );
+        i64 = va_arg( args, int64_t );
 
         if( p_sys->b_canseek && p_pmt && p_pmt->pcr.i_first > -1 &&
            !SeekToTime( p_demux, p_pmt, p_pmt->pcr.i_first + TO_SCALE(i64) ) )
@@ -980,7 +981,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         break;
 
     case DEMUX_GET_TIME:
-        pi64 = (int64_t*)va_arg( args, int64_t * );
+        pi64 = va_arg( args, int64_t * );
 
         if( p_sys->b_access_control )
         {
@@ -1001,7 +1002,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         break;
 
     case DEMUX_GET_LENGTH:
-        pi64 = (int64_t*)va_arg( args, int64_t * );
+        pi64 = va_arg( args, int64_t * );
 
         if( p_sys->b_access_control )
         {
@@ -1032,7 +1033,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         vlc_list_t *p_list;
 
         i_int = va_arg( args, int );
-        p_list = (vlc_list_t *)va_arg( args, vlc_list_t * );
+        p_list = va_arg( args, vlc_list_t * );
         msg_Dbg( p_demux, "DEMUX_SET_GROUP %d %p", i_int, (void *)p_list );
 
         if( i_int != 0 ) /* If not default program */
@@ -1070,7 +1071,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
 
     case DEMUX_SET_ES:
     {
-        i_int = (int)va_arg( args, int );
+        i_int = va_arg( args, int );
         msg_Dbg( p_demux, "DEMUX_SET_ES %d", i_int );
 
         if( !p_sys->b_es_all ) /* Won't change anything */
@@ -1101,12 +1102,12 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         return vlc_stream_vaControl( p_sys->stream, STREAM_GET_META, args );
 
     case DEMUX_CAN_RECORD:
-        pb_bool = (bool*)va_arg( args, bool * );
+        pb_bool = va_arg( args, bool * );
         *pb_bool = true;
         return VLC_SUCCESS;
 
     case DEMUX_SET_RECORD_STATE:
-        b_bool = (bool)va_arg( args, int );
+        b_bool = va_arg( args, int );
 
         if( !b_bool )
             vlc_stream_Control( p_sys->stream, STREAM_SET_RECORD_STATE,
@@ -1549,6 +1550,12 @@ static void ParsePESDataChain( demux_t *p_demux, ts_pid_t *pid, block_t *p_pes )
                 if ( p_block )
                 {
                     ts_pes_es_t *p_es_send = p_es;
+                    if( p_es_send->i_next_block_flags )
+                    {
+                        p_block->i_flags |= p_es_send->i_next_block_flags;
+                        p_es_send->i_next_block_flags = 0;
+                    }
+
                     while( p_es_send )
                     {
                         if( p_es_send->p_program->b_selected )
@@ -1816,17 +1823,7 @@ static void ReadyQueuesPostSeek( demux_t *p_demux )
                 continue;
 
             for( ts_pes_es_t *p_es = p_pes->p_es; p_es; p_es = p_es->p_next )
-            {
-                if( p_es->id && p_es->p_program->b_selected )
-                {
-                    block_t *p_block = block_Alloc(0);
-                    if( p_block )
-                    {
-                        p_block->i_flags = BLOCK_FLAG_DISCONTINUITY | BLOCK_FLAG_CORRUPTED;
-                        es_out_Send( p_demux->out, p_es->id, p_block );
-                    }
-                }
-            }
+                p_es->i_next_block_flags |= BLOCK_FLAG_DISCONTINUITY;
 
             pid->i_cc = 0xff;
 
@@ -2267,6 +2264,8 @@ static void PCRHandle( demux_t *p_demux, ts_pid_t *pid, mtime_t i_pcr )
     for( int i = 0; i < p_pat->programs.i_size; i++ )
     {
         ts_pmt_t *p_pmt = p_pat->programs.p_elems[i]->u.p_pmt;
+        if( p_pmt->pcr.b_disable )
+            continue;
         mtime_t i_program_pcr = TimeStampWrapAround( p_pmt->pcr.i_first, i_pcr );
 
         if( p_pmt->i_pid_pcr == 0x1FFF ) /* That program has no dedicated PCR pid ISO/IEC 13818-1 2.4.4.9 */
@@ -2412,7 +2411,7 @@ static block_t * ProcessTSPacket( demux_t *p_demux, ts_pid_t *pid, block_t *p_pk
             {
                 msg_Warn( p_demux, "discontinuity indicator (pid=%d) ",
                             pid->i_pid );
-                /* pid->es->p_data->i_flags |= BLOCK_FLAG_DISCONTINUITY; */
+                p_pkt->i_flags |= BLOCK_FLAG_DISCONTINUITY;
             }
 #if 0
             if( p[5]&0x40 )
@@ -2458,6 +2457,7 @@ static block_t * ProcessTSPacket( demux_t *p_demux, ts_pid_t *pid, block_t *p_pk
             pid->i_dup = 0;
             p_pkt->i_flags |= BLOCK_FLAG_DISCONTINUITY;
         }
+        else pid->i_cc = i_cc;
     }
 
     if( unlikely(!(b_payload || b_adaptation)) ) /* Invalid, ignore */
@@ -2568,11 +2568,11 @@ static bool GatherPESData( demux_t *p_demux, ts_pid_t *pid, block_t *p_pkt, size
     if( p_pkt->i_flags & BLOCK_FLAG_DISCONTINUITY )
     {
         p_pes->gather.i_saved = 0;
-        /* Propagate to output block to notify packetizers/decoders */
-        if( p_pes->gather.p_data )
-            p_pes->gather.p_data->i_flags |= BLOCK_FLAG_DISCONTINUITY;
         /* Flush/output current */
         b_ret |= PushPESBlock( p_demux, pid, NULL, true );
+        /* Propagate to output block to notify packetizers/decoders */
+        if( p_pes->p_es )
+            p_pes->p_es->i_next_block_flags |= BLOCK_FLAG_DISCONTINUITY;
     }
 
     if ( unlikely(p_pes->gather.i_saved > 0) )
@@ -2781,6 +2781,4 @@ void AddAndCreateES( demux_t *p_demux, ts_pid_t *pid, bool b_create_delayed )
                 DoCreateES( p_demux, p_pmt->e_streams.p_elems[j]->u.p_pes->p_es, NULL );
         }
     }
-
-    UpdatePESFilters( p_demux, p_sys->b_es_all );
 }

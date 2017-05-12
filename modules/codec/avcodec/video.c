@@ -310,7 +310,7 @@ static int lavc_UpdateVideoFormat(decoder_t *dec, AVCodecContext *ctx,
     dec->fmt_out.video.pose = dec->fmt_in.video.pose;
     if ( dec->fmt_in.video.mastering.max_luminance )
         dec->fmt_out.video.mastering = dec->fmt_in.video.mastering;
-    dec->fmt_out.video.ligthing = dec->fmt_in.video.ligthing;
+    dec->fmt_out.video.lighting = dec->fmt_in.video.lighting;
     return decoder_UpdateVideoFormat(dec);
 }
 
@@ -437,10 +437,10 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
         var_InheritInteger( p_dec, "avcodec-error-resilience" );
 
     if( var_CreateGetBool( p_dec, "grayscale" ) )
-        p_context->flags |= CODEC_FLAG_GRAY;
+        p_context->flags |= AV_CODEC_FLAG_GRAY;
 
     /* ***** Output always the frames ***** */
-    p_context->flags |= CODEC_FLAG_OUTPUT_CORRUPT;
+    p_context->flags |= AV_CODEC_FLAG_OUTPUT_CORRUPT;
 
     i_val = var_CreateGetInteger( p_dec, "avcodec-skiploopfilter" );
     if( i_val >= 4 ) p_context->skip_loop_filter = AVDISCARD_ALL;
@@ -450,7 +450,7 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     else p_context->skip_loop_filter = AVDISCARD_DEFAULT;
 
     if( var_CreateGetBool( p_dec, "avcodec-fast" ) )
-        p_context->flags2 |= CODEC_FLAG2_FAST;
+        p_context->flags2 |= AV_CODEC_FLAG2_FAST;
 
     /* ***** libavcodec frame skipping ***** */
     p_sys->b_hurry_up = var_CreateGetBool( p_dec, "avcodec-hurry-up" );
@@ -476,7 +476,7 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     p_sys->b_direct_rendering = false;
     atomic_init(&p_sys->b_dr_failure, false);
     if( var_CreateGetBool( p_dec, "avcodec-dr" ) &&
-       (p_codec->capabilities & CODEC_CAP_DR1) &&
+       (p_codec->capabilities & AV_CODEC_CAP_DR1) &&
         /* No idea why ... but this fixes flickering on some TSCC streams */
         p_sys->p_codec->id != AV_CODEC_ID_TSCC &&
         p_sys->p_codec->id != AV_CODEC_ID_CSCD &&
@@ -758,7 +758,7 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
     }
 
     p_block = pp_block ? *pp_block : NULL;
-    if(!p_block && !(p_sys->p_codec->capabilities & CODEC_CAP_DELAY) )
+    if(!p_block && !(p_sys->p_codec->capabilities & AV_CODEC_CAP_DELAY) )
         return NULL;
 
     if( p_sys->b_delayed_open )
@@ -868,6 +868,11 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
             p_block->i_dts = VLC_TS_INVALID;
         }
 
+#if LIBAVCODEC_VERSION_CHECK( 57, 0, 0xFFFFFFFFU, 64, 101 )
+        if( !b_need_output_picture )
+            pkt.flags |= AV_PKT_FLAG_DISCARD;
+#endif
+
         int ret = avcodec_send_packet(p_context, &pkt);
         if( ret != 0 && ret != AVERROR(EAGAIN) )
         {
@@ -945,11 +950,20 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
 
         update_late_frame_count( p_dec, p_block, current_time, i_pts);
 
-        if( !b_need_output_picture || ( !p_sys->p_va && !frame->linesize[0] ) )
+        if( ( !p_sys->p_va && !frame->linesize[0] ) ||
+           ( p_dec->b_frame_drop_allowed && (frame->flags & AV_FRAME_FLAG_CORRUPT) ) )
         {
             av_frame_free(&frame);
             continue;
         }
+
+#if !LIBAVCODEC_VERSION_CHECK( 57, 0, 0xFFFFFFFFU, 64, 101 )
+        if( !b_need_output_picture )
+        {
+            av_frame_free(&frame);
+            continue;
+        }
+#endif
 
         if( p_context->pix_fmt == AV_PIX_FMT_PAL8
          && !p_dec->fmt_out.video.p_palette )
@@ -1035,7 +1049,10 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
         p_pic->b_progressive = !frame->interlaced_frame;
         p_pic->b_top_field_first = frame->top_field_first;
 
+        bool format_changed = false;
 #if (LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_VERSION_INT >= AV_VERSION_INT( 55, 16, 101 ) )
+#define FROM_AVRAT(default_factor, avrat) \
+    (uint64_t)(default_factor) * (avrat).num / (avrat).den
         const AVFrameSideData *metadata =
                 av_frame_get_side_data( frame,
                                         AV_FRAME_DATA_MASTERING_DISPLAY_METADATA );
@@ -1045,8 +1062,11 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
                     (const AVMasteringDisplayMetadata *) metadata->data;
             if ( hdr_meta->has_luminance )
             {
-                p_pic->format.mastering.max_luminance = hdr_meta->max_luminance.num;
-                p_pic->format.mastering.min_luminance = hdr_meta->min_luminance.num;
+#define ST2086_LUMA_FACTOR 10000
+                p_pic->format.mastering.max_luminance =
+                        FROM_AVRAT(ST2086_LUMA_FACTOR, hdr_meta->max_luminance);
+                p_pic->format.mastering.min_luminance =
+                        FROM_AVRAT(ST2086_LUMA_FACTOR, hdr_meta->min_luminance);
             }
             if ( hdr_meta->has_primaries )
             {
@@ -1056,18 +1076,58 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
 #define LAV_RED    0
 #define LAV_GREEN  1
 #define LAV_BLUE   2
-                p_pic->format.mastering.primaries[ST2086_RED*2   + 0] = hdr_meta->display_primaries[LAV_RED][0].num;
-                p_pic->format.mastering.primaries[ST2086_RED*2   + 1] = hdr_meta->display_primaries[LAV_RED][1].num;
-                p_pic->format.mastering.primaries[ST2086_GREEN*2 + 0] = hdr_meta->display_primaries[LAV_GREEN][0].num;
-                p_pic->format.mastering.primaries[ST2086_GREEN*2 + 1] = hdr_meta->display_primaries[LAV_GREEN][1].num;
-                p_pic->format.mastering.primaries[ST2086_BLUE*2  + 0] = hdr_meta->display_primaries[LAV_BLUE][0].num;
-                p_pic->format.mastering.primaries[ST2086_BLUE*2  + 1] = hdr_meta->display_primaries[LAV_BLUE][1].num;
-                p_pic->format.mastering.white_point[0] = hdr_meta->white_point[0].num;
-                p_pic->format.mastering.white_point[1] = hdr_meta->white_point[1].num;
+#define ST2086_PRIM_FACTOR 50000
+                p_pic->format.mastering.primaries[ST2086_RED*2   + 0] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_RED][0]);
+                p_pic->format.mastering.primaries[ST2086_RED*2   + 1] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_RED][1]);
+                p_pic->format.mastering.primaries[ST2086_GREEN*2 + 0] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_GREEN][0]);
+                p_pic->format.mastering.primaries[ST2086_GREEN*2 + 1] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_GREEN][1]);
+                p_pic->format.mastering.primaries[ST2086_BLUE*2  + 0] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_BLUE][0]);
+                p_pic->format.mastering.primaries[ST2086_BLUE*2  + 1] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_BLUE][1]);
+                p_pic->format.mastering.white_point[0] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->white_point[0]);
+                p_pic->format.mastering.white_point[1] =
+                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->white_point[1]);
+            }
+
+            if ( memcmp( &p_dec->fmt_out.video.mastering,
+                         &p_pic->format.mastering,
+                         sizeof(p_pic->format.mastering) ) )
+            {
+                p_dec->fmt_out.video.mastering = p_pic->format.mastering;
+                format_changed = true;
+            }
+#undef FROM_AVRAT
+        }
+#endif
+#if (LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_VERSION_INT >= AV_VERSION_INT( 55, 60, 100 ) )
+        const AVFrameSideData *metadata_lt =
+                av_frame_get_side_data( frame,
+                                        AV_FRAME_DATA_CONTENT_LIGHT_LEVEL );
+        if ( metadata_lt )
+        {
+            const AVContentLightMetadata *light_meta =
+                    (const AVContentLightMetadata *) metadata_lt->data;
+            p_pic->format.lighting.MaxCLL = light_meta->MaxCLL;
+            p_pic->format.lighting.MaxFALL = light_meta->MaxFALL;
+            if ( memcmp( &p_dec->fmt_out.video.lighting,
+                         &p_pic->format.lighting,
+                         sizeof(p_pic->format.lighting) ) )
+            {
+                p_dec->fmt_out.video.lighting  = p_pic->format.lighting;
+                format_changed = true;
             }
         }
 #endif
         av_frame_free(&frame);
+
+        if (format_changed)
+            decoder_UpdateVideoFormat( p_dec );
 
         /* Send decoded frame to vout */
         if (i_pts > VLC_TS_INVALID)
@@ -1403,7 +1463,8 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     if (!can_hwaccel)
         return swfmt;
 
-#if !LIBAVCODEC_VERSION_CHECK(57, 30, 1, 83, 101)
+#if (LIBAVCODEC_VERSION_MICRO >= 100) \
+  && (LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 83, 101))
     if (p_context->active_thread_type)
     {
         msg_Warn(p_dec, "thread type %d: disabling hardware acceleration",

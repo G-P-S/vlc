@@ -148,19 +148,25 @@ int Import_ASX( vlc_object_t *p_this )
     demux_t *p_demux = (demux_t *)p_this;
 
     CHECK_FILE();
-    if( demux_IsPathExtension( p_demux, ".asx" ) ||
-        demux_IsPathExtension( p_demux, ".wax" ) ||
-        demux_IsPathExtension( p_demux, ".wvx" ) ||
-        (
-          ( CheckMimeType( p_demux->s, "video/x-ms-asf" ) ||
-            CheckMimeType( p_demux->s, "audio/x-ms-wax" ) ) && PeekASX( p_demux )
-        ) ||
-        demux_IsForced( p_demux, "asx-open" ) )
+
+    char *type = stream_MimeType( p_demux->s );
+
+    if( demux_IsPathExtension( p_demux, ".asx" )
+     || demux_IsPathExtension( p_demux, ".wax" )
+     || demux_IsPathExtension( p_demux, ".wvx" )
+     || (type != NULL && (strcasecmp(type, "video-x-ms-asf") == 0
+                       || strcasecmp(type, "audio/x-ms-wax") == 0)
+                      && PeekASX( p_demux ) )
+     || demux_IsForced( p_demux, "asx-open" ) )
     {
         msg_Dbg( p_demux, "found valid ASX playlist" );
+        free(type);
     }
     else
+    {
+        free(type);
         return VLC_EGENERIC;
+    }
 
     p_demux->pf_control = Control;
     p_demux->pf_demux = Demux;
@@ -460,7 +466,7 @@ static int Demux( demux_t *p_demux )
                 input_item_CopyOptions( p_input, p_current_input );
                 input_item_node_AppendItem( p_subitems, p_input );
 
-                vlc_gc_decref( p_input );
+                input_item_Release( p_input );
             }
             else
             /* Entry Handler */
@@ -496,7 +502,6 @@ error:
         input_item_node_Delete( p_subitems );
     if( p_stream )
         vlc_stream_Delete( p_stream );
-    vlc_gc_decref( p_current_input );
 
     return 0;
 }

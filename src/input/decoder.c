@@ -496,6 +496,20 @@ static int vout_update_format( decoder_t *p_dec )
             return -1;
         }
     }
+
+    if ( memcmp( &p_dec->fmt_out.video.mastering,
+                 &p_owner->fmt.video.mastering,
+                 sizeof(p_owner->fmt.video.mastering)) ||
+         p_dec->fmt_out.video.lighting.MaxCLL !=
+         p_owner->fmt.video.lighting.MaxCLL ||
+         p_dec->fmt_out.video.lighting.MaxFALL !=
+         p_owner->fmt.video.lighting.MaxFALL)
+    {
+        /* the format has changed but we don't need a new vout */
+        vlc_mutex_lock( &p_owner->lock );
+        DecoderUpdateFormatLocked( p_dec );
+        vlc_mutex_unlock( &p_owner->lock );
+    }
     return 0;
 }
 
@@ -896,11 +910,11 @@ static void DecoderGetCc( decoder_t *p_dec, decoder_t *p_dec_cc )
     block_t *p_cc;
     bool pb_present[4];
 
-    assert( p_dec_cc->pf_get_cc != NULL );
-
     /* Do not try retreiving CC if not wanted (sout) or cannot be retreived */
     if( !p_owner->cc.b_supported )
         return;
+
+    assert( p_dec_cc->pf_get_cc != NULL );
 
     p_cc = p_dec_cc->pf_get_cc( p_dec_cc, pb_present );
     if( !p_cc )
@@ -940,7 +954,8 @@ static int DecoderPlayVideo( decoder_t *p_dec, picture_t *p_picture,
 
     if( unlikely( p_cc != NULL ) )
     {
-        if( ( !p_owner->p_packetizer || !p_owner->p_packetizer->pf_get_cc ) )
+        if( p_owner->cc.b_supported &&
+           ( !p_owner->p_packetizer || !p_owner->p_packetizer->pf_get_cc ) )
             DecoderExtractCc( p_dec, p_cc, p_cc_present );
         else
             block_Release( p_cc );
@@ -1705,14 +1720,7 @@ static decoder_t * CreateDecoder( vlc_object_t *p_parent,
     }
 
     /* */
-    p_owner->cc.b_supported = false;
-    if( p_sout == NULL )
-    {
-        if( p_owner->p_packetizer && p_owner->p_packetizer->pf_get_cc )
-            p_owner->cc.b_supported = true;
-        if( p_dec->pf_get_cc )
-            p_owner->cc.b_supported = true;
-    }
+    p_owner->cc.b_supported = ( p_sout == NULL );
 
     for( unsigned i = 0; i < 4; i++ )
     {
@@ -1733,9 +1741,8 @@ static void DeleteDecoder( decoder_t * p_dec )
 {
     decoder_owner_sys_t *p_owner = p_dec->p_owner;
 
-    msg_Dbg( p_dec, "killing decoder fourcc `%4.4s', %u PES in FIFO",
-             (char*)&p_dec->fmt_in.i_codec,
-             (unsigned)block_FifoCount( p_owner->p_fifo ) );
+    msg_Dbg( p_dec, "killing decoder fourcc `%4.4s'",
+             (char*)&p_dec->fmt_in.i_codec );
 
     const bool b_flush_spu = p_dec->fmt_out.i_cat == SPU_ES;
     UnloadDecoder( p_dec );

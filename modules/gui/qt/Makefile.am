@@ -25,6 +25,9 @@ if HAVE_QT5_X11
 libqt_plugin_la_CXXFLAGS += $(QT5_X11_CFLAGS) -DQT5_HAS_X11
 libqt_plugin_la_LIBADD += $(QT5_X11_LIBS) $(X_LIBS) $(X_PRE_LIB) -lX11
 endif
+if HAVE_XCB
+libqt_plugin_la_CXXFLAGS += -DQT5_HAS_XCB
+endif
 if HAVE_WAYLAND
 libqt_plugin_la_CPPFLAGS += -DQT5_HAS_WAYLAND \
 	-DQPNI_HEADER=\<$(QT_VERSION)/QtGui/qpa/qplatformnativeinterface.h\>
@@ -292,7 +295,6 @@ EXTRA_DIST = $(libqt_plugin_la_UI)
 # Resources
 
 DEPS_res = \
-	pixmaps/arrow_down_dark.png \
 	pixmaps/clear.png \
 	pixmaps/eject.png \
 	pixmaps/faster.png \
@@ -307,7 +309,6 @@ DEPS_res = \
 	pixmaps/menus/messages_16px.png \
 	pixmaps/menus/playlist_16px.png \
 	pixmaps/menus/preferences_16px.png \
-	pixmaps/menus/quit_16px.png \
 	pixmaps/menus/settings_16px.png \
 	pixmaps/menus/stream_16px.png \
 	pixmaps/next.png \
@@ -319,13 +320,11 @@ DEPS_res = \
 	pixmaps/play.png \
 	pixmaps/play_16px.png \
 	pixmaps/playlist/add.png \
-	pixmaps/playlist/jumpto.png \
 	pixmaps/playlist/playlist.png \
 	pixmaps/playlist/remove.png \
 	pixmaps/playlist/repeat_all.png \
 	pixmaps/playlist/repeat_off.png \
 	pixmaps/playlist/repeat_one.png \
-	pixmaps/playlist/shuffle_off.png \
 	pixmaps/playlist/shuffle_on.png \
 	pixmaps/playlist/dropzone.png \
 	pixmaps/playlist/sidebar-icons/capture.png \
@@ -413,7 +412,6 @@ DEPS_res = \
 	pixmaps/types/type_node.png \
 	pixmaps/types/type_playlist.png \
 	pixmaps/types/type_unknown.xpm \
-	pixmaps/util/wait0.png \
 	pixmaps/util/wait1.png \
 	pixmaps/util/wait2.png \
 	pixmaps/util/wait3.png \

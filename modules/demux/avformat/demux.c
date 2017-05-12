@@ -337,7 +337,7 @@ int OpenDemux( vlc_object_t *p_this )
     for (unsigned i = 1; i < nb_streams; i++)
         options[i] = NULL;
     if (psz_opts) {
-        options[0] = vlc_av_get_options(psz_opts);
+        vlc_av_get_options(psz_opts, &options[0]);
         for (unsigned i = 1; i < nb_streams; i++) {
             av_dict_copy(&options[i], options[0], 0);
         }
@@ -649,7 +649,7 @@ int OpenDemux( vlc_object_t *p_this )
     if( p_sys->ic->start_time != (int64_t)AV_NOPTS_VALUE )
         i_start_time = p_sys->ic->start_time * 1000000 / AV_TIME_BASE;
 
-    msg_Dbg( p_demux, "AVFormat supported stream" );
+    msg_Dbg( p_demux, "AVFormat(%s %s) supported stream", AVPROVIDER(LIBAVFORMAT), LIBAVFORMAT_IDENT );
     msg_Dbg( p_demux, "    - format = %s (%s)",
              p_sys->fmt->name, p_sys->fmt->long_name );
     msg_Dbg( p_demux, "    - start time = %"PRId64, i_start_time );
@@ -956,7 +956,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_GET_POSITION:
-            pf = (double*) va_arg( args, double* ); *pf = 0.0;
+            pf = va_arg( args, double * ); *pf = 0.0;
             i64 = stream_Size( p_demux->s );
             if( i64 > 0 )
             {
@@ -972,7 +972,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_SET_POSITION:
-            f = (double) va_arg( args, double );
+            f = va_arg( args, double );
             i64 = p_sys->ic->duration * f + i_start_time;
 
             msg_Warn( p_demux, "DEMUX_SET_POSITION: %"PRId64, i64 );
@@ -998,7 +998,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_GET_LENGTH:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             if( p_sys->ic->duration != (int64_t)AV_NOPTS_VALUE )
                 *pi64 = p_sys->ic->duration * 1000000 / AV_TIME_BASE;
             else
@@ -1006,13 +1006,13 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_GET_TIME:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             *pi64 = p_sys->i_pcr;
             return VLC_SUCCESS;
 
         case DEMUX_SET_TIME:
         {
-            i64 = (int64_t)va_arg( args, int64_t );
+            i64 = va_arg( args, int64_t );
             i64 = i64 *AV_TIME_BASE / 1000000 + i_start_time;
 
             msg_Warn( p_demux, "DEMUX_SET_TIME: %"PRId64, i64 );
@@ -1027,7 +1027,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
 
         case DEMUX_HAS_UNSUPPORTED_META:
         {
-            bool *pb_bool = (bool*)va_arg( args, bool* );
+            bool *pb_bool = va_arg( args, bool* );
             *pb_bool = true;
             return VLC_SUCCESS;
         }
@@ -1073,8 +1073,8 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         case DEMUX_GET_ATTACHMENTS:
         {
             input_attachment_t ***ppp_attach =
-                (input_attachment_t***)va_arg( args, input_attachment_t*** );
-            int *pi_int = (int*)va_arg( args, int * );
+                va_arg( args, input_attachment_t*** );
+            int *pi_int = va_arg( args, int * );
             int i;
 
             if( p_sys->i_attachments <= 0 )
@@ -1089,10 +1089,10 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
 
         case DEMUX_GET_TITLE_INFO:
         {
-            input_title_t ***ppp_title = (input_title_t***)va_arg( args, input_title_t*** );
-            int *pi_int    = (int*)va_arg( args, int* );
-            int *pi_title_offset = (int*)va_arg( args, int* );
-            int *pi_seekpoint_offset = (int*)va_arg( args, int* );
+            input_title_t ***ppp_title = va_arg( args, input_title_t *** );
+            int *pi_int = va_arg( args, int * );
+            int *pi_title_offset = va_arg( args, int * );
+            int *pi_seekpoint_offset = va_arg( args, int * );
 
             if( !p_sys->p_title )
                 return VLC_EGENERIC;
@@ -1106,14 +1106,14 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         }
         case DEMUX_SET_TITLE:
         {
-            const int i_title = (int)va_arg( args, int );
+            const int i_title = va_arg( args, int );
             if( !p_sys->p_title || i_title != 0 )
                 return VLC_EGENERIC;
             return VLC_SUCCESS;
         }
         case DEMUX_SET_SEEKPOINT:
         {
-            const int i_seekpoint = (int)va_arg( args, int );
+            const int i_seekpoint = va_arg( args, int );
             if( !p_sys->p_title )
                 return VLC_EGENERIC;
 

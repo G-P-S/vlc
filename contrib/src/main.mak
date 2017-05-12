@@ -25,6 +25,7 @@ GNU ?= http://ftp.gnu.org/gnu
 SF := https://netcologne.dl.sourceforge.net/
 VIDEOLAN := http://downloads.videolan.org/pub/videolan
 CONTRIB_VIDEOLAN := http://downloads.videolan.org/pub/contrib
+GITHUB := https://github.com/
 
 #
 # Machine-dependent variables
@@ -100,8 +101,12 @@ endif
 endif
 
 ifdef HAVE_ANDROID
+ifneq ($(findstring $(origin CC),undefined default),)
 CC :=  clang
+endif
+ifneq ($(findstring $(origin CXX),undefined default),)
 CXX := clang++
+endif
 endif
 
 ifdef HAVE_MACOSX

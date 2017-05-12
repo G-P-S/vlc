@@ -172,13 +172,13 @@ void EpgDialog::updateInfos()
     {
         PL_LOCK; /* as input_GetItem still unfixed */
         p_input_item = input_GetItem( p_input_thread );
-        if ( p_input_item ) vlc_gc_incref( p_input_item );
+        if ( p_input_item ) input_item_Hold( p_input_item );
         PL_UNLOCK;
         vlc_object_release( p_input_thread );
         if ( p_input_item )
         {
             epg->updateEPG( p_input_item );
-            vlc_gc_decref( p_input_item );
+            input_item_Release( p_input_item );
         }
         else
         {

@@ -12,7 +12,6 @@
         <file alias="info">pixmaps/menus/info_16px.png</file>
         <file alias="messages">pixmaps/menus/messages_16px.png</file>
         <file alias="preferences">pixmaps/menus/preferences_16px.png</file>
-        <file alias="quit">pixmaps/menus/quit_16px.png</file>
         <file alias="settings">pixmaps/menus/settings_16px.png</file>
         <file alias="stream">pixmaps/menus/stream_16px.png</file>
         <file alias="playlist_menu">pixmaps/menus/playlist_16px.png</file>
@@ -24,7 +23,6 @@
         <file alias="exit">pixmaps/menus/exit_16px.png</file>
     </qresource>
     <qresource prefix="/util">
-        <file alias="wait0">pixmaps/util/wait0.png</file>
         <file alias="wait1">pixmaps/util/wait1.png</file>
         <file alias="wait2">pixmaps/util/wait2.png</file>
         <file alias="wait3">pixmaps/util/wait3.png</file>
@@ -76,7 +74,6 @@
         <file alias="repeat_all">pixmaps/playlist/repeat_all.png</file>
         <file alias="repeat_one">pixmaps/playlist/repeat_one.png</file>
         <file alias="shuffle_on">pixmaps/playlist/shuffle_on.png</file>
-        <file alias="jump_to">pixmaps/playlist/jumpto.png</file>
     </qresource>
     <qresource prefix="/type">
         <file alias="capture-card">pixmaps/types/capture-card_16px.png</file>
@@ -92,7 +89,6 @@
         <file alias="playlist">pixmaps/types/type_playlist.png</file>
     </qresource>
     <qresource prefix="/">
-        <file alias="down_arrow">pixmaps/arrow_down_dark.png</file>
         <file alias="update">pixmaps/update.png</file>
         <file alias="noart.png">pixmaps/noart.png</file>
         <file alias="noart64">pixmaps/noart-64.png</file>

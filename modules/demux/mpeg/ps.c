@@ -469,9 +469,11 @@ static int Demux( demux_t *p_demux )
             {
                 ps_track_t *tk = &p_sys->tk[i];
 
-                if( tk->b_seen && !tk->es && tk->fmt.i_cat != UNKNOWN_ES )
+                if( !tk->b_configured && tk->fmt.i_cat != UNKNOWN_ES )
                 {
-                    tk->es = es_out_Add( p_demux->out, &tk->fmt );
+                    if( tk->b_seen )
+                        tk->es = es_out_Add( p_demux->out, &tk->fmt );
+                     /* else create when seeing packet */
                     tk->b_configured = true;
                 }
             }
@@ -545,6 +547,12 @@ static int Demux( demux_t *p_demux )
                     msg_Dbg( p_demux, "es id=0x%x format unknown", i_id );
                 }
             }
+
+            /* Late creation from system header */
+            if( !tk->b_seen && tk->b_configured && !tk->es && tk->fmt.i_cat != UNKNOWN_ES )
+                tk->es = es_out_Add( p_demux->out, &tk->fmt );
+
+            tk->b_seen = true;
 
             /* The popular VCD/SVCD subtitling WinSubMux does not
              * renumber the SCRs when merging subtitles into the PES */
@@ -660,7 +668,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_GET_POSITION:
-            pf = (double*) va_arg( args, double* );
+            pf = va_arg( args, double * );
             i64 = stream_Size( p_demux->s ) - p_sys->i_start_byte;
             if( i64 > 0 )
             {
@@ -674,7 +682,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_SET_POSITION:
-            f = (double) va_arg( args, double );
+            f = va_arg( args, double );
             i64 = stream_Size( p_demux->s ) - p_sys->i_start_byte;
             p_sys->i_current_pts = 0;
             p_sys->i_scr = -1;
@@ -698,7 +706,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             break;
 
         case DEMUX_GET_TIME:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             if( p_sys->i_time_track_index >= 0 && p_sys->i_current_pts > 0 )
             {
                 *pi64 = p_sys->i_current_pts - p_sys->tk[p_sys->i_time_track_index].i_first_pts;
@@ -719,7 +727,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             break;
 
         case DEMUX_GET_LENGTH:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             if( p_sys->i_length > 0 )
             {
                 *pi64 = p_sys->i_length;
@@ -735,7 +743,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             break;
 
         case DEMUX_SET_TIME:
-            i64 = (int64_t)va_arg( args, int64_t );
+            i64 = va_arg( args, int64_t );
             if( p_sys->i_time_track_index >= 0 && p_sys->i_current_pts > 0 && p_sys->i_length )
             {
                 i64 -= p_sys->tk[p_sys->i_time_track_index].i_first_pts;

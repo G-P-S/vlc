@@ -256,7 +256,8 @@ static bool ParseH264NAL(decoder_t *p_dec,
                     p_info->b_top_field_first = (sei.i_pic_struct % 2 == 1);
 
                 /* Set frame rate for timings in case of missing rate */
-                if( !p_dec->fmt_in.video.i_frame_rate_base &&
+                if( (!p_dec->fmt_in.video.i_frame_rate_base ||
+                     !p_dec->fmt_in.video.i_frame_rate) &&
                     p_sps->vui.i_time_scale && p_sps->vui.i_num_units_in_tick )
                 {
                     date_Change( &p_sys->pts, p_sps->vui.i_time_scale,
@@ -356,7 +357,7 @@ static picture_t * RemoveOneFrameFromDPB(decoder_sys_t *p_sys)
     return p_ret;
 }
 
-static void FlushDPB(decoder_t *p_dec)
+static void DrainDPB(decoder_t *p_dec)
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     for( ;; )
@@ -410,7 +411,7 @@ static void OnDecodedFrame(decoder_t *p_dec, frame_info_t *p_info)
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     assert(p_info->p_picture);
-    while(p_info->b_flush || p_sys->i_pic_reorder == (p_sys->i_pic_reorder_max * 2))
+    while(p_info->b_flush || p_sys->i_pic_reorder >= (p_sys->i_pic_reorder_max * 2))
     {
         /* First check if DPB sizing was correct before removing one frame */
         if (p_sys->p_pic_reorder && !p_info->b_flush &&
@@ -629,12 +630,12 @@ static int StartVideoToolbox(decoder_t *p_dec)
     const unsigned i_sar_num = p_dec->fmt_out.video.i_sar_num;
     const unsigned i_sar_den = p_dec->fmt_out.video.i_sar_den;
 
-    if( p_dec->fmt_in.video.i_frame_rate_base )
+    if( p_dec->fmt_in.video.i_frame_rate_base && p_dec->fmt_in.video.i_frame_rate )
     {
         date_Init( &p_sys->pts, p_dec->fmt_in.video.i_frame_rate * 2,
                                 p_dec->fmt_in.video.i_frame_rate_base );
     }
-    else date_Init( &p_sys->pts, 30000, 1001 );
+    else date_Init( &p_sys->pts, 2 * 30000, 1001 );
 
     VTDictionarySetInt32(pixelaspectratio,
                          kCVImageBufferPixelAspectRatioHorizontalSpacingKey,
@@ -744,7 +745,7 @@ static void StopVideoToolbox(decoder_t *p_dec, bool b_reset_format)
             p_sys->b_format_propagated = false;
             p_dec->fmt_out.i_codec = 0;
         }
-        FlushDPB( p_dec );
+        DrainDPB( p_dec );
     }
 
     if (p_sys->videoFormatDescription != nil) {
@@ -788,6 +789,7 @@ static int SetupDecoderExtradata(decoder_t *p_dec)
                                           p_dec->fmt_in.i_extra);
         if (i_ret != VLC_SUCCESS)
             return i_ret;
+        assert(p_sys->hh.pf_process_block != NULL);
 
         if (p_dec->fmt_in.p_extra)
         {
@@ -1245,14 +1247,13 @@ static void Drain(decoder_t *p_dec)
         VTDecompressionSessionWaitForAsynchronousFrames(p_sys->session);
 
     vlc_mutex_lock(&p_sys->lock);
-    FlushDPB( p_dec );
+    DrainDPB( p_dec );
     vlc_mutex_unlock(&p_sys->lock);
 }
 
 static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
-    frame_info_t *p_info = NULL;
 
     if (p_sys->b_vt_flush) {
         RestartVideoToolbox(p_dec, false);
@@ -1268,7 +1269,10 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
     vlc_mutex_lock(&p_sys->lock);
     if (p_sys->b_abort) { /* abort from output thread (DecoderCallback) */
         vlc_mutex_unlock(&p_sys->lock);
-        goto reload;
+        /* Add an empty variable so that videotoolbox won't be loaded again for
+        * this ES */
+        var_Create(p_dec, "videotoolbox-failed", VLC_VAR_VOID);
+        return VLCDEC_RELOAD;
     }
     vlc_mutex_unlock(&p_sys->lock);
 
@@ -1283,7 +1287,7 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
     }
 
     bool b_config_changed = false;
-    if (p_sys->codec == kCMVideoCodecType_H264 && p_sys->hh.pf_process_block)
+    if (p_sys->codec == kCMVideoCodecType_H264)
     {
         p_block = p_sys->hh.pf_process_block(&p_sys->hh, p_block, &b_config_changed);
         if (!p_block)
@@ -1294,7 +1298,7 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
     {
         /* decoding didn't start yet, which is ok for H264, let's see
          * if we can use this block to get going */
-        assert(p_sys->codec == kCMVideoCodecType_H264 && !p_sys->hh.b_is_xvcC);
+        assert(p_sys->codec == kCMVideoCodecType_H264);
         if (p_sys->session)
         {
             msg_Dbg(p_dec, "SPS/PPS changed: draining H264 decoder");
@@ -1306,8 +1310,7 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
         int i_ret = avcCFromAnnexBCreate(p_dec);
         if (i_ret == VLC_SUCCESS)
         {
-            if ((p_block->i_flags & BLOCK_FLAG_TOP_FIELD_FIRST
-             || p_block->i_flags & BLOCK_FLAG_BOTTOM_FIELD_FIRST)
+            if ((p_block->i_flags & BLOCK_FLAG_INTERLACED_MASK)
              && var_InheritBool(p_dec, "videotoolbox-temporal-deinterlacing"))
                 p_sys->b_enable_temporal_processing = true;
 
@@ -1318,15 +1321,17 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
             goto skip;
     }
 
-
-    p_info = CreateReorderInfo(p_dec, p_block);
+    frame_info_t *p_info = CreateReorderInfo(p_dec, p_block);
     if(unlikely(!p_info))
         goto skip;
 
     CMSampleBufferRef sampleBuffer =
         VTSampleBufferCreate(p_dec, p_sys->videoFormatDescription, p_block);
     if (unlikely(!sampleBuffer))
+    {
+        free(p_info);
         goto skip;
+    }
 
     VTDecodeInfoFlags flagOut;
     VTDecodeFrameFlags decoderFlags = kVTDecodeFrame_EnableAsynchronousDecompression;
@@ -1337,21 +1342,16 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
         VTDecompressionSessionDecodeFrame(p_sys->session, sampleBuffer,
                                           decoderFlags, p_info, &flagOut);
     if (HandleVTStatus(p_dec, status) == VLC_SUCCESS)
-    {
         p_sys->b_vt_feed = true;
-        p_info = NULL;
-    }
     else
     {
+        bool b_abort = false;
         switch (status)
         {
+            case -8960 /* codecErr */:
             case kCVReturnInvalidArgument:
-                msg_Err(p_dec, "decoder failure: invalid argument");
-                /* The decoder module will be reloaded next time since we already
-                 * modified the input block */
-                vlc_mutex_lock(&p_sys->lock);
-                p_dec->p_sys->b_abort = true;
-                vlc_mutex_unlock(&p_sys->lock);
+            case kVTVideoDecoderMalfunctionErr:
+                b_abort = true;
                 break;
             case -8969 /* codecBadDataErr */:
             case kVTVideoDecoderBadDataErr:
@@ -1363,30 +1363,29 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
                     if (status != 0)
                     {
                         free( p_info );
-                        StopVideoToolbox(p_dec, true);
+                        b_abort = true;
                     }
                 }
                 break;
-            case -8960 /* codecErr */:
-            case kVTVideoDecoderMalfunctionErr:
             case kVTInvalidSessionErr:
                 RestartVideoToolbox(p_dec, true);
                 break;
         }
-        p_info = NULL;
+        if (b_abort)
+        {
+            msg_Err(p_dec, "decoder failure, Abort.");
+            /* The decoder module will be reloaded next time since we already
+             * modified the input block */
+            vlc_mutex_lock(&p_sys->lock);
+            p_dec->p_sys->b_abort = true;
+            vlc_mutex_unlock(&p_sys->lock);
+        }
     }
     CFRelease(sampleBuffer);
 
 skip:
-    free(p_info);
     block_Release(p_block);
     return VLCDEC_SUCCESS;
-
-reload:
-    /* Add an empty variable so that videotoolbox won't be loaded again for
-     * this ES */
-    var_Create(p_dec, "videotoolbox-failed", VLC_VAR_VOID);
-    return VLCDEC_RELOAD;
 }
 
 static int UpdateVideoFormat(decoder_t *p_dec, CVPixelBufferRef imageBuffer)
@@ -1520,9 +1519,8 @@ static void DecoderCallback(void *decompressionOutputRefCon,
 
     if (infoFlags & kVTDecodeInfo_FrameDropped)
     {
+        /* We can't trust VT, some decoded frames can be marked as dropped */
         msg_Dbg(p_dec, "decoder dropped frame");
-        free(p_info);
-        return;
     }
 
     if (!CMTIME_IS_VALID(pts))

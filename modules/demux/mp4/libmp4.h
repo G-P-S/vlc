@@ -193,6 +193,8 @@ typedef int64_t stime_t;
 #define ATOM_fl32 VLC_FOURCC( 'f', 'l', '3', '2' )
 #define ATOM_fl64 VLC_FOURCC( 'f', 'l', '6', '4' )
 #define ATOM_Opus VLC_FOURCC( 'O', 'p', 'u', 's' )
+#define ATOM_fLaC VLC_FOURCC( 'f', 'L', 'a', 'C' )
+#define ATOM_dfLa VLC_FOURCC( 'd', 'f', 'L', 'a' )
 
 /* XiphQT */
 #define ATOM_fCtS VLC_FOURCC( 'f', 'C', 't', 'S' )
@@ -637,8 +639,8 @@ typedef struct MP4_Box_data_sample_soun_s
     uint16_t i_samplesize;
     uint16_t i_compressionid;
     uint16_t i_reserved3;
-    uint16_t i_sampleratehi; /* timescale of track */
-    uint16_t i_sampleratelo;
+    uint32_t i_sampleratehi; /* timescale of track */
+    uint32_t i_sampleratelo;
 
     /* for version 1 (i_reserved1[0] == 1) */
     uint32_t i_sample_per_packet;
@@ -1155,7 +1157,11 @@ typedef struct MP4_descriptor_trun_sample_t
     uint32_t i_duration;
     uint32_t i_size;
     uint32_t i_flags;
-    uint32_t i_composition_time_offset; /* version == 0 ? signed : unsigned */
+    union
+    {
+        uint32_t v0;
+        int32_t  v1; /* version == 1 ? signed : unsigned */
+    } i_composition_time_offset;
 } MP4_descriptor_trun_sample_t;
 
 typedef struct MP4_Box_data_trun_s

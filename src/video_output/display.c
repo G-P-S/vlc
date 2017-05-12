@@ -159,14 +159,14 @@ void vout_display_GetDefaultDisplaySize(unsigned *width, unsigned *height,
                                         const video_format_t *source,
                                         const vout_display_cfg_t *cfg)
 {
-    if (cfg->display.width > 0 && cfg->display.height > 0) {
+    if (cfg->display.width != 0 && cfg->display.height != 0) {
         *width  = cfg->display.width;
         *height = cfg->display.height;
-    } else if (cfg->display.width > 0) {
+    } else if (cfg->display.width != 0) {
         *width  = cfg->display.width;
         *height = (int64_t)source->i_visible_height * source->i_sar_den * cfg->display.width * cfg->display.sar.num /
             source->i_visible_width / source->i_sar_num / cfg->display.sar.den;
-    } else if (cfg->display.height > 0) {
+    } else if (cfg->display.height != 0) {
         *width  = (int64_t)source->i_visible_width * source->i_sar_num * cfg->display.height * cfg->display.sar.den /
             source->i_visible_height / source->i_sar_den / cfg->display.sar.num;
         *height = cfg->display.height;
@@ -197,7 +197,7 @@ void vout_display_PlacePicture(vout_display_place_t *place,
 {
     /* */
     memset(place, 0, sizeof(*place));
-    if (cfg->display.width <= 0 || cfg->display.height <= 0)
+    if (cfg->display.width == 0 || cfg->display.height == 0)
         return;
 
     /* */
@@ -228,9 +228,9 @@ void vout_display_PlacePicture(vout_display_place_t *place,
     const unsigned width  = source->i_visible_width;
     const unsigned height = source->i_visible_height;
     /* Compute the height if we use the width to fill up display_width */
-    const int64_t scaled_height = (int64_t)height * display_width  * cfg->display.sar.num * source->i_sar_den / width  / source->i_sar_num / cfg->display.sar.den;
+    const int64_t scaled_height = (int64_t)height * display_width  * cfg->display.sar.num * source->i_sar_den / (width  * source->i_sar_num * cfg->display.sar.den);
     /* And the same but switching width/height */
-    const int64_t scaled_width  = (int64_t)width  * display_height * cfg->display.sar.den * source->i_sar_num / height / source->i_sar_den / cfg->display.sar.num;
+    const int64_t scaled_width  = (int64_t)width  * display_height * cfg->display.sar.den * source->i_sar_num / (height * source->i_sar_den * cfg->display.sar.num);
 
     if (source->projection_mode == PROJECTION_MODE_RECTANGULAR) {
         /* We keep the solution that avoid filling outside the display */
@@ -337,39 +337,25 @@ typedef struct {
 
     /* */
     vout_display_cfg_t cfg;
-    struct {
-        unsigned num;
-        unsigned den;
-    } sar_initial;
+    vlc_rational_t sar_initial;
 
     /* */
     unsigned width_saved;
     unsigned height_saved;
-
-    struct {
-        unsigned num;
-        unsigned den;
-    } crop_saved;
 
     /* */
     bool ch_display_filled;
     bool is_display_filled;
 
     bool ch_zoom;
-    struct {
-        unsigned num;
-        unsigned den;
-    } zoom;
+    vlc_rational_t zoom;
 #if defined(_WIN32) || defined(__OS2__)
     bool ch_wm_state;
     unsigned wm_state;
     unsigned wm_state_initial;
 #endif
     bool ch_sar;
-    struct {
-        unsigned num;
-        unsigned den;
-    } sar;
+    vlc_rational_t sar;
 
     bool ch_crop;
     struct {
@@ -981,7 +967,7 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
             osys->ch_sar  = false;
 
             /* If a crop ratio is requested, recompute the parameters */
-            if (osys->crop.num > 0 && osys->crop.den > 0)
+            if (osys->crop.num != 0 && osys->crop.den != 0)
                 osys->ch_crop = true;
         }
         /* */
@@ -990,7 +976,7 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
 
             unsigned crop_num = osys->crop.num;
             unsigned crop_den = osys->crop.den;
-            if (crop_num > 0 && crop_den > 0) {
+            if (crop_num != 0 && crop_den != 0) {
                 video_format_t fmt = osys->source;
                 fmt.i_sar_num = source.i_sar_num;
                 fmt.i_sar_den = source.i_sar_den;
@@ -1026,8 +1012,8 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
                 msg_Err(vd, "Failed to change source crop TODO implement crop at core");
 
                 source = vd->source;
-                crop_num = osys->crop_saved.num;
-                crop_den = osys->crop_saved.den;
+                crop_num = 0;
+                crop_den = 0;
                 /* FIXME implement cropping in the core if not supported by the
                  * vout module (easy)
                  */
@@ -1148,7 +1134,7 @@ void vout_SetDisplayZoom(vout_display_t *vd, unsigned num, unsigned den)
 {
     vout_display_owner_sys_t *osys = vd->owner.sys;
 
-    if (num > 0 && den > 0) {
+    if (num != 0 && den != 0) {
         vlc_ureduce(&num, &den, num, den, 0);
     } else {
         num = 1;
@@ -1191,7 +1177,7 @@ void vout_SetDisplayCrop(vout_display_t *vd,
 
     if (osys->crop.left  != (int)left  || osys->crop.top != (int)top ||
         osys->crop.right != right || osys->crop.bottom != bottom ||
-        (crop_num > 0 && crop_den > 0 &&
+        (crop_num != 0 && crop_den != 0 &&
          (crop_num != osys->crop.num || crop_den != osys->crop.den))) {
 
         osys->crop.left   = left;
@@ -1234,8 +1220,7 @@ static vout_display_t *DisplayNew(vout_thread_t *vout,
     vout_display_cfg_t *cfg = &osys->cfg;
 
     *cfg = state->cfg;
-    osys->sar_initial.num = state->sar.num;
-    osys->sar_initial.den = state->sar.den;
+    osys->sar_initial = state->sar;
     vout_display_GetDefaultDisplaySize(&cfg->display.width, &cfg->display.height,
                                        source, cfg);
 
@@ -1280,8 +1265,6 @@ static vout_display_t *DisplayNew(vout_thread_t *vout,
     osys->crop.top    = 0;
     osys->crop.right  = 0;
     osys->crop.bottom = 0;
-    osys->crop_saved.num = 0;
-    osys->crop_saved.den = 0;
     osys->crop.num = 0;
     osys->crop.den = 0;
 
@@ -1334,8 +1317,7 @@ void vout_DeleteDisplay(vout_display_t *vd, vout_display_state_t *state)
 #if defined(_WIN32) || defined(__OS2__)
         state->wm_state = osys->wm_state;
 #endif
-        state->sar.num  = osys->sar_initial.num;
-        state->sar.den  = osys->sar_initial.den;
+        state->sar = osys->sar_initial;
     }
 
     VoutDisplayDestroyRender(vd);

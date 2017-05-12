@@ -263,6 +263,11 @@
         [self setCollectionBehavior: NSWindowCollectionBehaviorFullScreenAuxiliary];
     }
 
+    if (!_darkInterface && self.titlebarView) {
+        [self.titlebarView removeFromSuperview];
+        self.titlebarView = nil;
+    }
+
     [super awakeFromNib];
 }
 
@@ -656,8 +661,8 @@
 
     NSInteger i_currLevel = [self level];
     // self.fullscreen and _inFullscreenTransition must not be true yet
-    [[[VLCMain sharedInstance] voutController] updateWindowLevelForHelperWindows: NSNormalWindowLevel];
-    [self setLevel:NSNormalWindowLevel];
+    [[[VLCMain sharedInstance] voutController] updateWindowLevelForHelperWindows: NSMainMenuWindowLevel + 1];
+    [self setLevel:NSMainMenuWindowLevel + 1];
     i_originalLevel = i_currLevel;
 
     _inFullscreenTransition = YES;
@@ -678,19 +683,23 @@
         [[[VLCMain sharedInstance] mainWindow] recreateHideMouseTimer];
 
     if (_darkInterface) {
-        [self.titlebarView removeFromSuperviewWithoutNeedingDisplay];
+        [self.titlebarView setHidden:YES];
+        self.videoViewTopConstraint.priority = 1;
 
-        NSRect winrect;
+        // shrink window height
         CGFloat f_titleBarHeight = [self.titlebarView frame].size.height;
-        winrect = [self frame];
+        NSRect winrect = [self frame];
 
         winrect.size.height = winrect.size.height - f_titleBarHeight;
         [self setFrame: winrect display:NO animate:NO];
     }
 
+    // TODO remove
     [_videoView setFrame: [[self contentView] frame]];
+
     if (![_videoView isHidden]) {
         [[self.controlsBar bottomBarView] setHidden: YES];
+        self.videoViewBottomConstraint.priority = 1;
     }
 
     [self setMovableByWindowBackground: NO];
@@ -738,24 +747,17 @@
     [NSCursor setHiddenUntilMouseMoves: NO];
     [[[[VLCMain sharedInstance] mainWindow] fspanel] setNonActive];
 
-
     if (_darkInterface) {
-        NSRect winrect;
+        [self.titlebarView setHidden:NO];
+        self.videoViewTopConstraint.priority = 999;
+
+        NSRect winrect = [self frame];
         CGFloat f_titleBarHeight = [self.titlebarView frame].size.height;
-
-        winrect = [_videoView frame];
-        winrect.size.height -= f_titleBarHeight;
-        [_videoView setFrame: winrect];
-
-        winrect = [self frame];
-        [self.titlebarView setFrame: NSMakeRect(0, winrect.size.height - f_titleBarHeight,
-                                              winrect.size.width, f_titleBarHeight)];
-        [[self contentView] addSubview: self.titlebarView];
-
         winrect.size.height = winrect.size.height + f_titleBarHeight;
         [self setFrame: winrect display:NO animate:NO];
     }
 
+    // TODO remove
     NSRect videoViewFrame = [_videoView frame];
     videoViewFrame.origin.y += [self.controlsBar height];
     videoViewFrame.size.height -= [self.controlsBar height];
@@ -763,6 +765,7 @@
 
     if (![_videoView isHidden]) {
         [[self.controlsBar bottomBarView] setHidden: NO];
+        self.videoViewBottomConstraint.priority = 999;
     }
 
     [self setMovableByWindowBackground: YES];
@@ -812,8 +815,8 @@
     /* Make sure we don't see the window flashes in float-on-top mode */
     NSInteger i_currLevel = [self level];
     // self.fullscreen must not be true yet
-    [[[VLCMain sharedInstance] voutController] updateWindowLevelForHelperWindows: NSNormalWindowLevel];
-    [self setLevel:NSNormalWindowLevel];
+    [[[VLCMain sharedInstance] voutController] updateWindowLevelForHelperWindows: NSMainMenuWindowLevel + 1];
+    [self setLevel:NSMainMenuWindowLevel + 1];
     i_originalLevel = i_currLevel; // would be overwritten by previous call
 
     /* Only create the o_fullscreen_window if we are not in the middle of the zooming animation */
@@ -829,10 +832,12 @@
         [o_fullscreen_window setCanBecomeMainWindow: YES];
         [o_fullscreen_window setHasActiveVideo: YES];
         [o_fullscreen_window setFullscreen: YES];
+        [o_fullscreen_window setLevel:NSMainMenuWindowLevel + 1];
 
         /* Make sure video view gets visible in case the playlist was visible before */
         b_video_view_was_hidden = [_videoView isHidden];
         [_videoView setHidden: NO];
+        _videoView.translatesAutoresizingMaskIntoConstraints = YES;
 
         if (!b_animation) {
             /* We don't animate if we are not visible, instead we
@@ -849,6 +854,7 @@
             [o_temp_view setFrame:[_videoView frame]];
             [[o_fullscreen_window contentView] addSubview:_videoView];
             [_videoView setFrame: [[o_fullscreen_window contentView] frame]];
+            [_videoView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
             NSEnableScreenUpdates();
 
             [screen setFullscreenPresentationOptions];
@@ -856,8 +862,6 @@
             [o_fullscreen_window setFrame:screen_rect display:YES animate:NO];
 
             [o_fullscreen_window orderFront:self animate:YES];
-
-            [o_fullscreen_window setLevel:NSNormalWindowLevel];
 
             if (blackout_other_displays) {
                 CGDisplayFade(token, 0.3, kCGDisplayBlendSolidColor, kCGDisplayBlendNormal, 0, 0, 0, NO);
@@ -876,6 +880,8 @@
         [o_temp_view setFrame:[_videoView frame]];
         [[o_fullscreen_window contentView] addSubview:_videoView];
         [_videoView setFrame: [[o_fullscreen_window contentView] frame]];
+        [_videoView setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+
         [o_fullscreen_window makeKeyAndOrderFront:self];
         NSEnableScreenUpdates();
     }

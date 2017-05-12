@@ -53,6 +53,9 @@
 #if defined (QT5_HAS_X11)
 # include <X11/Xlib.h>
 # include <QX11Info>
+# if defined(QT5_HAS_XCB)
+#  include <xcb/xproto.h>
+# endif
 #endif
 #ifdef QT5_HAS_WAYLAND
 # include QPNI_HEADER
@@ -257,10 +260,36 @@ void VideoWidget::setSize( unsigned int w, unsigned int h )
     sync();
 }
 
+bool VideoWidget::nativeEvent( const QByteArray& eventType, void* message, long* )
+{
+#if defined(QT5_HAS_XCB)
+    if ( eventType == "xcb_generic_event_t" )
+    {
+        const xcb_generic_event_t* xev = reinterpret_cast<const xcb_generic_event_t*>( message );
+
+        if ( xev->response_type == XCB_CONFIGURE_NOTIFY )
+            reportSize();
+    }
+#endif
+#ifdef _WIN32
+    if ( eventType == "windows_generic_MSG" )
+    {
+        MSG* msg = static_cast<MSG*>( message );
+        if ( msg->message == WM_SIZE )
+            reportSize();
+    }
+#endif
+    // Let Qt handle that event in any case
+    return false;
+}
+
 void VideoWidget::resizeEvent( QResizeEvent *event )
 {
     QWidget::resizeEvent( event );
 
+    if ( p_intf->p_sys->voutWindowType == VOUT_WINDOW_TYPE_XID ||
+        p_intf->p_sys->voutWindowType == VOUT_WINDOW_TYPE_HWND )
+        return;
     reportSize();
 }
 
@@ -761,7 +790,7 @@ CoverArtLabel::CoverArtLabel( QWidget *parent, intf_thread_t *_p_i )
     p_item = THEMIM->currentInputItem();
     if( p_item )
     {
-        vlc_gc_incref( p_item );
+        input_item_Hold( p_item );
         showArtUpdate( p_item );
     }
     else
@@ -773,14 +802,14 @@ CoverArtLabel::~CoverArtLabel()
     QList< QAction* > artActions = actions();
     foreach( QAction *act, artActions )
         removeAction( act );
-    if ( p_item ) vlc_gc_decref( p_item );
+    if ( p_item ) input_item_Release( p_item );
 }
 
 void CoverArtLabel::setItem( input_item_t *_p_item )
 {
-    if ( p_item ) vlc_gc_decref( p_item );
+    if ( p_item ) input_item_Release( p_item );
     p_item = _p_item;
-    if ( p_item ) vlc_gc_incref( p_item );
+    if ( p_item ) input_item_Hold( p_item );
 }
 
 void CoverArtLabel::showArtUpdate( const QString& url )

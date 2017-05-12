@@ -1020,7 +1020,7 @@ static int MP4_ReadBox_trun(  stream_t *p_stream, MP4_Box_t *p_box )
         if( p_box->data.p_trun->i_flags & MP4_TRUN_SAMPLE_FLAGS )
             MP4_GET4BYTES( p_sample->i_flags );
         if( p_box->data.p_trun->i_flags & MP4_TRUN_SAMPLE_TIME_OFFSET )
-            MP4_GET4BYTES( p_sample->i_composition_time_offset );
+            MP4_GET4BYTES( p_sample->i_composition_time_offset.v0 );
     }
 
 #ifdef MP4_ULTRA_VERBOSE
@@ -2219,7 +2219,11 @@ static int MP4_ReadBox_fiel( stream_t *p_stream, MP4_Box_t *p_box )
     p_fiel = p_box->data.p_fiel;
     if(i_read < 2)
         MP4_READBOX_EXIT( 0 );
-    if(p_peek[0] == 2) /* Interlaced */
+    if(p_peek[0] == 1)
+    {
+        p_fiel->i_flags = BLOCK_FLAG_SINGLE_FIELD;
+    }
+    else if(p_peek[0] == 2) /* Interlaced */
     {
         /*
          * 0 – There is only one field.
@@ -2354,8 +2358,9 @@ static int MP4_ReadBox_sample_soun( stream_t *p_stream, MP4_Box_t *p_box )
         MP4_GET8BYTES( i_dummy64 );
         memcpy( &f_sample_rate, &i_dummy64, 8 );
         msg_Dbg( p_stream, "read box: %f Hz", f_sample_rate );
-        p_box->data.p_sample_soun->i_sampleratehi = (int)f_sample_rate % BLOCK16x16;
-        p_box->data.p_sample_soun->i_sampleratelo = f_sample_rate / BLOCK16x16;
+        /* Rounding error with lo, but we don't care since we do not support fractional audio rate */
+        p_box->data.p_sample_soun->i_sampleratehi = (uint32_t)f_sample_rate;
+        p_box->data.p_sample_soun->i_sampleratelo = (f_sample_rate - p_box->data.p_sample_soun->i_sampleratehi);
 
         MP4_GET4BYTES( i_channel );
         p_box->data.p_sample_soun->i_channelcount = i_channel;
@@ -4220,6 +4225,7 @@ static const struct
     { ATOM_esds,    MP4_ReadBox_esds,         ATOM_mp4v },
     { ATOM_esds,    MP4_ReadBox_esds,         ATOM_mp4s },
     { ATOM_dcom,    MP4_ReadBox_dcom,         0 },
+    { ATOM_dfLa,    MP4_ReadBox_Binary,       ATOM_fLaC },
     { ATOM_cmvd,    MP4_ReadBox_cmvd,         0 },
     { ATOM_avcC,    MP4_ReadBox_avcC,         ATOM_avc1 },
     { ATOM_avcC,    MP4_ReadBox_avcC,         ATOM_avc3 },
@@ -4276,6 +4282,7 @@ static const struct
     { ATOM_agsm,    MP4_ReadBox_sample_soun,  ATOM_stsd },
     { ATOM_ac3,     MP4_ReadBox_sample_soun,  ATOM_stsd },
     { ATOM_eac3,    MP4_ReadBox_sample_soun,  ATOM_stsd },
+    { ATOM_fLaC,    MP4_ReadBox_sample_soun,  ATOM_stsd },
     { ATOM_lpcm,    MP4_ReadBox_sample_soun,  ATOM_stsd },
     { ATOM_ms02,    MP4_ReadBox_sample_soun,  ATOM_stsd },
     { ATOM_ms11,    MP4_ReadBox_sample_soun,  ATOM_stsd },
@@ -4657,7 +4664,12 @@ MP4_Box_t *MP4_BoxGetNextChunk( stream_t *s )
     MP4_ReadBoxContainerChildren( s, p_fakeroot, stoplist );
 
     p_tmp_box = p_fakeroot->p_first;
-    while( p_tmp_box )
+    if( p_tmp_box == NULL )
+    {
+        MP4_BoxFree( p_fakeroot );
+        return NULL;
+    }
+    else while( p_tmp_box )
     {
         p_fakeroot->i_size += p_tmp_box->i_size;
         p_tmp_box = p_tmp_box->p_next;

@@ -47,14 +47,17 @@ int Import_PLS( vlc_object_t *p_this )
     demux_t *p_demux = (demux_t *)p_this;
     const uint8_t *p_peek;
     CHECK_FILE();
-    CHECK_PEEK( p_peek, 10 );
 
-    if( POKE( p_peek, "[playlist]", 10 ) || POKE( p_peek, "[Reference]", 10 ) ||
-        demux_IsPathExtension( p_demux, ".pls" )   || demux_IsForced( p_demux, "pls" ) )
-    {
-        ;
+    if( vlc_stream_Peek( p_demux->s , &p_peek, 10 ) < 10 ) {
+        msg_Dbg( p_demux, "not enough data" );
+        return VLC_EGENERIC;
     }
-    else return VLC_EGENERIC;
+
+    if( strncasecmp( (const char *)p_peek, "[playlist]", 10 )
+     && strncasecmp( (const char *)p_peek, "[Reference]", 10 )
+     && !demux_IsPathExtension( p_demux, ".pls" )
+     && !demux_IsForced( p_demux, "pls" ) )
+        return VLC_EGENERIC;
 
     msg_Dbg( p_demux, "found valid PLS playlist file");
     p_demux->pf_demux = Demux;
@@ -134,7 +137,7 @@ static int Demux( demux_t *p_demux )
                 p_input = input_item_New( psz_mrl, psz_name );
                 input_item_CopyOptions( p_input, p_current_input );
                 input_item_node_AppendItem( p_subitems, p_input );
-                vlc_gc_decref( p_input );
+                input_item_Release( p_input );
                 free( psz_mrl_orig );
                 psz_mrl_orig = psz_mrl = NULL;
             }
@@ -179,7 +182,7 @@ static int Demux( demux_t *p_demux )
         p_input = input_item_New( psz_mrl, psz_name );
         input_item_CopyOptions( p_input, p_current_input );
         input_item_node_AppendItem( p_subitems, p_input );
-        vlc_gc_decref( p_input );
+        input_item_Release( p_input );
         free( psz_mrl_orig );
     }
     else
@@ -191,7 +194,6 @@ static int Demux( demux_t *p_demux )
 
     input_item_node_PostAndDelete( p_subitems );
 
-    vlc_gc_decref(p_current_input);
     free( psz_prefix );
     return 0; /* Needed for correct operation of go back */
 }

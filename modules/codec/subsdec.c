@@ -485,10 +485,11 @@ static bool AppendString( text_segment_t* p_segment, const char* psz_str )
     return true;
 }
 
-static char* ConsumeAttribute( const char** ppsz_subtitle, char** psz_attribute_value )
+static char* ConsumeAttribute( const char** ppsz_subtitle, char** ppsz_attribute_value )
 {
     const char* psz_subtitle = *ppsz_subtitle;
     char* psz_attribute_name;
+    *ppsz_attribute_value = NULL;
 
     while (*psz_subtitle == ' ')
         psz_subtitle++;
@@ -512,6 +513,8 @@ static char* ConsumeAttribute( const char** ppsz_subtitle, char** psz_attribute_
     // Skip over to the attribute value
     while ( *psz_subtitle && *psz_subtitle != '=' )
         psz_subtitle++;
+    if ( !*psz_subtitle )
+        return psz_attribute_name;
     // Skip the '=' sign
     psz_subtitle++;
 
@@ -539,13 +542,15 @@ static char* ConsumeAttribute( const char** ppsz_subtitle, char** psz_attribute_
         psz_subtitle++;
         attr_len++;
     }
-    if ( unlikely( !( *psz_attribute_value = malloc( attr_len + 1 ) ) ) )
+    if ( attr_len == 0 )
+        return psz_attribute_name;
+    if ( unlikely( !( *ppsz_attribute_value = malloc( attr_len + 1 ) ) ) )
     {
         free( psz_attribute_name );
         return NULL;
     }
-    strncpy( *psz_attribute_value, psz_subtitle - attr_len, attr_len );
-    (*psz_attribute_value)[attr_len] = 0;
+    strncpy( *ppsz_attribute_value, psz_subtitle - attr_len, attr_len );
+    (*ppsz_attribute_value)[attr_len] = 0;
     // Finally, skip over the final delimiter
     if (delimiter != 0 && *psz_subtitle)
         psz_subtitle++;
@@ -774,6 +779,11 @@ static text_segment_t* ParseSubtitles( int *pi_align, const char *psz_subtitle )
 
                     while( ( psz_attribute_name = ConsumeAttribute( &psz_subtitle, &psz_attribute_value ) ) )
                     {
+                        if ( !psz_attribute_value )
+                        {
+                            free( psz_attribute_name );
+                            continue;
+                        }
                         if ( !strcasecmp( psz_attribute_name, "face" ) )
                         {
                             p_segment->style->psz_fontname = psz_attribute_value;
@@ -929,7 +939,7 @@ static text_segment_t* ParseSubtitles( int *pi_align, const char *psz_subtitle )
          *  - We don't support the DEFAULT flag (HEADER)
          */
 
-        else if( psz_subtitle[0] == '{' &&
+        else if( psz_subtitle[0] == '{' && psz_subtitle[1] != 0 &&
                  psz_subtitle[2] == ':' && strchr( &psz_subtitle[2], '}' ) )
         {
             const char *psz_tag_end = strchr( &psz_subtitle[2], '}' );

@@ -51,8 +51,13 @@ static int Demux( demux_t * );
  */
 int Import_iTML( vlc_object_t *p_this )
 {
-    DEMUX_BY_EXTENSION_OR_FORCED_MSG( ".xml", "itml",
-                                      "using iTunes Media Library reader" );
+    demux_t *p_demux = (demux_t *)p_this;
+    CHECK_FILE();
+    if( !demux_IsPathExtension( p_demux, ".xml" )
+     && !demux_IsForced( p_demux, "itml" ) )
+        return VLC_EGENERIC; \
+    STANDARD_DEMUX_INIT_MSG( "using iTunes Media Library reader" );
+
     const uint8_t *p_peek;
     const ssize_t i_peek = vlc_stream_Peek( p_demux->s, &p_peek, 128 );
     if ( i_peek < 32 ||
@@ -112,8 +117,6 @@ int Demux( demux_t *p_demux )
     parse_plist_node( p_demux, p_subitems, NULL, p_xml_reader, "plist",
                       pl_elements );
     input_item_node_PostAndDelete( p_subitems );
-
-    vlc_gc_decref(p_current_input);
 
 end:
     if( p_xml_reader )
@@ -334,7 +337,7 @@ static bool parse_track_dict( demux_t *p_demux, input_item_node_t *p_input_node,
 
     /* add meta info */
     add_meta( p_new_input, p_track );
-    vlc_gc_decref( p_new_input );
+    input_item_Release( p_new_input );
 
     p_demux->p_sys->i_ntracks++;
 

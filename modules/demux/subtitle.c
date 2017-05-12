@@ -647,19 +647,19 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_GET_LENGTH:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             *pi64 = p_sys->i_length;
             return VLC_SUCCESS;
 
         case DEMUX_GET_TIME:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             *pi64 = p_sys->i_next_demux_date - var_GetInteger( p_demux->obj.parent, "spu-delay" );
             if( *pi64 < 0 )
                *pi64 = p_sys->i_next_demux_date;
             return VLC_SUCCESS;
 
         case DEMUX_SET_TIME:
-            i64 = (int64_t)va_arg( args, int64_t );
+            i64 = va_arg( args, int64_t );
             for( size_t i = 0; i + 1< p_sys->subtitles.i_count; i++ )
             {
                 if( p_sys->subtitles.p_array[i + 1].i_start >= i64 )
@@ -673,7 +673,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             break;
 
         case DEMUX_GET_POSITION:
-            pf = (double*)va_arg( args, double * );
+            pf = va_arg( args, double * );
             if( p_sys->subtitles.i_current >= p_sys->subtitles.i_count )
             {
                 *pf = 1.0;
@@ -692,7 +692,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
             return VLC_SUCCESS;
 
         case DEMUX_SET_POSITION:
-            f = (double)va_arg( args, double );
+            f = va_arg( args, double );
             if( p_sys->subtitles.i_count && p_sys->i_length )
             {
                 i64 = VLC_TS_0 + f * p_sys->i_length;
@@ -702,7 +702,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
 
         case DEMUX_SET_NEXT_DEMUX_TIME:
             p_sys->b_slave = true;
-            p_sys->i_next_demux_date = (int64_t)va_arg( args, int64_t ) - VLC_TS_0;
+            p_sys->i_next_demux_date = va_arg( args, int64_t ) - VLC_TS_0;
             return VLC_SUCCESS;
 
         case DEMUX_GET_PTS_DELAY:
@@ -1689,7 +1689,7 @@ static int ParseJSS( vlc_object_t *p_obj, subs_properties_t *p_props,
                      text_t *txt, subtitle_t *p_subtitle, size_t i_idx )
 {
     VLC_UNUSED( i_idx );
-    char         *psz_text, *psz_orig;
+    char         *psz_text, *psz_orig = NULL;
     char         *psz_text2, *psz_orig2;
     int h1, h2, m1, m2, s1, s2, f1, f2;
 
@@ -1705,11 +1705,13 @@ static int ParseJSS( vlc_object_t *p_obj, subs_properties_t *p_props,
     /* Parse the main lines */
     for( ;; )
     {
+        free( psz_orig );
         const char *s = TextGetLine( txt );
         if( !s )
             return VLC_EGENERIC;
 
-        psz_orig = malloc( strlen( s ) + 1 );
+        size_t line_length = strlen( s );
+        psz_orig = malloc( line_length + 1 );
         if( !psz_orig )
             return VLC_ENOMEM;
         psz_text = psz_orig;
@@ -1749,6 +1751,8 @@ static int ParseJSS( vlc_object_t *p_obj, subs_properties_t *p_props,
             {
             case 'S':
                  shift = isalpha( (unsigned char)psz_text[2] ) ? 6 : 2 ;
+                 if ( shift > line_length )
+                     continue;
 
                  if( sscanf( &psz_text[shift], "%d", &h ) )
                  {
@@ -1786,20 +1790,16 @@ static int ParseJSS( vlc_object_t *p_obj, subs_properties_t *p_props,
 
             case 'T':
                 shift = isalpha( (unsigned char)psz_text[2] ) ? 8 : 2 ;
+                if ( shift > line_length )
+                    continue;
 
                 sscanf( &psz_text[shift], "%d", &p_props->jss.i_time_resolution );
                 break;
             }
-            free( psz_orig );
-            continue;
-        }
-        else
-            /* Unkown type line, probably a comment */
-        {
-            free( psz_orig );
-            continue;
         }
     }
+    free( psz_orig );
+    psz_orig = NULL;
 
     while( psz_text[ strlen( psz_text ) - 1 ] == '\\' )
     {
@@ -1889,7 +1889,7 @@ static int ParseJSS( vlc_object_t *p_obj, subs_properties_t *p_props,
             if( ( toupper((unsigned char)*(psz_text + 1 ) ) == 'C' ) ||
                     ( toupper((unsigned char)*(psz_text + 1 ) ) == 'F' ) )
             {
-                psz_text++; psz_text++;
+                psz_text++;
                 break;
             }
             if( (*(psz_text + 1 ) ) == 'B' || (*(psz_text + 1 ) ) == 'b' ||
@@ -1903,8 +1903,8 @@ static int ParseJSS( vlc_object_t *p_obj, subs_properties_t *p_props,
             if( (*(psz_text + 1 ) ) == '~' || (*(psz_text + 1 ) ) == '{' ||
                 (*(psz_text + 1 ) ) == '\\' )
                 psz_text++;
-            else if( *(psz_text + 1 ) == '\r' ||  *(psz_text + 1 ) == '\n' ||
-                     *(psz_text + 1 ) == '\0' )
+            else if( ( *(psz_text + 1 ) == '\r' ||  *(psz_text + 1 ) == '\n' ) &&
+                     *(psz_text + 1 ) != '\0' )
             {
                 psz_text++;
             }

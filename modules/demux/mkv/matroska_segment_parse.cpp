@@ -200,7 +200,7 @@ void matroska_segment_c::ParseSeekHead( KaxSeekHead *seekhead )
  * ParseTrackEntry:
  *****************************************************************************/
 
-void matroska_segment_c::ParseTrackEntry( KaxTrackEntry *m )
+void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
 {
     bool bSupported = true;
 
@@ -375,13 +375,15 @@ void matroska_segment_c::ParseTrackEntry( KaxTrackEntry *m )
         E_CASE( KaxTrackName, tname )
         {
             vars.tk->fmt.psz_description = ToUTF8( UTFstring( tname ) );
-            debug( vars, "Track Name=%s", vars.tk->fmt.psz_description ) ;
+            debug( vars, "Track Name=%s", vars.tk->fmt.psz_description ? vars.tk->fmt.psz_description : "(null)" );
         }
         E_CASE( KaxTrackLanguage, lang )
         {
             free( vars.tk->fmt.psz_language );
-            vars.tk->fmt.psz_language = strdup( std::string( lang ).c_str() );
-            debug( vars, "Track Language=`%s'", vars.tk->fmt.psz_language );
+            const std::string slang ( lang );
+            size_t pos = slang.find_first_of( '-' );
+            vars.tk->fmt.psz_language = pos != std::string::npos ? strndup( slang.c_str (), pos ) : strdup( slang.c_str() );
+            debug( vars, "Track Language=`%s'", vars.tk->fmt.psz_language ? vars.tk->fmt.psz_language : "(null)" );
         }
         E_CASE( KaxCodecID, codecid )
         {
@@ -694,6 +696,8 @@ void matroska_segment_c::ParseTrackEntry( KaxTrackEntry *m )
     if( track.i_number == 0 )
     {
         msg_Warn( &sys.demuxer, "Missing KaxTrackNumber, discarding track!" );
+        es_format_Clean( &track.fmt );
+        free(track.p_extra_data);
         return;
     }
 
@@ -704,11 +708,13 @@ void matroska_segment_c::ParseTrackEntry( KaxTrackEntry *m )
             track.i_encoding_scope & MATROSKA_ENCODING_SCOPE_PRIVATE &&
             track.i_extra_data && track.p_extra_data &&
             zlib_decompress_extra( &sys.demuxer, &track ) )
+            // zlib_decompress_extra will clean the track itself
             return;
 #endif
         if( TrackInit( &track ) )
         {
             msg_Err(&sys.demuxer, "Couldn't init track %u", track.i_number );
+            es_format_Clean( &track.fmt );
             free(track.p_extra_data);
             return;
         }
@@ -926,7 +932,7 @@ void matroska_segment_c::ParseInfo( KaxInfo *info )
                 chapter_translation_c *p_translate = new chapter_translation_c();
 
                 TranslationHandler::Dispatcher().iterate(
-                    trans.begin(), trans.end(), TranslationHandler::Payload( p_translate ) 
+                    trans.begin(), trans.end(), TranslationHandler::Payload( p_translate )
                 );
 
                 vars.obj->translations.push_back( p_translate );
@@ -1468,6 +1474,10 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
         }
         S_CASE("V_UNCOMPRESSED") {
             msg_Dbg( vars.p_demuxer, "uncompressed format detected");
+        }
+        S_CASE("V_FFV1") {
+            vars.p_fmt->i_codec = VLC_CODEC_FFV1;
+            fill_extra_data( vars.p_tk, 0 );
         }
         S_CASE("A_MS/ACM") {
             mkv_track_t * p_tk = vars.p_tk;

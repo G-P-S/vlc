@@ -143,7 +143,7 @@ enum stream_query_e
     STREAM_CAN_CONTROL_PACE,    /**< arg1= bool *   res=cannot fail*/
     /* */
     STREAM_GET_SIZE=6,          /**< arg1= uint64_t *     res=can fail */
-    STREAM_IS_DIRECTORY,        /**< arg1= bool *, res=can fail*/
+    STREAM_IS_DIRECTORY,        /**< res=can fail */
 
     /* */
     STREAM_GET_PTS_DELAY = 0x101,/**< arg1= int64_t* res=cannot fail */
@@ -333,6 +333,7 @@ static inline char *stream_ContentType( stream_t *s )
  * \warning the returned resource is to be freed by the caller
  * \return the mime-type, or `NULL` if unknown
  **/
+VLC_USED
 static inline char *stream_MimeType( stream_t *s )
 {
     char* mime_type = stream_ContentType( s );
@@ -341,6 +342,23 @@ static inline char *stream_MimeType( stream_t *s )
         mime_type[strcspn( mime_type, " ;" )] = '\0';
 
     return mime_type;
+}
+
+/**
+ * Checks for a MIME type.
+ *
+ * Checks if the stream has a specific MIME type.
+ */
+VLC_USED
+static inline bool stream_IsMimeType(stream_t *s, const char *type)
+{
+    char *mime = stream_MimeType(s);
+    if (mime == NULL)
+        return false;
+
+    bool ok = !strcasecmp(mime, type);
+    free(mime);
+    return ok;
 }
 
 /**

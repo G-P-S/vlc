@@ -51,28 +51,6 @@
 #define SKIP_ADS_LONGTEXT N_( "Use playlist options usually used to prevent " \
     "ads skipping to detect ads and prevent adding them to the playlist." )
 
-static const char *const psz_recursive_list[] = { "none", "collapse", "expand" };
-static const char *const psz_recursive_list_text[] = {
-    N_("None"), N_("Collapse"), N_("Expand"), N_("Expand distant files") };
-
-#define RECURSIVE_TEXT N_("Subdirectory behavior")
-#define RECURSIVE_LONGTEXT N_( \
-        "Select whether subdirectories must be expanded.\n" \
-        "none: subdirectories do not appear in the playlist.\n" \
-        "collapse: subdirectories appear but are expanded on first play.\n" \
-        "expand: all subdirectories are expanded.\n" )
-
-#define IGNORE_TEXT N_("Ignored extensions")
-#define IGNORE_LONGTEXT N_( \
-        "Files with these extensions will not be added to playlist when " \
-        "opening a directory.\n" \
-        "This is useful if you add directories that contain playlist files " \
-        "for instance. Use a comma-separated list of extensions." )
-
-#define SHOW_HIDDENFILES_TEXT N_("Show hidden files")
-#define SHOW_HIDDENFILES_LONGTEXT N_( \
-        "Ignore files starting with '.'" )
-
 vlc_module_begin ()
     add_shortcut( "playlist" )
     set_category( CAT_INPUT )
@@ -162,18 +140,6 @@ vlc_module_begin ()
         add_shortcut( "playlist", "wpl" )
         set_capability( "demux", 10 )
         set_callbacks( Import_WPL, Close_WPL )
-    add_submodule ()
-        set_description( N_("Directory import") )
-        add_shortcut( "playlist", "directory" )
-        set_capability( "demux", 10 )
-        set_callbacks( Import_Dir, Close_Dir )
-        add_string( "recursive", "collapse" , RECURSIVE_TEXT,
-                    RECURSIVE_LONGTEXT, false )
-          change_string_list( psz_recursive_list, psz_recursive_list_text )
-        add_string( "ignore-filetypes", "m3u,db,nfo,ini,jpg,jpeg,ljpg,gif,png,pgm,pgmyuv,pbm,pam,tga,bmp,pnm,xpm,xcf,pcx,tif,tiff,lbm,sfv,txt,sub,idx,srt,cue,ssa",
-                    IGNORE_TEXT, IGNORE_LONGTEXT, false )
-        add_bool( "show-hiddenfiles", false,
-                   SHOW_HIDDENFILES_TEXT, SHOW_HIDDENFILES_LONGTEXT, false )
 vlc_module_end ()
 
 int Control(demux_t *demux, int query, va_list args)
@@ -183,7 +149,7 @@ int Control(demux_t *demux, int query, va_list args)
     {
         case DEMUX_IS_PLAYLIST:
         {
-            bool *pb_bool = (bool*)va_arg( args, bool * );
+            bool *pb_bool = va_arg( args, bool * );
             *pb_bool = true;
             return VLC_SUCCESS;
         }
@@ -198,13 +164,6 @@ int Control(demux_t *demux, int query, va_list args)
         }
     }
     return VLC_EGENERIC;
-}
-
-input_item_t * GetCurrentItem(demux_t *p_demux)
-{
-    input_item_t *p_current_input = input_GetItem( p_demux->p_input );
-    vlc_gc_incref(p_current_input);
-    return p_current_input;
 }
 
 /**
@@ -289,16 +248,4 @@ char *ProcessMRL(const char *str, const char *base)
     }
 
     return abs;
-}
-
-/**
- * Checks stream Content-Type against a known one
- */
-bool CheckMimeType( stream_t *stream, const char *mime_type )
-{
-    char* stream_mtype = stream_MimeType( stream );
-    bool const match = stream_mtype && !strcasecmp( mime_type, stream_mtype );
-
-    free( stream_mtype );
-    return match;
 }

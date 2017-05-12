@@ -89,6 +89,7 @@ struct decoder_sys_t
     const hevc_video_parameter_set_t    *p_active_vps;
     const hevc_sequence_parameter_set_t *p_active_sps;
     const hevc_picture_parameter_set_t  *p_active_pps;
+    hevc_sei_pic_timing_t *p_timing;
     bool b_init_sequence_complete;
 
     date_t dts;
@@ -98,6 +99,8 @@ struct decoder_sys_t
     /* */
     cc_storage_t *p_ccs;
 };
+
+#define BLOCK_FLAG_DROP (1 << BLOCK_FLAG_PRIVATE_SHIFT)
 
 static const uint8_t p_hevc_startcode[3] = {0x00, 0x00, 0x01};
 /****************************************************************************
@@ -143,7 +146,7 @@ static block_t * OutputQueues(decoder_sys_t *p_sys, bool b_valid)
     {
         p_output->i_flags |= i_flags;
         if(!b_valid)
-            p_output->i_flags |= BLOCK_FLAG_CORRUPTED;
+            p_output->i_flags |= BLOCK_FLAG_DROP;
     }
 
     return p_output;
@@ -190,7 +193,7 @@ static int Open(vlc_object_t *p_this)
         date_Init( &p_sys->dts, p_dec->fmt_in.video.i_frame_rate * 2,
                                 p_dec->fmt_in.video.i_frame_rate_base );
     else
-        date_Init( &p_sys->dts, 1, 1 );
+        date_Init( &p_sys->dts, 2 * 30000, 1001 );
     date_Set( &p_sys->dts, VLC_TS_INVALID );
     p_sys->pts = VLC_TS_INVALID;
     p_sys->b_need_ts = true;
@@ -261,6 +264,8 @@ static void Close(vlc_object_t *p_this)
         if(p_sys->rgi_p_decvps[i])
             hevc_rbsp_release_vps(p_sys->rgi_p_decvps[i]);
     }
+
+    hevc_release_sei_pic_timing( p_sys->p_timing );
 
     cc_storage_delete( p_sys->p_ccs );
 
@@ -451,11 +456,16 @@ static void ActivateSets(decoder_t *p_dec,
     p_sys->p_active_vps = p_vps;
     if(p_sps)
     {
-        if(!p_dec->fmt_in.video.i_frame_rate)
+        if(!p_dec->fmt_in.video.i_frame_rate || !p_dec->fmt_in.video.i_frame_rate_base)
         {
-            (void) hevc_get_frame_rate( p_sps, p_dec->p_sys->rgi_p_decvps,
-                                        &p_dec->fmt_out.video.i_frame_rate,
-                                        &p_dec->fmt_out.video.i_frame_rate_base );
+            unsigned num, den;
+            if(hevc_get_frame_rate( p_sps, p_dec->p_sys->rgi_p_decvps, &num, &den ))
+            {
+                p_dec->fmt_out.video.i_frame_rate = num;
+                p_dec->fmt_out.video.i_frame_rate_base = den;
+                if(p_sys->dts.i_divider_den != den && p_sys->dts.i_divider_num != 2 * num)
+                    date_Change(&p_sys->dts, 2 * num, den);
+            }
         }
 
         if(p_dec->fmt_in.video.primaries == COLOR_PRIMARIES_UNDEF)
@@ -471,11 +481,12 @@ static void ActivateSets(decoder_t *p_dec,
         if( hevc_get_picture_size( p_sps, &sizes[0], &sizes[1],
                                           &sizes[2], &sizes[3] ) )
         {
-            if( p_dec->fmt_out.video.i_width != sizes[0] ||
-                p_dec->fmt_out.video.i_height != sizes[1] )
+            p_dec->fmt_out.video.i_width = sizes[0];
+            p_dec->fmt_out.video.i_height = sizes[1];
+            if(p_dec->fmt_in.video.i_visible_width == 0)
             {
-                p_dec->fmt_out.video.i_width = sizes[0];
-                p_dec->fmt_out.video.i_height = sizes[1];
+                p_dec->fmt_out.video.i_visible_width = sizes[2];
+                p_dec->fmt_out.video.i_visible_height = sizes[3];
             }
         }
 
@@ -693,19 +704,36 @@ static block_t *GatherAndValidateChain(block_t *p_outputchain)
 
     if(p_outputchain)
     {
-        if(p_outputchain->i_flags & BLOCK_FLAG_CORRUPTED)
+        if(p_outputchain->i_flags & BLOCK_FLAG_DROP)
             p_output = p_outputchain; /* Avoid useless gather */
         else
             p_output = block_ChainGather(p_outputchain);
     }
 
-    if(p_output && (p_output->i_flags & BLOCK_FLAG_CORRUPTED))
+    if(p_output && (p_output->i_flags & BLOCK_FLAG_DROP))
     {
         block_ChainRelease(p_output); /* Chain! see above */
         p_output = NULL;
     }
 
     return p_output;
+}
+
+static void SetOutputBlockProperties(decoder_t *p_dec, block_t *p_output)
+{
+    decoder_sys_t *p_sys = p_dec->p_sys;
+    /* Set frame duration */
+    if(p_sys->p_active_sps)
+    {
+        uint8_t i_num_clock_ts = hevc_get_num_clock_ts(p_sys->p_active_sps,
+                                                       p_sys->p_timing);
+        const mtime_t i_start = date_Get(&p_sys->dts);
+        date_Increment(&p_sys->dts, i_num_clock_ts);
+        p_output->i_length = date_Get(&p_sys->dts) - i_start;
+        p_sys->pts = VLC_TS_INVALID;
+    }
+    hevc_release_sei_pic_timing(p_sys->p_timing);
+    p_sys->p_timing = NULL;
 }
 
 /*****************************************************************************
@@ -750,7 +778,7 @@ static block_t *ParseNALBlock(decoder_t *p_dec, bool *pb_ts_used, block_t *p_fra
     {
         /* NAL is a VCL NAL */
         p_output = ParseVCL(p_dec, i_nal_type, p_frag);
-        if (p_output && (p_output->i_flags & BLOCK_FLAG_CORRUPTED))
+        if (p_output && (p_output->i_flags & BLOCK_FLAG_DROP))
             msg_Info(p_dec, "Waiting for VPS/SPS/PPS");
     }
     else
@@ -760,7 +788,10 @@ static block_t *ParseNALBlock(decoder_t *p_dec, bool *pb_ts_used, block_t *p_fra
 
     p_output = GatherAndValidateChain(p_output);
     if(p_output)
+    {
         p_sys->b_need_ts = true;
+        SetOutputBlockProperties( p_dec, p_output );
+    }
 
     return p_output;
 }
@@ -795,6 +826,15 @@ static bool ParseSEICallback( const hxxx_sei_data_t *p_sei_data, void *cbdata )
 
     switch( p_sei_data->i_type )
     {
+        case HXXX_SEI_PIC_TIMING:
+        {
+            if( p_sys->p_active_sps )
+            {
+                hevc_release_sei_pic_timing( p_sys->p_timing );
+                p_sys->p_timing = hevc_decode_sei_pic_timing( p_sei_data->p_bs,
+                                                              p_sys->p_active_sps );
+            }
+        } break;
         case HXXX_SEI_USER_DATA_REGISTERED_ITU_T_T35:
         {
             if( p_sei_data->itu_t35.type == HXXX_ITU_T35_TYPE_CC )
@@ -816,8 +856,8 @@ static bool ParseSEICallback( const hxxx_sei_data_t *p_sei_data, void *cbdata )
         case HXXX_SEI_CONTENT_LIGHT_LEVEL:
         {
             video_format_t *p_fmt = &p_dec->fmt_out.video;
-            p_fmt->ligthing.MaxCLL = p_sei_data->content_light_lvl.MaxCLL;
-            p_fmt->ligthing.MaxFALL = p_sei_data->content_light_lvl.MaxFALL;
+            p_fmt->lighting.MaxCLL = p_sei_data->content_light_lvl.MaxCLL;
+            p_fmt->lighting.MaxFALL = p_sei_data->content_light_lvl.MaxFALL;
         } break;
     }
 

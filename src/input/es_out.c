@@ -3019,7 +3019,7 @@ static void EsOutUpdateInfo( es_out_t *out, es_out_id_t *es, const es_format_t *
             info_category_AddInfo( p_cat, _("Channels"), "%s",
                                    _( aout_FormatPrintChannels( &fmt->audio ) ) );
 
-        if( fmt->audio.i_rate > 0 )
+        if( fmt->audio.i_rate != 0 )
         {
             info_category_AddInfo( p_cat, _("Sample rate"), _("%u Hz"),
                                    fmt->audio.i_rate );
@@ -3028,13 +3028,13 @@ static void EsOutUpdateInfo( es_out_t *out, es_out_id_t *es, const es_format_t *
         }
 
         unsigned int i_bitspersample = fmt->audio.i_bitspersample;
-        if( i_bitspersample <= 0 )
+        if( i_bitspersample == 0 )
             i_bitspersample = aout_BitsPerSample( p_fmt_es->i_codec );
-        if( i_bitspersample > 0 )
+        if( i_bitspersample != 0 )
             info_category_AddInfo( p_cat, _("Bits per sample"), "%u",
                                    i_bitspersample );
 
-        if( fmt->i_bitrate > 0 )
+        if( fmt->i_bitrate != 0 )
         {
             info_category_AddInfo( p_cat, _("Bitrate"), _("%u kb/s"),
                                    fmt->i_bitrate / 1000 );
@@ -3187,6 +3187,58 @@ static void EsOutUpdateInfo( es_out_t *out, es_out_id_t *es, const es_format_t *
                                   fmt->video.pose.f_roll_degrees );
            info_category_AddInfo( p_cat, _("Field of view"), "%.2f",
                                   fmt->video.pose.f_fov_degrees );
+       }
+       if ( fmt->video.mastering.max_luminance )
+       {
+           float luminance = (float)fmt->video.mastering.max_luminance /
+                                    10000.f;
+           info_category_AddInfo( p_cat, _("Max luminance"), "%.4f cd/m²",
+                                  luminance );
+       }
+       if ( fmt->video.mastering.min_luminance )
+       {
+           float luminance = (float)fmt->video.mastering.min_luminance /
+                                    10000.f;
+           info_category_AddInfo( p_cat, _("Min luminance"), "%.4f cd/m²",
+                                  luminance );
+       }
+       if ( fmt->video.mastering.primaries[4] &&
+            fmt->video.mastering.primaries[5] )
+       {
+           float x = (float)fmt->video.mastering.primaries[4] / 50000.f;
+           float y = (float)fmt->video.mastering.primaries[5] / 50000.f;
+           info_category_AddInfo( p_cat, _("Primary R"), "x=%.4f y=%.4f", x, y );
+       }
+       if ( fmt->video.mastering.primaries[0] &&
+            fmt->video.mastering.primaries[1] )
+       {
+           float x = (float)fmt->video.mastering.primaries[0] / 50000.f;
+           float y = (float)fmt->video.mastering.primaries[1] / 50000.f;
+           info_category_AddInfo( p_cat, _("Primary G"), "x=%.4f y=%.4f", x, y );
+       }
+       if ( fmt->video.mastering.primaries[2] &&
+            fmt->video.mastering.primaries[3] )
+       {
+           float x = (float)fmt->video.mastering.primaries[2] / 50000.f;
+           float y = (float)fmt->video.mastering.primaries[3] / 50000.f;
+           info_category_AddInfo( p_cat, _("Primary B"), "x=%.4f y=%.4f", x, y );
+       }
+       if ( fmt->video.mastering.white_point[0] &&
+            fmt->video.mastering.white_point[1] )
+       {
+           float x = (float)fmt->video.mastering.white_point[0] / 50000.f;
+           float y = (float)fmt->video.mastering.white_point[1] / 50000.f;
+           info_category_AddInfo( p_cat, _("White point"), "x=%.4f y=%.4f", x, y );
+       }
+       if ( fmt->video.lighting.MaxCLL )
+       {
+           info_category_AddInfo( p_cat, _("MaxCLL"), "%d cd/m²",
+                                  fmt->video.lighting.MaxCLL );
+       }
+       if ( fmt->video.lighting.MaxFALL )
+       {
+           info_category_AddInfo( p_cat, _("MaxFALL"), "%d cd/m²",
+                                  fmt->video.lighting.MaxFALL );
        }
        break;
 

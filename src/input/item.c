@@ -957,9 +957,6 @@ void input_item_SetEpg( input_item_t *p_item, const vlc_epg_t *p_update, bool b_
 
     vlc_mutex_unlock( &p_item->lock );
 
-    if( !p_epg )
-        return;
-
 #ifdef EPG_DEBUG
     char *psz_epg;
     if( asprintf( &psz_epg, "EPG %s", p_epg->psz_name ? p_epg->psz_name : "unknown" ) < 0 )
@@ -1262,7 +1259,7 @@ input_item_node_t *input_item_node_Create( input_item_t *p_input )
     assert( p_input );
 
     p_node->p_item = p_input;
-    vlc_gc_incref( p_input );
+    input_item_Hold( p_input );
 
     p_node->p_parent = NULL;
     p_node->i_children = 0;
@@ -1276,7 +1273,7 @@ static void RecursiveNodeDelete( input_item_node_t *p_node )
     for( int i = 0; i < p_node->i_children; i++ )
         RecursiveNodeDelete( p_node->pp_children[i] );
 
-    vlc_gc_decref( p_node->p_item );
+    input_item_Release( p_node->p_item );
     free( p_node->pp_children );
     free( p_node );
 }

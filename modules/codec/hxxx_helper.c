@@ -205,7 +205,7 @@ h264_helper_parse_nal(struct hxxx_helper *hh, const uint8_t *p_buf, size_t i_buf
 
             hnal->h264_pps = p_pps;
             *p_config_changed = true;
-            msg_Dbg(hh->p_obj, "new  PPS parsed: %u\n", p_pps->i_id);
+            msg_Dbg(hh->p_obj, "new PPS parsed: %u\n", p_pps->i_id);
         }
         else if (i_nal_type <= H264_NAL_SLICE_IDR
               && i_nal_type != H264_NAL_UNKNOWN)
@@ -354,28 +354,30 @@ hevc_helper_set_extra(struct hxxx_helper *hh, const void *p_extra,
 }
 
 static block_t *
-helper_process_block_xvcc2annexb(struct hxxx_helper *hh, block_t *p_block,
+helper_process_block_h264_annexb(struct hxxx_helper *hh, block_t *p_block,
                                  bool *p_config_changed)
 {
-    assert(helper_nal_length_valid(hh));
-    *p_config_changed = false;
-    h264_AVC_to_AnnexB(p_block->p_buffer, p_block->i_buffer,
-                       hh->i_nal_length_size);
+    if (p_config_changed != NULL)
+    {
+        int i_ret = h264_helper_parse_nal(hh, p_block->p_buffer,
+                                          p_block->i_buffer, 0, p_config_changed);
+        if (i_ret != VLC_SUCCESS)
+        {
+            block_Release(p_block);
+            return NULL;
+        }
+    }
     return p_block;
 }
 
 static block_t *
-helper_process_block_h264_annexb(struct hxxx_helper *hh, block_t *p_block,
+helper_process_block_xvcc2annexb(struct hxxx_helper *hh, block_t *p_block,
                                  bool *p_config_changed)
 {
-    int i_ret = h264_helper_parse_nal(hh, p_block->p_buffer, p_block->i_buffer,
-                                      0, p_config_changed);
-    if (i_ret != VLC_SUCCESS)
-    {
-        block_Release(p_block);
-        return NULL;
-    }
-    return p_block;
+    assert(helper_nal_length_valid(hh));
+    h264_AVC_to_AnnexB(p_block->p_buffer, p_block->i_buffer,
+                       hh->i_nal_length_size);
+    return helper_process_block_h264_annexb(hh, p_block, p_config_changed);
 }
 
 static block_t *
@@ -384,6 +386,34 @@ helper_process_block_h264_annexb2avcc(struct hxxx_helper *hh, block_t *p_block,
 {
     p_block = helper_process_block_h264_annexb(hh, p_block, p_config_changed);
     return p_block ? hxxx_AnnexB_to_xVC(p_block, hh->i_nal_length_size) : NULL;
+}
+
+static block_t *
+helper_process_block_h264_avcc(struct hxxx_helper *hh, block_t *p_block,
+                               bool *p_config_changed)
+{
+    if (p_config_changed != NULL)
+    {
+        int i_ret = h264_helper_parse_nal(hh, p_block->p_buffer,
+                                          p_block->i_buffer,
+                                          hh->i_nal_length_size,
+                                          p_config_changed);
+        if (i_ret != VLC_SUCCESS)
+        {
+            block_Release(p_block);
+            return NULL;
+        }
+    }
+    return p_block;
+}
+
+static block_t *
+helper_process_block_dummy(struct hxxx_helper *hh, block_t *p_block,
+                           bool *p_config_changed)
+{
+    (void) hh;
+    (void) p_config_changed;
+    return p_block;
 }
 
 int
@@ -405,32 +435,42 @@ hxxx_helper_set_extra(struct hxxx_helper *hh, const void *p_extra,
     if (i_ret != VLC_SUCCESS)
         return i_ret;
 
-    if (hh->b_is_xvcC)
+    switch (hh->i_codec)
     {
-        if (hh->b_need_xvcC)
-            hh->pf_process_block = NULL;
-        else
-            hh->pf_process_block = helper_process_block_xvcc2annexb;
-    }
-    else
-    {
-        switch (hh->i_codec)
-        {
-            case VLC_CODEC_H264:
+        case VLC_CODEC_H264:
+            if (hh->b_is_xvcC)
+            {
+                if (hh->b_need_xvcC)
+                    hh->pf_process_block = helper_process_block_h264_avcc;
+                else
+                    hh->pf_process_block = helper_process_block_xvcc2annexb;
+            }
+            else /* AnnexB */
+            {
                 if (hh->b_need_xvcC)
                     hh->pf_process_block = helper_process_block_h264_annexb2avcc;
                 else
                     hh->pf_process_block = helper_process_block_h264_annexb;
-                break;
-            case VLC_CODEC_HEVC:
+            }
+            break;
+        case VLC_CODEC_HEVC:
+            if (hh->b_is_xvcC)
+            {
+                if (hh->b_need_xvcC)
+                    hh->pf_process_block = helper_process_block_dummy;
+                else
+                    hh->pf_process_block = helper_process_block_xvcc2annexb;
+            }
+            else /* AnnexB */
+            {
                 if (hh->b_need_xvcC)
                     return VLC_EGENERIC; /* TODO */
                 else
-                    hh->pf_process_block = NULL;
-                break;
-            default:
-                vlc_assert_unreachable();
-        }
+                    hh->pf_process_block = helper_process_block_dummy;
+            }
+            break;
+        default:
+            vlc_assert_unreachable();
     }
     return VLC_SUCCESS;;
 }

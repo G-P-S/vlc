@@ -100,8 +100,6 @@ vlc_module_end()
 # include <dxgidebug.h>
 #endif
 
-DEFINE_GUID(GUID_CONTEXT_MUTEX,      0x472e8835, 0x3f8e, 0x4f93, 0xa0, 0xcb, 0x25, 0x79, 0x77, 0x6c, 0xed, 0x86);
-
 DEFINE_GUID(DXVA_Intel_H264_NoFGT_ClearVideo,       0x604F8E68, 0x4951, 0x4c54, 0x88, 0xFE, 0xAB, 0xD2, 0x5C, 0x15, 0xB3, 0xD6);
 
 DEFINE_GUID(DXVA2_NoEncrypt,                        0x1b81bed0, 0xa0c7, 0x11d3, 0xb9, 0x84, 0x00, 0xc0, 0x4f, 0x2e, 0x73, 0xc5);
@@ -286,7 +284,7 @@ static int Extract(vlc_va_t *va, picture_t *output, uint8_t *data)
 
             D3D11_VIDEO_PROCESSOR_STREAM stream = {
                 .Enable = TRUE,
-                .pInputSurface = p_sys_in->inputView,
+                .pInputSurface = p_sys_in->processorInput,
             };
 
             HRESULT hr = ID3D11VideoContext_VideoProcessorBlt(sys->d3dvidctx, sys->videoProcessor,
@@ -391,6 +389,9 @@ static int Get(vlc_va_t *va, picture_t *pic, uint8_t **data)
                                                              &p_sys->decoder );
         if (FAILED(hr)) {
             msg_Warn(va, "CreateVideoDecoderOutputView %d failed. (hr=0x%0lx)", p_sys->slice_index, hr);
+            D3D11_TEXTURE2D_DESC texDesc;
+            ID3D11Texture2D_GetDesc(p_sys->texture[KNOWN_DXGI_INDEX], &texDesc);
+            assert(texDesc.BindFlags & D3D11_BIND_DECODER);
             p_sys->decoder = NULL;
         }
     }
@@ -836,29 +837,11 @@ static bool SetupProcessor(vlc_va_t *va, const video_format_t *fmt)
     {
         // check if we can create render texture of that format
         // check the decoder can output to that format
-        const UINT i_quadSupportFlags = D3D11_FORMAT_SUPPORT_TEXTURE2D | D3D11_FORMAT_SUPPORT_SHADER_LOAD;
-        for (const d3d_format_t *output = GetRenderFormatList();
-             output->name != NULL; ++output)
-        {
-            UINT i_formatSupport;
-            if( SUCCEEDED( ID3D11Device_CheckFormatSupport((ID3D11Device*) dx_sys->d3ddev,
-                                                           output->formatTexture,
-                                                           &i_formatSupport)) &&
-                    ( i_formatSupport & i_quadSupportFlags ) == i_quadSupportFlags )
-            {
-                msg_Dbg(va, "Render pixel format %s supported", DxgiFormatToStr(output->formatTexture) );
-
-                hr = ID3D11VideoProcessorEnumerator_CheckVideoProcessorFormat(processorEnumerator,
-                                                                              output->formatTexture, &flags);
-                if (FAILED(hr) || !(flags & D3D11_VIDEO_PROCESSOR_FORMAT_SUPPORT_OUTPUT))
-                    msg_Dbg(va, "Processor format %s not supported for output", DxgiFormatToStr(output->formatTexture));
-                else
-                {
-                    processorOutput = output->formatTexture;
-                    break;
-                }
-            }
-        }
+        const d3d_format_t *found;
+        found = FindD3D11Format( (ID3D11Device*) dx_sys->d3ddev, 0, 0, true,
+                                 D3D11_FORMAT_SUPPORT_SHADER_LOAD | D3D11_FORMAT_SUPPORT_VIDEO_PROCESSOR_OUTPUT);
+        if (found)
+            processorOutput = found->formatTexture;
     }
 
     if (processorOutput != DXGI_FORMAT_UNKNOWN)
@@ -925,18 +908,14 @@ static int DxSetupOutput(vlc_va_t *va, const GUID *input, const video_format_t *
             continue;
         }
 
-        // check if we can create render texture of that format
-        // check the decoder can output to that format
-        const UINT i_quadSupportFlags = D3D11_FORMAT_SUPPORT_TEXTURE2D | D3D11_FORMAT_SUPPORT_SHADER_LOAD;
-        UINT i_formatSupport;
-        if( SUCCEEDED( ID3D11Device_CheckFormatSupport((ID3D11Device*) dx_sys->d3ddev,
-                                                       processorInput[idx],
-                                                       &i_formatSupport)) &&
-                ( i_formatSupport & i_quadSupportFlags ) != i_quadSupportFlags )
-        {
-            msg_Dbg(va, "Format %s needs a processor", DxgiFormatToStr(processorInput[idx]));
+       // check if we can create render texture of that format
+       // check the decoder can output to that format
+       if ( !DeviceSupportsFormat((ID3D11Device*) dx_sys->d3ddev, processorInput[idx],
+                                  D3D11_FORMAT_SUPPORT_SHADER_LOAD) )
+       {
+           msg_Dbg(va, "Format %s needs a processor", DxgiFormatToStr(processorInput[idx]));
 #ifdef ID3D11VideoContext_VideoProcessorBlt
-            if (!SetupProcessor( va, fmt ))
+           if (!SetupProcessor( va, fmt ))
                 continue;
             msg_Dbg(va, "Using processor %s to %s", DxgiFormatToStr(processorInput[idx]), DxgiFormatToStr(va->sys->processorFormat));
 #else
@@ -1211,8 +1190,8 @@ static void DestroyPicture(picture_t *picture)
 {
     picture_sys_t *p_sys = picture->p_sys;
     ID3D11Texture2D_Release( p_sys->texture[KNOWN_DXGI_INDEX] );
-    if (p_sys->inputView)
-        ID3D11View_Release( (ID3D11View*) p_sys->inputView );
+    if (p_sys->processorInput)
+        ID3D11VideoProcessorInputView_Release( p_sys->processorInput );
 
     free(p_sys);
     free(picture);
@@ -1247,7 +1226,7 @@ static picture_t *DxAllocPicture(vlc_va_t *va, const video_format_t *fmt, unsign
                                                         pic_sys->resource[KNOWN_DXGI_INDEX],
                                                         sys->procEnumerator,
                                                         &inDesc,
-                                                        &pic_sys->inputView);
+                                                        &pic_sys->processorInput);
         if (FAILED(hr))
         {
             msg_Err(va, "Failed to create the processor input ArraySlice=%d. (hr=0x%lX)", inDesc.Texture2D.ArraySlice, hr);

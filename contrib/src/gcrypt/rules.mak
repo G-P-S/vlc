@@ -1,5 +1,5 @@
 # GCRYPT
-GCRYPT_VERSION := 1.7.3
+GCRYPT_VERSION := 1.7.6
 GCRYPT_URL := ftp://ftp.gnupg.org/gcrypt/libgcrypt/libgcrypt-$(GCRYPT_VERSION).tar.bz2
 
 PKGS += gcrypt
@@ -12,6 +12,7 @@ $(TARBALLS)/libgcrypt-$(GCRYPT_VERSION).tar.bz2:
 libgcrypt: libgcrypt-$(GCRYPT_VERSION).tar.bz2 .sum-gcrypt
 	$(UNPACK)
 	$(APPLY) $(SRC)/gcrypt/disable-tests-compilation.patch
+	$(APPLY) $(SRC)/gcrypt/fix-pthread-detection.patch
 ifdef HAVE_WINSTORE
 	$(APPLY) $(SRC)/gcrypt/winrt.patch
 endif
@@ -54,6 +55,9 @@ GCRYPT_CONF += ac_cv_sys_symbol_underscore=no
 endif
 ifeq ($(ANDROID_ABI), x86_64)
 GCRYPT_CONF += ac_cv_sys_symbol_underscore=no
+endif
+ifeq ($(ARCH),aarch64)
+GCRYPT_CONF += --disable-arm-crypto-support
 endif
 endif
 ifdef HAVE_TIZEN

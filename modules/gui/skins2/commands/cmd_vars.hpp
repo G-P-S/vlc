@@ -47,12 +47,12 @@ public:
         CmdGeneric( pIntf ), m_pItem( pItem )
     {
         if( pItem )
-            vlc_gc_incref( pItem );
+            input_item_Hold( pItem );
     }
     virtual ~CmdItemUpdate()
     {
         if( m_pItem )
-            vlc_gc_decref( m_pItem );
+            input_item_Release( m_pItem );
     }
     virtual void execute();
     virtual std::string getType() const { return "playtree update"; }

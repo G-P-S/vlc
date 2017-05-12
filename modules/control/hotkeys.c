@@ -737,7 +737,9 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
                 var_FreeList( &list, &list2 );
             }
             break;
+
         case ACTIONID_SUBTITLE_TRACK:
+        case ACTIONID_SUBTITLE_REVERSE_TRACK:
             if( p_input )
             {
                 vlc_value_t val, list, list2;
@@ -768,10 +770,12 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
                               "invalid current subtitle track, selecting 0" );
                     i = 0;
                 }
-                else if( i == i_count - 1 )
+                else if ((i == i_count - 1) && (i_action == ACTIONID_SUBTITLE_TRACK))
                     i = 0;
+                else if ((i == 0) && (i_action == ACTIONID_SUBTITLE_REVERSE_TRACK))
+                    i = i_count - 1;
                 else
-                    i++;
+                    i = (i_action == ACTIONID_SUBTITLE_TRACK) ? i+1 : i-1;
                 var_SetInteger( p_input, "spu-es", list.p_list->p_values[i].i_int );
                 var_SetInteger( p_input, "spu-choice", list.p_list->p_values[i].i_int );
                 DisplayMessage( p_vout, _("Subtitle track: %s"),
@@ -1189,6 +1193,15 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
         case ACTIONID_UNZOOM:
             if( p_vout )
             {
+                bool b_autoscale = var_GetBool( p_vout, "autoscale" );
+                if( b_autoscale )
+                {
+                    DisplayMessage( p_vout, _("Original Size") );
+                    var_SetBool( p_vout, "autoscale", false );
+                    var_SetFloat( p_vout, "zoom", 1.f );
+                    break;
+                }
+
                 vlc_value_t val={0}, val_list, text_list;
                 var_Get( p_vout, "zoom", &val );
                 if( var_Change( p_vout, "zoom", VLC_VAR_GETCHOICES,

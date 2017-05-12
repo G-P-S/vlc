@@ -31,6 +31,7 @@
 #import "VLCAboutWindowController.h"
 #import "VLCOpenWindowController.h"
 #import "VLCAudioEffectsWindowController.h"
+#import "VLCErrorWindowController.h"
 #import "VLCTrackSynchronizationWindowController.h"
 #import "VLCHelpWindowController.h"
 #import "VLCVideoEffectsWindowController.h"
@@ -39,6 +40,7 @@
 #import "VLCPlaylist.h"
 #import "VLCPlaylistInfo.h"
 #import "VLCVoutView.h"
+#import "VLCCoreDialogProvider.h"
 #import "VLCCoreInteraction.h"
 #import "VLCMainWindow.h"
 #import "VLCMainWindowControlsBar.h"
@@ -1002,7 +1004,7 @@
     [openPanel setCanChooseDirectories: NO];
     [openPanel setAllowsMultipleSelection: YES];
 
-    [openPanel setAllowedFileTypes: [NSArray arrayWithObjects:@"cdg",@"idx",@"srt",@"sub",@"utf",@"ass",@"ssa",@"aqt",@"jss",@"psb",@"rt",@"smi",@"txt",@"smil",nil]];
+    [openPanel setAllowedFileTypes: [NSArray arrayWithObjects:@"cdg",@"idx",@"srt",@"sub",@"utf",@"ass",@"ssa",@"aqt",@"jss",@"psb",@"rt",@"smi",@"txt",@"smil",@"stl",@"usf",@"dks",@"pjs",@"mpl2",@"mks",@"vtt",@"ttml",@"dfxp",nil]];
 
     NSURL *url = [NSURL URLWithString:[toNSStr(path) stringByExpandingTildeInPath]];
     url = [url URLByDeletingLastPathComponent];
@@ -1205,6 +1207,11 @@
         _addonsController = [[VLCAddonsWindowController alloc] init];
 
     [_addonsController showWindow:self];
+}
+
+- (IBAction)showErrorsAndWarnings:(id)sender
+{
+    [[[[VLCMain sharedInstance] coreDialogProvider] errorPanel] showWindow:self];
 }
 
 - (IBAction)showMessagesPanel:(id)showMessagesPanel

@@ -77,19 +77,26 @@ int Import_M3U( vlc_object_t *p_this )
         offset = 3;
     }
 
+    char *type = stream_MimeType(p_demux->s);
+
     if( demux_IsPathExtension( p_demux, ".m3u8" )
      || demux_IsForced( p_demux, "m3u8" )
-     || CheckMimeType( p_demux->s, "application/vnd.apple.mpegurl" ) )
+     || (type != NULL && !strcasecmp(type, "application/vnd.apple.mpegurl")))
+    {
         pf_dup = CheckUnicode; /* UTF-8 file type */
+        free(type);
+    }
     else
     if( demux_IsPathExtension( p_demux, ".m3u" )
      || demux_IsPathExtension( p_demux, ".vlc" )
      || demux_IsForced( p_demux, "m3u" )
      || ContainsURL( p_demux )
-     || CheckMimeType( p_demux->s, "audio/x-mpegurl") )
-        ; /* Guess encoding */
+     || (type != NULL && !strcasecmp(type, "audio/x-mpegurl")))
+        free(type); /* Guess encoding */
     else
     {
+        free(type);
+
         if( vlc_stream_Peek( p_demux->s, &p_peek, 8 + offset ) < (8 + offset) )
             return VLC_EGENERIC;
 
@@ -272,7 +279,7 @@ static int Demux( demux_t *p_demux )
                 input_item_SetArtURL( p_input, psz_album_art );
 
             input_item_node_AppendItem( p_subitems, p_input );
-            vlc_gc_decref( p_input );
+            input_item_Release( p_input );
         }
 
  error:
@@ -298,7 +305,6 @@ static int Demux( demux_t *p_demux )
         }
     }
     input_item_node_PostAndDelete( p_subitems );
-    vlc_gc_decref(p_current_input);
     var_Destroy( p_demux, "m3u-extvlcopt" );
     return 0; /* Needed for correct operation of go back */
 }

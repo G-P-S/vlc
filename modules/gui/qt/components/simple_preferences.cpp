@@ -63,7 +63,7 @@ static struct {
 } const language_map[] = {
     { "auto",  N_("Auto") },
     { "en",    "American English" },
-    { "ar",    "ﻉﺮﺒﻳ" },
+    { "ar",    "عربي" },
     { "bn",    "বাংলা" },
     { "pt_BR", "Português Brasileiro" },
     { "en_GB", "British English" },
@@ -102,7 +102,7 @@ static struct {
     { "km",    "ភាសាខ្មែរ" },
     { "ne",    "नेपाली" },
     { "oc",    "Occitan" },
-    { "fa",    "ﻑﺍﺮﺳی" },
+    { "fa",    "فارسی" },
     { "pl",    "Polski" },
     { "pt_PT", "Português" },
     { "pa",    "ਪੰਜਾਬੀ" },
@@ -199,7 +199,7 @@ SPrefsCatList::SPrefsCatList( intf_thread_t *_p_intf, QWidget *_parent ) :
     button->setToolTip( ltooltip );                                         \
     button->setToolButtonStyle( Qt::ToolButtonTextUnderIcon );              \
     button->setIconSize( QSize( icon_height + 40 , icon_height ) );         \
-    button->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Preferred        ); \
+    button->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum); \
     button->setAutoRaise( true );                                           \
     button->setCheckable( true );                                           \
     button->setAutoExclusive( true );                                       \

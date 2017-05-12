@@ -94,6 +94,8 @@ int OpenMux( vlc_object_t *p_this )
                               >= sizeof (((AVFormatContext *)NULL)->filename) )
         return VLC_EGENERIC;
 
+    msg_Dbg( p_mux, "using %s %s", AVPROVIDER(LIBAVFORMAT), LIBAVFORMAT_IDENT );
+
     vlc_init_avformat(p_this);
 
     config_ChainParse( p_mux, "sout-avformat-", ppsz_mux_options, p_mux->p_cfg );
@@ -404,7 +406,7 @@ static int Mux( sout_mux_t *p_mux )
         char *psz_opts = var_GetNonEmptyString( p_mux, "sout-avformat-options" );
         AVDictionary *options = NULL;
         if (psz_opts) {
-            options = vlc_av_get_options(psz_opts);
+            vlc_av_get_options(psz_opts, &options);
             free(psz_opts);
         }
         av_dict_set( &p_sys->oc->metadata, "encoding_tool", "VLC "VERSION, 0 );
@@ -451,18 +453,18 @@ static int Control( sout_mux_t *p_mux, int i_query, va_list args )
     switch( i_query )
     {
     case MUX_CAN_ADD_STREAM_WHILE_MUXING:
-        pb_bool = (bool*)va_arg( args, bool * );
+        pb_bool = va_arg( args, bool * );
         *pb_bool = false;
         return VLC_SUCCESS;
 
     case MUX_GET_ADD_STREAM_WAIT:
-        pb_bool = (bool*)va_arg( args, bool * );
+        pb_bool = va_arg( args, bool * );
         *pb_bool = true;
         return VLC_SUCCESS;
 
     case MUX_GET_MIME:
     {
-        char **ppsz = (char**)va_arg( args, char ** );
+        char **ppsz = va_arg( args, char ** );
         *ppsz = strdup( p_mux->p_sys->oc->oformat->mime_type );
         return VLC_SUCCESS;
     }

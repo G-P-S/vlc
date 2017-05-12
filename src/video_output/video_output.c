@@ -76,8 +76,8 @@ static void VoutDestructor(vlc_object_t *);
 static int VoutValidateFormat(video_format_t *dst,
                               const video_format_t *src)
 {
-    if (src->i_width <= 0  || src->i_width  > 8192 ||
-        src->i_height <= 0 || src->i_height > 8192)
+    if (src->i_width == 0  || src->i_width  > 8192 ||
+        src->i_height == 0 || src->i_height > 8192)
         return VLC_EGENERIC;
     if (src->i_sar_num <= 0 || src->i_sar_den <= 0)
         return VLC_EGENERIC;
@@ -243,11 +243,11 @@ vout_thread_t *vout_Request(vlc_object_t *object,
 
             vout_control_Push(&vout->p->control, &cmd);
             vout_control_WaitEmpty(&vout->p->control);
+            vout_IntfReinit(vout);
         }
 
         if (!vout->p->dead) {
             msg_Dbg(object, "reusing provided vout");
-            vout_IntfReinit(vout);
             return vout;
         }
         vout_CloseAndRelease(vout);
@@ -698,6 +698,7 @@ typedef struct {
 static void ThreadChangeFilters(vout_thread_t *vout,
                                 const video_format_t *source,
                                 const char *filters,
+                                int deinterlace,
                                 bool is_locked)
 {
     ThreadFilterFlush(vout, is_locked);
@@ -707,6 +708,19 @@ static void ThreadChangeFilters(vout_thread_t *vout,
 
     vlc_array_init(&array_static);
     vlc_array_init(&array_interactive);
+
+    if ((vout->p->filter.has_deint =
+         deinterlace == 1 || (deinterlace == -1 && vout->p->filter.has_deint)))
+    {
+        vout_filter_t *e = malloc(sizeof(*e));
+
+        if (e)
+        {
+            free(config_ChainCreate(&e->name, &e->cfg, "deinterlace"));
+            vlc_array_append(&array_static, e);
+        }
+    }
+
     char *current = filters ? strdup(filters) : NULL;
     while (current) {
         config_chain_t *cfg;
@@ -714,14 +728,20 @@ static void ThreadChangeFilters(vout_thread_t *vout,
         char *next = config_ChainCreate(&name, &cfg, current);
 
         if (name && *name) {
-            vout_filter_t *e = xmalloc(sizeof(*e));
-            e->name = name;
-            e->cfg  = cfg;
-            if (!strcmp(e->name, "deinterlace") ||
-                !strcmp(e->name, "postproc")) {
-                vlc_array_append(&array_static, e);
-            } else {
-                vlc_array_append(&array_interactive, e);
+            vout_filter_t *e = malloc(sizeof(*e));
+
+            if (e) {
+                e->name = name;
+                e->cfg  = cfg;
+                if (!strcmp(e->name, "postproc"))
+                    vlc_array_append(&array_static, e);
+                else
+                    vlc_array_append(&array_interactive, e);
+            }
+            else {
+                if (cfg)
+                    config_ChainDestroy(cfg);
+                free(name);
             }
         } else {
             if (cfg)
@@ -763,8 +783,8 @@ static void ThreadChangeFilters(vout_thread_t *vout,
 
     if (!es_format_IsSimilar(&fmt_current, &fmt_target)) {
         msg_Dbg(vout, "Adding a filter to compensate for format changes");
-        if (!filter_chain_AppendConverter(vout->p->filter.chain_interactive,
-                                          &fmt_current, &fmt_target)) {
+        if (filter_chain_AppendConverter(vout->p->filter.chain_interactive,
+                                         &fmt_current, &fmt_target) != 0) {
             msg_Err(vout, "Failed to compensate for the format changes, removing all filters");
             filter_chain_Reset(vout->p->filter.chain_static,      &fmt_target, &fmt_target);
             filter_chain_Reset(vout->p->filter.chain_interactive, &fmt_target, &fmt_target);
@@ -817,7 +837,7 @@ static int ThreadDisplayPreparePicture(vout_thread_t *vout, bool reuse, bool fra
                     }
                 }
                 if (!VideoFormatIsCropArEqual(&decoded->format, &vout->p->filter.format))
-                    ThreadChangeFilters(vout, &decoded->format, vout->p->filter.configuration, true);
+                    ThreadChangeFilters(vout, &decoded->format, vout->p->filter.configuration, -1, true);
             }
         }
 
@@ -1489,6 +1509,8 @@ static int ThreadReinit(vout_thread_t *vout,
 
     ThreadStop(vout, &state);
 
+    vout_ReinitInterlacingSupport(vout);
+
     if (!state.cfg.is_fullscreen) {
         state.cfg.display.width  = 0;
         state.cfg.display.height = 0;
@@ -1554,7 +1576,11 @@ static int ThreadControl(vout_thread_t *vout, vout_control_cmd_t cmd)
         ThreadDisplayOsdTitle(vout, cmd.u.string);
         break;
     case VOUT_CONTROL_CHANGE_FILTERS:
-        ThreadChangeFilters(vout, NULL, cmd.u.string, false);
+        ThreadChangeFilters(vout, NULL, cmd.u.string, -1, false);
+        break;
+    case VOUT_CONTROL_CHANGE_INTERLACE:
+        ThreadChangeFilters(vout, NULL, vout->p->filter.configuration,
+                            cmd.u.boolean ? 1 : 0, false);
         break;
     case VOUT_CONTROL_CHANGE_SUB_SOURCES:
         ThreadChangeSubSources(vout, cmd.u.string);
@@ -1627,11 +1653,6 @@ static void *Thread(void *object)
     vout_thread_t *vout = object;
     vout_thread_sys_t *sys = vout->p;
 
-    vout_interlacing_support_t interlacing = {
-        .is_interlaced = false,
-        .date = mdate(),
-    };
-
     mtime_t deadline = VLC_TS_INVALID;
     bool wait = false;
     for (;;) {
@@ -1653,7 +1674,7 @@ static void *Thread(void *object)
 
         const bool picture_interlaced = sys->displayed.is_interlaced;
 
-        vout_SetInterlacingState(vout, &interlacing, picture_interlaced);
+        vout_SetInterlacingState(vout, picture_interlaced);
         vout_ManageWrapper(vout);
     }
 }

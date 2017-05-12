@@ -194,8 +194,8 @@ static int Open( vlc_object_t *p_this )
     date_Init( &p_sys->prev_iframe_dts, 1, 1 );
     date_Set( &p_sys->prev_iframe_dts, VLC_TS_INVALID );
 
-    p_sys->i_frame_rate = 1;
-    p_sys->i_frame_rate_base = 1;
+    p_sys->i_frame_rate = 2 * 30000;
+    p_sys->i_frame_rate_base = 1001;
     p_sys->b_seq_progressive = true;
     p_sys->b_low_delay = true;
     p_sys->i_seq_old = 0;
@@ -465,10 +465,19 @@ static block_t *ParseMPEGBlock( decoder_t *p_dec, block_t *p_frag )
             break;
         }
 
-        if( p_sys->i_picture_structure == 0x03 && !p_sys->b_seq_progressive )
+        if( !p_sys->b_seq_progressive )
         {
-            p_pic->i_flags |= (p_sys->i_top_field_first) ? BLOCK_FLAG_TOP_FIELD_FIRST
-                                                         : BLOCK_FLAG_BOTTOM_FIELD_FIRST;
+            if( p_sys->i_picture_structure < 0x03 )
+            {
+                p_pic->i_flags |= BLOCK_FLAG_SINGLE_FIELD;
+                p_pic->i_flags |= (p_sys->i_picture_structure == 0x01) ? BLOCK_FLAG_TOP_FIELD_FIRST
+                                                                       : BLOCK_FLAG_BOTTOM_FIELD_FIRST;
+            }
+            else /* if( p_sys->i_picture_structure == 0x03 ) */
+            {
+                p_pic->i_flags |= (p_sys->i_top_field_first) ? BLOCK_FLAG_TOP_FIELD_FIRST
+                                                             : BLOCK_FLAG_BOTTOM_FIELD_FIRST;
+            }
         }
 
         /* Special case for DVR-MS where we need to fully build pts from scratch
@@ -661,8 +670,9 @@ static block_t *ParseMPEGBlock( decoder_t *p_dec, block_t *p_frag )
         p_sys->i_frame_rate_base =
             code_to_frame_rate[p_frag->p_buffer[7]&0x0f][1];
 
-        if( p_sys->i_frame_rate != p_dec->fmt_out.video.i_frame_rate ||
-            p_dec->fmt_out.video.i_frame_rate_base != p_sys->i_frame_rate_base )
+        if( ( p_sys->i_frame_rate != p_dec->fmt_out.video.i_frame_rate ||
+              p_dec->fmt_out.video.i_frame_rate_base != p_sys->i_frame_rate_base ) &&
+            p_sys->i_frame_rate && p_sys->i_frame_rate_base )
         {
             date_Change( &p_sys->dts, 2 * p_sys->i_frame_rate, p_sys->i_frame_rate_base );
             date_Change( &p_sys->prev_iframe_dts, 2 * p_sys->i_frame_rate, p_sys->i_frame_rate_base );
@@ -679,7 +689,7 @@ static block_t *ParseMPEGBlock( decoder_t *p_dec, block_t *p_frag )
             msg_Dbg( p_dec, "size %dx%d/%dx%d fps=%.3f",
                  p_dec->fmt_out.video.i_visible_width, p_dec->fmt_out.video.i_visible_height,
                  p_dec->fmt_out.video.i_width, p_dec->fmt_out.video.i_height,
-                 p_sys->i_frame_rate / (float)p_sys->i_frame_rate_base );
+                 p_sys->i_frame_rate / (float)(p_sys->i_frame_rate_base ? p_sys->i_frame_rate_base : 1) );
             p_sys->b_inited = 1;
         }
     }

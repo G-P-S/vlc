@@ -32,6 +32,7 @@
 #include <vlc_memory.h>
 #include <vlc_memstream.h>
 #include <vlc_es_out.h>
+#include <vlc_charset.h>          /* FromCharset */
 
 #include <assert.h>
 #include <stdlib.h>
@@ -216,11 +217,11 @@ static int Control( demux_t* p_demux, int i_query, va_list args )
             *va_arg( args, bool * ) = true;
             return VLC_SUCCESS;
         case DEMUX_GET_TIME:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             *pi64 = p_sys->i_next_demux_time;
             return VLC_SUCCESS;
         case DEMUX_SET_TIME:
-            i64 = (int64_t)va_arg( args, int64_t );
+            i64 = va_arg( args, int64_t );
             if( p_sys->times.i_count )
             {
                 tt_time_t t = tt_time_Create( i64 - VLC_TS_0 );
@@ -232,12 +233,12 @@ static int Control( demux_t* p_demux, int i_query, va_list args )
             }
             break;
         case DEMUX_SET_NEXT_DEMUX_TIME:
-            i64 = (int64_t)va_arg( args, int64_t );
+            i64 = va_arg( args, int64_t );
             p_sys->i_next_demux_time = i64;
             p_sys->b_slave = true;
             return VLC_SUCCESS;
         case DEMUX_GET_LENGTH:
-            pi64 = (int64_t*)va_arg( args, int64_t * );
+            pi64 = va_arg( args, int64_t * );
             if( p_sys->times.i_count )
             {
                 tt_time_t t = tt_time_Sub( p_sys->times.p_array[p_sys->times.i_count - 1],
@@ -247,7 +248,7 @@ static int Control( demux_t* p_demux, int i_query, va_list args )
             }
             break;
         case DEMUX_GET_POSITION:
-            pf = (double*)va_arg( args, double * );
+            pf = va_arg( args, double * );
             if( p_sys->times.i_current >= p_sys->times.i_count )
             {
                 *pf = 1.0;
@@ -263,7 +264,7 @@ static int Control( demux_t* p_demux, int i_query, va_list args )
             }
             return VLC_SUCCESS;
         case DEMUX_SET_POSITION:
-            f = (double)va_arg( args, double );
+            f = va_arg( args, double );
             if( p_sys->times.i_count )
             {
                 i64 = f * tt_time_Convert( &p_sys->times.p_array[p_sys->times.i_count - 1] );
@@ -395,22 +396,64 @@ int OpenDemux( vlc_object_t* p_this )
     demux_t     *p_demux = (demux_t*)p_this;
     demux_sys_t *p_sys;
 
-    uint8_t *p_peek;
-    ssize_t i_peek = vlc_stream_Peek( p_demux->s, (const uint8_t **) &p_peek, 2048 );
-    if( unlikely( i_peek <= 0 ) )
+    const uint8_t *p_peek;
+    ssize_t i_peek = vlc_stream_Peek( p_demux->s, &p_peek, 2048 );
+    if( unlikely( i_peek <= 32 ) )
         return VLC_EGENERIC;
 
+    const char *psz_xml = (const char *) p_peek;
+    size_t i_xml  = i_peek;
+
+    char *psz_alloc = NULL;
+    switch( GetQWBE(p_peek) )
+    {
+        /* See RFC 3023 Part 4 */
+        case 0xFFFE3C003F007800UL: /* UTF16 BOM<?xml */
+        case 0xFEFF003C003F0078UL: /* UTF16 BOM<?xml */
+            psz_alloc = FromCharset( "UTF-16", p_peek, i_peek );
+            break;
+        case 0x3C003F0078006D00UL: /* UTF16-LE <?xml */
+            psz_alloc = FromCharset( "UTF-16LE", p_peek, i_peek );
+            break;
+        case 0x003C003F0078006DUL: /* UTF16-BE <?xml */
+            psz_alloc = FromCharset( "UTF-16BE", p_peek, i_peek );
+            break;
+        case 0x3C3F786D6C207665UL: /* UTF8 <?xml */
+            break;
+        default:
+            return VLC_EGENERIC;
+    }
+
+    if( psz_alloc )
+    {
+        psz_xml = psz_alloc;
+        i_xml = strlen( psz_alloc );
+    }
+
     /* Simplified probing. Valid TTML must have a namespace declaration */
-    const char *psz_tt = strnstr( (const char*) p_peek, "tt ", i_peek );
-    if( !psz_tt || (ptrdiff_t)psz_tt == (ptrdiff_t)p_peek ||
+    const char *psz_tt = strnstr( psz_xml, "tt ", i_xml );
+    if( !psz_tt || psz_tt == psz_xml ||
         (psz_tt[-1] != ':' && psz_tt[-1] != '<') )
     {
+        free( psz_alloc );
         return VLC_EGENERIC;
     }
     else
     {
-        const char *psz_ns = strnstr( (const char*) p_peek, "=\"http://www.w3.org/ns/ttml\"",
-                                      i_peek -( (ptrdiff_t)psz_tt - (ptrdiff_t)p_peek ) );
+        const char * const rgsz[] =
+        {
+            "=\"http://www.w3.org/ns/ttml\"",
+            "=\"http://www.w3.org/2004/11/ttaf1\"",
+            "=\"http://www.w3.org/2006/04/ttaf1\"",
+            "=\"http://www.w3.org/2006/10/ttaf1\"",
+        };
+        const char *psz_ns = NULL;
+        for( size_t i=0; i<ARRAY_SIZE(rgsz) && !psz_ns; i++ )
+        {
+            psz_ns = strnstr( psz_xml, rgsz[i],
+                              i_xml - (psz_tt - psz_xml) );
+        }
+        free( psz_alloc );
         if( !psz_ns )
             return VLC_EGENERIC;
     }

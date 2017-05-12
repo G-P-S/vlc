@@ -622,7 +622,7 @@ tc_pbo_update(const opengl_tex_converter_t *tc, GLuint *textures,
 
     for (int i = 0; i < pic->i_planes; i++)
     {
-        GLsizeiptr size = pic->p[i].i_visible_lines * pic->p[i].i_visible_pitch;
+        GLsizeiptr size = pic->p[i].i_lines * pic->p[i].i_pitch;
         const GLvoid *data = pic->p[i].p_pixels;
         tc->api->BindBuffer(GL_PIXEL_UNPACK_BUFFER,
                             display_pic->p_sys->buffers[i]);
@@ -1128,7 +1128,7 @@ generic_init(const video_format_t *fmt, opengl_tex_converter_t *tc,
             {
                 tc->pf_update  = tc_pbo_update;
                 tc->pf_release = tc_pbo_release;
-                msg_Err(tc->gl, "PBO support enabled");
+                msg_Dbg(tc->gl, "PBO support enabled");
             }
         }
 #endif

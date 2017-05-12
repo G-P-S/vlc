@@ -81,13 +81,13 @@ public:
         : QEvent( (QEvent::Type)(type) )
     {
         if( (p_item = p_input) != NULL )
-            vlc_gc_incref( p_item );
+            input_item_Hold( p_item );
     }
 
     virtual ~IMEvent()
     {
         if( p_item )
-            vlc_gc_decref( p_item );
+            input_item_Release( p_item );
     }
 
     input_item_t *item() const { return p_item; };

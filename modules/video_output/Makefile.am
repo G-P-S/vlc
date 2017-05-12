@@ -214,9 +214,13 @@ libdirect3d9_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DMODULE_NAME_IS_direct3d9
 libdirect3d9_plugin_la_LIBADD = -lgdi32 $(LIBCOM) -luuid
 libdirect3d9_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
+libdxva2_deinterlace_plugin_la_SOURCES = video_output/win32/dxva2_deinterlace.c
+libdxva2_deinterlace_plugin_la_LIBADD = $(LIBCOM)
+libdxva2_deinterlace_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
 if HAVE_WIN32_DESKTOP
 vout_LTLIBRARIES += $(LTLIBdirect3d9)
-EXTRA_LTLIBRARIES += libdirect3d9_plugin.la
+vout_LTLIBRARIES += $(LTLIBdxva2_deinterlace)
+EXTRA_LTLIBRARIES += libdirect3d9_plugin.la libdxva2_deinterlace_plugin.la
 endif
 
 libdirect3d11_plugin_la_SOURCES = video_output/win32/direct3d11.c \
@@ -235,6 +239,12 @@ endif
 libdirect3d11_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
 vout_LTLIBRARIES += $(LTLIBdirect3d11)
 EXTRA_LTLIBRARIES += libdirect3d11_plugin.la
+
+libdirect3d11_deinterlace_plugin_la_SOURCES = video_output/win32/d3d11_deinterlace.c \
+  video_chroma/dxgi_fmt.c video_chroma/dxgi_fmt.h
+libdirect3d11_deinterlace_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
+vout_LTLIBRARIES += $(LTLIBdirect3d11_deinterlace)
+EXTRA_LTLIBRARIES += libdirect3d11_deinterlace_plugin.la
 
 libdirectdraw_plugin_la_SOURCES = video_output/win32/directdraw.c \
 	video_output/win32/common.c video_output/win32/common.h \

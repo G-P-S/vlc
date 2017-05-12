@@ -61,7 +61,7 @@ void PLItem::init( playlist_item_t *_playlist_item, PLItem *parent )
     i_playlist_id = _playlist_item->i_id;           /* Playlist item specific id */
     p_input = _playlist_item->p_input;
     i_flags = _playlist_item->i_flags;
-    vlc_gc_incref( p_input );
+    input_item_Hold( p_input );
 }
 
 /*
@@ -80,7 +80,7 @@ PLItem::PLItem( playlist_item_t * p_item )
 
 PLItem::~PLItem()
 {
-    vlc_gc_decref( p_input );
+    input_item_Release( p_input );
     qDeleteAll( children );
     children.clear();
 }

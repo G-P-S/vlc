@@ -2714,7 +2714,7 @@ AS_IF([test "${enable_png}" != "no"], [
 AC_CHECK_HEADERS(png.h, [
   VLC_SAVE_FLAGS
   LDFLAGS="${LDFLAGS} -lz $LIBM"
-  AC_CHECK_LIB(png, png_set_rows, [
+  AC_CHECK_LIB(png, png_set_alpha_mode, [
     VLC_ADD_PLUGIN([png])
   ], [], [-lz $LIBM])
   VLC_RESTORE_FLAGS
@@ -3266,14 +3266,22 @@ AS_IF([test "${enable_directx}" != "no"], [
 
   dnl Direct3D11
   AC_CHECK_HEADERS(d3d11.h, [
-    VLC_ADD_PLUGIN([direct3d11])
+    VLC_ADD_PLUGIN([direct3d11 direct3d11_deinterlace])
   ])
 
   dnl Direct3D9
   AC_CHECK_HEADERS(d3d9.h, [
     VLC_ADD_PLUGIN([direct3d9])
-  ])
 
+    AC_CHECK_FUNCS([IDirectXVideoProcessorService_GetVideoProcessorDeviceGuids],
+      [
+        VLC_ADD_PLUGIN([dxva2_deinterlace])
+      ],
+      [AC_MSG_WARN([Could not find required IDirectXVideoDecoder in dxva2api.h])],
+      [#include <d3d9.h>
+       #include <dxva2api.h>])
+
+  ])
 ])
 
 dnl
@@ -3795,8 +3803,28 @@ AC_ARG_ENABLE(macosx,
   [  --enable-macosx         Mac OS X gui support (default enabled on Mac OS X)])
 if test "x${enable_macosx}" != "xno" -a "${SYS}" = "darwin"
 then
+
+  dnl
+  dnl If possible, use xcrun to find the right ibtool
+  dnl
+
+  AC_PATH_PROG([XCRUN], [xcrun], [no])
+  AS_IF([test ! "x${XCRUN}" = "xno"], [
+    AC_MSG_CHECKING([for ibtool (using xcrun)])
+    XIB="$(eval $XCRUN -f ibtool 2>/dev/null || echo no)"
+    AC_MSG_RESULT([${XIB}])
+  ], [
+    AC_MSG_WARN([Looking for tools without using xcrun])
+  ])
+
+  AS_IF([test "x${XIB}" = "xno"], [
+    AC_PATH_PROG(XIB, [ibtool], [no])
+    AS_IF([test "x${XIB}" = "xno"], [
+      AC_MSG_ERROR([ibtool was not found, but is required for --enable-macosx])
+    ])
+  ])
+
   VLC_ADD_PLUGIN([macosx])
-  AC_PATH_PROGS(XIB, [ibtool], ibtool, ["/usr/bin"])
 fi
 AM_CONDITIONAL(ENABLE_MACOSX_UI, [test "$enable_macosx" != "no" -a "${SYS}" = "darwin"])
 

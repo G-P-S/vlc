@@ -54,8 +54,8 @@
 
 - (void)awakeFromNib
 {
-    _darkInterface = config_GetInt(getIntf(), "macosx-interfacestyle");
-    _nativeFullscreenMode = NO;
+    _darkInterface = var_InheritBool(getIntf(), "macosx-interfacestyle");
+    _nativeFullscreenMode = var_InheritBool(getIntf(), "macosx-nativefullscreenmode");
 
     [self.dropView setDrawBorder: NO];
 
@@ -130,6 +130,7 @@
     [self.timeField setRemainingIdentifier:@"DisplayTimeAsTimeRemaining"];
 
     // prepare time slider fance gradient view
+    self.timeSliderGradientView.translatesAutoresizingMaskIntoConstraints = YES;
     if (!_darkInterface) {
         NSRect frame;
         frame = [self.timeSliderGradientView frame];
@@ -152,17 +153,7 @@
 
     // remove fullscreen button for lion fullscreen
     if (_nativeFullscreenMode) {
-        CGFloat f_width = [self.fullscreenButton frame].size.width;
-
-        NSRect frame = [self.timeField frame];
-        frame.origin.x += f_width;
-        [self.timeField setFrame: frame];
-
-        frame = [self.progressView frame];
-        frame.size.width = f_width + frame.size.width;
-        [self.progressView setFrame: frame];
-
-        [self.fullscreenButton removeFromSuperviewWithoutNeedingDisplay];
+        [self.fullscreenButton removeFromSuperview];
     }
 
     if (config_GetInt(getIntf(), "macosx-show-playback-buttons"))

@@ -34,6 +34,12 @@
 using namespace adaptive::logic;
 using namespace adaptive;
 
+/*
+ * Modified PBA algorithm (streaming for Cellular Networks) for multi streams
+ * Targets optimal quality
+ * https://www.cs.princeton.edu/~jrex/papers/hotmobile15.pdf
+ */
+
 PredictiveStats::PredictiveStats()
 {
     segments_count = 0;
@@ -162,10 +168,13 @@ void PredictiveAdaptationLogic::updateDownloadRate(const ID &id, size_t dlsize, 
 unsigned PredictiveAdaptationLogic::getAvailableBw(unsigned i_bw, const BaseRepresentation *curRep) const
 {
     unsigned i_remain = i_bw;
-    i_remain -= usedBps;
+    if(i_remain > usedBps)
+        i_remain -= usedBps;
+    else
+        i_remain = 0;
     if(curRep)
         i_remain += curRep->getBandwidth();
-    return i_remain;
+    return i_remain > i_bw ? i_remain : i_bw;
 }
 
 void PredictiveAdaptationLogic::trackerEvent(const SegmentTrackerEvent &event)
@@ -205,7 +214,7 @@ void PredictiveAdaptationLogic::trackerEvent(const SegmentTrackerEvent &event)
             }
             vlc_mutex_unlock(&lock);
             BwDebug(msg_Info(p_obj, "Stream %s is now known %sactive",
-                             (event.u.buffering.enabled) "" : "in"));
+                             (event.u.buffering.enabled) ? "" : "in"));
         }
         break;
 

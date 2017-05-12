@@ -1129,9 +1129,6 @@ static bool hevc_parse_slice_segment_header_rbsp( bs_t *p_bs,
         if( p_pps->dependent_slice_segments_enabled_flag )
             p_sl->dependent_slice_segment_flag = bs_read1( p_bs );
 
-        if( !p_sps )
-            return false;
-
         unsigned w, h;
         if( !hevc_get_picture_CtbsYsize( p_sps, &w, &h ) )
             return false;
@@ -1306,4 +1303,47 @@ int hevc_compute_picture_order_count( const hevc_sequence_parameter_set_t *p_sps
     p_ctx->prevPicOrderCnt.lsb = p_slice->pic_order_cnt_lsb;
 
     return pocMSB + p_slice->pic_order_cnt_lsb;
+}
+
+struct hevc_sei_pic_timing_t
+{
+    nal_u4_t pic_struct;
+};
+
+void hevc_release_sei_pic_timing( hevc_sei_pic_timing_t *p_timing )
+{
+    free( p_timing );
+}
+
+hevc_sei_pic_timing_t * hevc_decode_sei_pic_timing( bs_t *p_bs,
+                                                    const hevc_sequence_parameter_set_t *p_sps )
+{
+    hevc_sei_pic_timing_t *p_timing = malloc(sizeof(*p_timing));
+    if( p_timing )
+    {
+        if( p_sps->vui.frame_field_info_present_flag )
+            p_timing->pic_struct = bs_read( p_bs, 4 );
+        else
+            p_timing->pic_struct = 0;
+    }
+    return p_timing;
+}
+
+uint8_t hevc_get_num_clock_ts( const hevc_sequence_parameter_set_t *p_sps,
+                               const hevc_sei_pic_timing_t *p_timing )
+{
+    if( p_sps->vui.frame_field_info_present_flag && p_timing && p_timing->pic_struct < 13 )
+    {
+        /* !WARN modified with units_field_based_flag (D.3.25) for values 0, 7 and 8 */
+        const uint8_t rgi_numclock[13] = { 2, 1, 1, 2, 2, 3, 3, 4, 6, 1, 1, 1, 1 };
+        return rgi_numclock[p_timing->pic_struct];
+    }
+
+    if( p_sps->vui_parameters_present_flag )
+    {
+        if( p_sps->vui.field_seq_flag )
+            return 1; /* D.3.27 */
+    }
+
+    return 2;
 }
