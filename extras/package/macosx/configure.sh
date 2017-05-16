@@ -16,25 +16,7 @@ esac
 
 OPTIONS="
         --prefix=`pwd`/vlc_install_dir
-        --enable-macosx
-        --enable-merge-ffmpeg
-        --enable-osx-notifications
-        --enable-faad
-        --enable-flac
-        --enable-theora
-        --enable-shout
-        --enable-ncurses
-        --enable-twolame
-        --enable-realrtsp
-        --enable-libass
-        --enable-macosx-qtkit
-        --enable-macosx-avfoundation
-        --disable-skins2
-        --disable-xcb
-        --disable-caca
-        --disable-pulse
-        --disable-sdl
-        --disable-vnc
+--host=x86_64-w64-mingw32 --build=x86_64-pc-linux-gnu --disable-archive --disable-aa --disable-aribb25 --disable-aribsub --disable-avahi --disable-bluray --disable-bpg --disable-breakpad --disable-caca --disable-chromaprint --disable-chromecast --disable-dc1394 --disable-dv1394 --disable-dvdnav --disable-dvdread --disable-evas --disable-freerdp --disable-gme --disable-gnutls --disable-goom --disable-jpeg --disable-kwallet --disable-libass --disable-libcddb --disable-libgcrypt --disable-libtar --disable-libxml2 --disable-linsys --disable-lirc --disable-macosx --disable-macosx-avfoundation --disable-microdns --disable-minimal-macosx --disable-mtp --disable-ncurses --disable-notify --disable-opencv --disable-opensles --disable-osx-notifications --disable-png --disable-projectm --disable-qt --disable-samplerate --disable-screen --disable-secret --disable-shout --disable-sid --disable-skins2 --disable-soxr --disable-sparkle --disable-svg --disable-svgdec --disable-telx --disable-udev --disable-update-check --disable-upnp --disable-v4l2 --disable-vcd --disable-vnc --disable-vsxu --disable-zvbi
         --with-macosx-version-min=10.7
 "
 
