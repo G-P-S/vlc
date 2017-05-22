@@ -378,6 +378,16 @@ typedef void (*libvlc_video_cleanup_cb)(void *opaque);
 
 
 /**
+ * Callback prototype when a new opengl frame is ready
+ *
+ * \param opaque private pointer as passed to libvlc_video_set_callbacks()
+ *               (and possibly modified by @ref libvlc_video_format_cb) [IN]
+ * \param textureId opengl texture id of the new frame [IN]
+ */
+typedef void (*libvlc_video_newframe_cb)(void *opaque, unsigned *textureId);
+
+
+/**
  * Set callbacks and private data to render decoded video to a custom area
  * in memory.
  * Use libvlc_video_set_format() or libvlc_video_set_format_callbacks()
@@ -455,6 +465,32 @@ LIBVLC_API
 void libvlc_video_set_format_callbacks( libvlc_media_player_t *mp,
                                         libvlc_video_format_cb setup,
                                         libvlc_video_cleanup_cb cleanup );
+
+
+/**
+ * Set an opengl context to share with video_output module.
+ * The context will be shared with new context created by video_output module,
+ * context has to be available at any time else context creation will fail.
+ * 
+ * \param mp the media player
+ * \param context pointer to opengl context to share
+ * \version LibVLC 3.0 or later
+ */
+LIBVLC_API
+void libvlc_video_set_openglcontext( libvlc_media_player_t *mp, void *context);
+
+/**
+ * Set the callback when a new opengl frame is ready.
+ * This only works in combination with libvlc_video_set_openglcontext()
+ * 
+ * \param mp the media player
+ * \param context pointer to opengl context to share
+ * \param opaque private pointer for the three callbacks (as first parameter) 
+ * \version LibVLC 3.0 or later
+ */
+LIBVLC_API
+void libvlc_video_set_openglcontext_callbacks( libvlc_media_player_t *mp, libvlc_video_newframe_cb newframe, void *opaque );
+
 
 /**
  * Set the NSView handler where the media player should render its video output.

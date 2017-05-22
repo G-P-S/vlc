@@ -155,6 +155,11 @@ struct vout_display_sys_t
     bool                    lost_not_ready;
     bool                    clear_scene;
 
+    // opengl stuff
+    void* openglcontext;
+    void (*newframe)(void *opaque, unsigned *textureId);
+    void* opaque;
+
     /* It protects the following variables */
     vlc_mutex_t    lock;
     bool           ch_desktop;
@@ -308,6 +313,11 @@ static int Open(vlc_object_t *object)
     vd->display = Display;
     vd->control = Control;
     vd->manage  = Manage;
+
+    // get opengl context to share and callback to call when a new frame is ready
+    sys->openglcontext = var_InheritAddress(vd, "vmem-openglcontext");
+    sys->newframe      = var_InheritAddress(vd, "vmem-newframe");
+    sys->opaque        = var_InheritAddress(vd, "vmem-opaque");
 
     /* Fix state in case of desktop mode */
     if (sys->sys.use_desktop && vd->cfg->is_fullscreen)
@@ -487,6 +497,18 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         return;
     }
 
+
+    unsigned textureId = 9;
+
+    //StretchRect from 'surface' (source frame NV12) to interop DX surface RGB
+
+    //Copy interop OpenGL texture RGB to another texture (or do it in callback app-side?)
+
+    // notify app that new texture is ready
+    if (sys->newframe != NULL) sys->newframe(sys->opaque, &textureId);
+
+
+    /* DISABLE THIS CODE
     d3d_region_t picture_region;
     if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
         picture_region.width = picture->format.i_visible_width;
@@ -504,6 +526,7 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         sys->d3dregion_count = subpicture_region_count;
         sys->d3dregion       = subpicture_region;
     }
+    */
 }
 
 static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpicture)
