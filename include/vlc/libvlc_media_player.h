@@ -376,16 +376,36 @@ typedef unsigned (*libvlc_video_format_cb)(void **opaque, char *chroma,
  */
 typedef void (*libvlc_video_cleanup_cb)(void *opaque);
 
+/**
+ * Callback prototype when opening a video output, create your gpu resources here
+ *
+ * \param opaque private pointer as passed to libvlc_video_set_gpu_callbacks()  [IN]
+ * \param pDXDevice pointer [IN]
+ * \param width width of gpu frames [IN]
+ * \param height height of gpu frames [IN]
+ */
+typedef void (*libvlc_video_gpu_open_cb)(void *opaque,
+                                         void *pDXDevice,
+                                         unsigned *width,
+                                         unsigned *height);
 
 /**
- * Callback prototype when a new opengl frame is ready
+ * Callback prototype when closing a video output, destroy your gpu resources here
  *
- * \param opaque private pointer as passed to libvlc_video_set_callbacks()
- *               (and possibly modified by @ref libvlc_video_format_cb) [IN]
- * \param textureId opengl texture id of the new frame [IN]
+ * \param opaque private pointer as passed to libvlc_video_set_gpu_callbacks()  [IN]
  */
-typedef void (*libvlc_video_newframe_cb)(void *opaque, unsigned *textureId);
+typedef void (*libvlc_video_gpu_close_cb)(void *opaque);
 
+/**
+ * Callback prototype when a new gpu frame is ready, process your gpu resources here
+ *
+ * \param opaque private pointer as passed to libvlc_video_set_gpu_callbacks()  [IN]
+ * \param source pointer to DX surface containing frame freshly decoded [IN]
+ * \param sourceRect pointer to RECT struct defining source content [IN]
+ */
+typedef void (*libvlc_video_gpu_newframe_cb)(void *opaque,
+                                             void *source,
+                                             void *sourceRect);
 
 /**
  * Set callbacks and private data to render decoded video to a custom area
@@ -466,30 +486,23 @@ void libvlc_video_set_format_callbacks( libvlc_media_player_t *mp,
                                         libvlc_video_format_cb setup,
                                         libvlc_video_cleanup_cb cleanup );
 
-
-/**
- * Set an opengl context to share with video_output module.
- * The context will be shared with new context created by video_output module,
- * context has to be available at any time else context creation will fail.
- * 
- * \param mp the media player
- * \param context pointer to opengl context to share
- * \version LibVLC 3.0 or later
- */
-LIBVLC_API
-void libvlc_video_set_openglcontext( libvlc_media_player_t *mp, void *context);
-
 /**
  * Set the callback when a new opengl frame is ready.
  * This only works in combination with libvlc_video_set_openglcontext()
  * 
  * \param mp the media player
- * \param context pointer to opengl context to share
- * \param opaque private pointer for the three callbacks (as first parameter) 
+ * \param gpuopen callback to create gpu stuff (cannot be NULL)
+ * \param gpuclose callback to destroy gpu stuff (cannot be NULL)
+ * \param gpunewframe callback to process gpu stuff (cannot be NULL)
+ * \param opaque private pointer for the three callbacks (as first parameter)
  * \version LibVLC 3.0 or later
  */
 LIBVLC_API
-void libvlc_video_set_openglcontext_callbacks( libvlc_media_player_t *mp, libvlc_video_newframe_cb newframe, void *opaque );
+void libvlc_video_set_gpu_callbacks( libvlc_media_player_t *mp,
+                                     libvlc_video_gpu_open_cb gpuopen,
+                                     libvlc_video_gpu_close_cb gpuclose,
+                                     libvlc_video_gpu_newframe_cb gpunewframe,
+                                     void *opaque );
 
 
 /**
@@ -650,7 +663,7 @@ LIBVLC_API int libvlc_media_player_set_evas_object( libvlc_media_player_t *p_mi,
  * or libvlc_audio_set_format_callbacks() as is the channels layout.
  *
  * Note that the number of samples is per channel. For instance, if the audio
- * track sampling rate is 48000 Hz, then 1200 samples represent 25 milliseconds
+ * track sampling rate is 48000 Hz, then 1200 samples represent 25 milliseconds
  * of audio signal - regardless of the number of audio channels. 
  *
  * \param data data pointer as passed to libvlc_audio_set_callbacks() [IN]

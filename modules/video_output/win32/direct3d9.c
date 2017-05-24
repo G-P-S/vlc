@@ -155,9 +155,10 @@ struct vout_display_sys_t
     bool                    lost_not_ready;
     bool                    clear_scene;
 
-    // opengl stuff
-    void* openglcontext;
-    void (*newframe)(void *opaque, unsigned *textureId);
+    // gpu callbacks
+    void (*gpuopen)(void *opaque, void *pDXDevice, unsigned *width, unsigned *height);
+    void (*gpuclose)(void *opaque);
+    void (*gpunewframe)(void *opaque, void *source, void *sourceRect);
     void* opaque;
 
     /* It protects the following variables */
@@ -314,10 +315,14 @@ static int Open(vlc_object_t *object)
     vd->control = Control;
     vd->manage  = Manage;
 
-    // get opengl context to share and callback to call when a new frame is ready
-    sys->openglcontext = var_InheritAddress(vd, "vmem-openglcontext");
-    sys->newframe      = var_InheritAddress(vd, "vmem-newframe");
-    sys->opaque        = var_InheritAddress(vd, "vmem-opaque");
+    // get gpu callbacks
+    sys->gpuopen            = var_InheritAddress(vd, "vmem-gpuopen");
+    sys->gpuclose           = var_InheritAddress(vd, "vmem-gpuclose");
+    sys->gpunewframe        = var_InheritAddress(vd, "vmem-gpunewframe");
+    sys->opaque             = var_InheritAddress(vd, "vmem-opaque");
+
+    // call gpu open callback
+    if (sys->gpuopen != NULL) sys->gpuopen(sys->opaque, sys->d3ddev, &vd->fmt.i_width, &vd->fmt.i_height);
 
     /* Fix state in case of desktop mode */
     if (sys->sys.use_desktop && vd->cfg->is_fullscreen)
@@ -338,6 +343,9 @@ error:
 static void Close(vlc_object_t *object)
 {
     vout_display_t * vd = (vout_display_t *)object;
+
+    // call gpu close callback
+    if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(sys->opaque);
 
     var_DelCallback(vd, "video-wallpaper", DesktopCallback, NULL);
     vlc_mutex_destroy(&vd->sys->lock);
@@ -497,36 +505,31 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         return;
     }
 
-
-    unsigned textureId = 9;
-
-    //StretchRect from 'surface' (source frame NV12) to interop DX surface RGB
-
-    //Copy interop OpenGL texture RGB to another texture (or do it in callback app-side?)
-
-    // notify app that new texture is ready
-    if (sys->newframe != NULL) sys->newframe(sys->opaque, &textureId);
-
-
-    /* DISABLE THIS CODE
-    d3d_region_t picture_region;
-    if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
-        picture_region.width = picture->format.i_visible_width;
-        picture_region.height = picture->format.i_visible_height;
-        int subpicture_region_count     = 0;
-        d3d_region_t *subpicture_region = NULL;
-        if (subpicture)
-            Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
-                                     subpicture);
-
-        Direct3D9RenderScene(vd, &picture_region,
-                            subpicture_region_count, subpicture_region);
-
-        Direct3D9DeleteRegions(sys->d3dregion_count, sys->d3dregion);
-        sys->d3dregion_count = subpicture_region_count;
-        sys->d3dregion       = subpicture_region;
+    // call gpu newframe callback if exists, else do common rendering in window
+    if (sys->gpunewframe != NULL)
+    {
+        sys->gpunewframe(sys->opaque, surface, &sys->sys.rect_src);
     }
-    */
+    else
+    {
+        d3d_region_t picture_region;
+        if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
+            picture_region.width = picture->format.i_visible_width;
+            picture_region.height = picture->format.i_visible_height;
+            int subpicture_region_count     = 0;
+            d3d_region_t *subpicture_region = NULL;
+            if (subpicture)
+                Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
+                                         subpicture);
+
+            Direct3D9RenderScene(vd, &picture_region,
+                                subpicture_region_count, subpicture_region);
+
+            Direct3D9DeleteRegions(sys->d3dregion_count, sys->d3dregion);
+            sys->d3dregion_count = subpicture_region_count;
+            sys->d3dregion       = subpicture_region;
+        }
+    }
 }
 
 static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpicture)
