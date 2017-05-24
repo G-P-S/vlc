@@ -345,7 +345,7 @@ static void Close(vlc_object_t *object)
     vout_display_t * vd = (vout_display_t *)object;
 
     // call gpu close callback
-    if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(sys->opaque);
+    if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(vd->sys->opaque);
 
     var_DelCallback(vd, "video-wallpaper", DesktopCallback, NULL);
     vlc_mutex_destroy(&vd->sys->lock);
