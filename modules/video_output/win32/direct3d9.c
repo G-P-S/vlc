@@ -48,6 +48,7 @@
 #include <windows.h>
 #include <d3d9.h>
 #include <d3dx9effect.h>
+#include "../../video_chroma/d3d9_fmt.h"
 
 #include "common.h"
 #include "builtin_shaders.h"
@@ -147,8 +148,6 @@ struct vout_display_sys_t
     struct d3d_region_t     *d3dregion;
     const d3d_format_t      *d3dtexture_format;  /* Rendering texture(s) format */
 
-    picture_sys_t           *picsys;
-
     /* */
     bool                    reset_device;
     bool                    reopen_device;
@@ -165,11 +164,6 @@ struct vout_display_sys_t
     vlc_mutex_t    lock;
     bool           ch_desktop;
     bool           desktop_requested;
-};
-
-struct picture_sys_t
-{
-    LPDIRECT3DSURFACE9 surface;
 };
 
 static const d3d_format_t *Direct3DFindFormat(vout_display_t *vd, vlc_fourcc_t chroma, D3DFORMAT target);
@@ -279,10 +273,10 @@ static int Open(vlc_object_t *object)
 
     /* */
     vout_display_info_t info = vd->info;
-    info.is_slow = !is_d3d9_opaque(fmt.i_chroma) && (vd->fmt.i_chroma != vd->source.i_chroma);
+    info.is_slow = !is_d3d9_opaque(fmt.i_chroma);
     info.has_double_click = true;
     info.has_hide_mouse = false;
-    info.has_pictures_invalid = info.is_slow;
+    info.has_pictures_invalid = !is_d3d9_opaque(fmt.i_chroma);
     if (var_InheritBool(vd, "direct3d9-hw-blending") &&
         sys->d3dregion_format != D3DFMT_UNKNOWN &&
         (sys->d3dcaps.SrcBlendCaps  & D3DPBLENDCAPS_SRCALPHA) &&
@@ -361,7 +355,7 @@ static void Close(vlc_object_t *object)
 
 static void DestroyPicture(picture_t *picture)
 {
-    IDirect3DSurface9_Release(picture->p_sys->surface);
+    ReleasePictureSys(picture->p_sys);
 
     free(picture->p_sys);
     free(picture);
@@ -781,9 +775,7 @@ static int Direct3D9Create(vout_display_t *vd)
     }
 
     /* TODO: need to test device capabilities and select the right render function */
-    if (!(sys->d3dcaps.DevCaps2 & D3DDEVCAPS2_CAN_STRETCHRECT_FROM_TEXTURES) ||
-        !(sys->d3dcaps.TextureFilterCaps & (D3DPTFILTERCAPS_MAGFLINEAR)) ||
-        !(sys->d3dcaps.TextureFilterCaps & (D3DPTFILTERCAPS_MINFLINEAR))) {
+    if (!(sys->d3dcaps.DevCaps2 & D3DDEVCAPS2_CAN_STRETCHRECT_FROM_TEXTURES)) {
         msg_Err(vd, "Device does not support stretching from textures.");
         return VLC_EGENERIC;
     }
@@ -1123,6 +1115,8 @@ static const d3d_format_t *Direct3DFindFormat(vout_display_t *vd, vlc_fourcc_t c
 {
     vout_display_sys_t *sys = vd->sys;
     bool hardware_scale_ok = !(vd->fmt.i_visible_width & 1) && !(vd->fmt.i_visible_height & 1);
+    if( !hardware_scale_ok )
+        msg_Warn( vd, "Disabling hardware chroma conversion due to odd dimensions" );
 
     for (unsigned pass = 0; pass < 2; pass++) {
         const vlc_fourcc_t *list;
@@ -1529,7 +1523,6 @@ static void  Direct3D9SetupVertices(CUSTOMVERTEX *vertices,
         { dst->right, dst->bottom },
         { dst->left,  dst->bottom },
     };
-    bool has_src = src != NULL && src_clipped != NULL;
 
     /* Compute index remapping necessary to implement the rotation. */
     int vertex_order[4];
@@ -1540,10 +1533,10 @@ static void  Direct3D9SetupVertices(CUSTOMVERTEX *vertices,
         vertices[i].y  = vertices_coords[vertex_order[i]][1];
     }
 
-    float right = has_src ? (float)src_clipped->right / (float)src->right : 1.0f;
-    float left = has_src ? (float)src_clipped->left / (float)src->right : .0f;
-    float top = has_src ? (float)src_clipped->top / (float)src->bottom : .0f;
-    float bottom = has_src ? (float)src_clipped->bottom / (float)src->bottom : 1.0f;
+    float right = (float)src_clipped->right / (float)src->right;
+    float left = (float)src_clipped->left / (float)src->right;
+    float top = (float)src_clipped->top / (float)src->bottom;
+    float bottom = (float)src_clipped->bottom / (float)src->bottom;
 
     vertices[0].tu = left;
     vertices[0].tv = top;
@@ -1594,7 +1587,14 @@ static int Direct3D9ImportPicture(vout_display_t *vd,
 
     /* Copy picture surface into texture surface
      * color space conversion happen here */
-    hr = IDirect3DDevice9_StretchRect(sys->d3ddev, source, &vd->sys->sys.rect_src, destination, NULL, D3DTEXF_NONE);
+    RECT copy_rect = sys->sys.rect_src_clipped;
+    // On nVidia & AMD, StretchRect will fail if the visible size isn't even.
+    // When copying the entire buffer, the margin end up being blended in the actual picture
+    // on nVidia (regardless of even/odd dimensions)
+    if ( copy_rect.right & 1 ) copy_rect.right++;
+    if ( copy_rect.bottom & 1 ) copy_rect.bottom++;
+    hr = IDirect3DDevice9_StretchRect(sys->d3ddev, source, &copy_rect, destination,
+                                      &copy_rect, D3DTEXF_NONE);
     IDirect3DSurface9_Release(destination);
     if (FAILED(hr)) {
         msg_Dbg(vd, "Failed IDirect3DDevice9_StretchRect: source 0x%p 0x%0lx",
@@ -1718,10 +1718,23 @@ static void Direct3D9ImportSubpicture(vout_display_t *vd,
 
         RECT dst;
         dst.left   = video.left + scale_w * r->i_x,
-        dst.right  = dst.left + scale_w * r->fmt.i_width,
+        dst.right  = dst.left + scale_w * r->fmt.i_visible_width,
         dst.top    = video.top  + scale_h * r->i_y,
-        dst.bottom = dst.top  + scale_h * r->fmt.i_height,
-        Direct3D9SetupVertices(d3dr->vertex, NULL, NULL,
+        dst.bottom = dst.top  + scale_h * r->fmt.i_visible_height;
+
+        RECT src;
+        src.left = 0;
+        src.right = r->fmt.i_width;
+        src.top = 0;
+        src.bottom = r->fmt.i_height;
+
+        RECT src_clipped;
+        src_clipped.left = r->fmt.i_x_offset;
+        src_clipped.right = r->fmt.i_x_offset + r->fmt.i_visible_width;
+        src_clipped.top = r->fmt.i_y_offset;
+        src_clipped.bottom = r->fmt.i_y_offset + r->fmt.i_visible_height;
+
+        Direct3D9SetupVertices(d3dr->vertex, &src, &src_clipped,
                               &dst, subpicture->i_alpha * r->i_alpha / 255, ORIENT_NORMAL);
     }
 }

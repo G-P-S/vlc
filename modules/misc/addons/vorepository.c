@@ -29,6 +29,7 @@
 #include <vlc_common.h>
 #include <vlc_plugin.h>
 #include <vlc_stream.h>
+#include <vlc_stream_extractor.h>
 #include <vlc_addons.h>
 #include <vlc_xml.h>
 #include <vlc_fs.h>
@@ -147,7 +148,11 @@ static int ParseManifest( addons_finder_t *p_finder, addon_entry_t *p_entry,
         case XML_READER_TEXT:
             if ( data_pointer.e_type == TYPE_NONE || !p_entry ) break;
             if ( data_pointer.e_type == TYPE_STRING )
+            {
+                if( data_pointer.u_data.ppsz )
+                    free( data_pointer.u_data.ppsz );
                 *data_pointer.u_data.ppsz = strdup( p_node );
+            }
             else
             if ( data_pointer.e_type == TYPE_LONG )
                 *data_pointer.u_data.pl = atol( p_node );
@@ -165,7 +170,7 @@ static int ParseManifest( addons_finder_t *p_finder, addon_entry_t *p_entry,
                     addon_file_t *p_file = malloc( sizeof(addon_file_t) );
                     p_file->e_filetype = i_filetype;
                     p_file->psz_filename = strdup( psz_filename );
-                    if ( asprintf( & p_file->psz_download_uri, "%s!/%s",
+                    if ( asprintf( & p_file->psz_download_uri, "%s#!/%s",
                                    psz_tempfileuri, psz_filename  ) > 0 )
                     {
                         ARRAY_APPEND( p_entry->files, p_file );
@@ -284,7 +289,11 @@ static int ParseCategoriesInfo( addons_finder_t *p_finder, stream_t *p_stream )
         case XML_READER_TEXT:
             if ( data_pointer.e_type == TYPE_NONE || !p_entry ) break;
             if ( data_pointer.e_type == TYPE_STRING )
+            {
+                if( data_pointer.u_data.ppsz )
+                    free( *data_pointer.u_data.ppsz );
                 *data_pointer.u_data.ppsz = strdup( p_node );
+            }
             else
             if ( data_pointer.e_type == TYPE_LONG )
                 *data_pointer.u_data.pl = atol( p_node );
@@ -423,18 +432,18 @@ static int Retrieve( addons_finder_t *p_finder, addon_entry_t *p_entry )
 
     msg_Dbg( p_finder, "Reading manifest from %s", p_finder->p_sys->psz_tempfile );
 
-    char *psz_tempfileuri = vlc_path2uri( p_finder->p_sys->psz_tempfile, "unzip" );
+    char *psz_tempfileuri = vlc_path2uri( p_finder->p_sys->psz_tempfile, NULL );
     if ( !psz_tempfileuri )
         return VLC_ENOMEM;
 
     char *psz_manifest_uri;
-    if ( asprintf( &psz_manifest_uri, "%s!/manifest.xml", psz_tempfileuri ) < 1 )
+    if ( asprintf( &psz_manifest_uri, "%s#!/manifest.xml", psz_tempfileuri ) < 1 )
     {
         free( psz_tempfileuri );
         return VLC_ENOMEM;
     }
 
-    p_stream = vlc_stream_NewURL( p_finder, psz_manifest_uri );
+    p_stream = vlc_stream_NewMRL( p_finder, psz_manifest_uri );
     free( psz_manifest_uri );
     if ( !p_stream )
     {
@@ -457,11 +466,11 @@ static int FindDesignated( addons_finder_t *p_finder )
     char *psz_manifest;
     const char *psz_path = p_finder->psz_uri + 7; // remove scheme
 
-    if ( asprintf( &psz_manifest, "unzip://%s!/manifest.xml",
+    if ( asprintf( &psz_manifest, "file://%s#!/manifest.xml",
                    psz_path ) < 1 )
         return VLC_ENOMEM;
 
-    stream_t *p_stream = vlc_stream_NewURL( p_finder, psz_manifest );
+    stream_t *p_stream = vlc_stream_NewMRL( p_finder, psz_manifest );
     free( psz_manifest );
     if ( !p_stream ) return VLC_EGENERIC;
 
@@ -496,7 +505,10 @@ static int Open(vlc_object_t *p_this)
     if ( p_finder->psz_uri &&
          strcmp( "repo://"ADDONS_MODULE_SHORTCUT, p_finder->psz_uri ) &&
          memcmp( "repo://", p_finder->psz_uri, 8 ) )
+    {
+        free( p_finder->p_sys );
         return VLC_EGENERIC;
+    }
 
     p_finder->pf_find = Find;
     p_finder->pf_retrieve = Retrieve;
@@ -510,8 +522,9 @@ static void Close(vlc_object_t *p_this)
     if ( p_finder->p_sys->psz_tempfile )
     {
         vlc_unlink( p_finder->p_sys->psz_tempfile );
-        free( p_finder->p_sys );
+        free( p_finder->p_sys->psz_tempfile );
     }
+    free( p_finder->p_sys );
 }
 
 static int OpenDesignated(vlc_object_t *p_this)

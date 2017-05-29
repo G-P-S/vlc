@@ -26,8 +26,6 @@
 
 #include <vlc_bits.h>
 
-#define BLOCK_FLAG_ORDERED_CAPTIONS (0x01 << BLOCK_FLAG_PRIVATE_SHIFT)
-
 #define CC_PKT_BYTE0(field) (0xFC | (0x03 & field))
 
 /* CC have a maximum rate of 9600 bit/s (per field?) */
@@ -35,6 +33,7 @@
 enum cc_payload_type_e
 {
     CC_PAYLOAD_NONE,
+    CC_PAYLOAD_RAW,
     CC_PAYLOAD_GA94,
     CC_PAYLOAD_DVD,
     CC_PAYLOAD_REPLAYTV,
@@ -63,10 +62,8 @@ typedef struct
 
 static inline void cc_Init( cc_data_t *c )
 {
-    int i;
-
-    for( i = 0; i < 4; i++ )
-        c-> pb_present[i] = false; 
+    for( int i = 0; i < 4; i++ )
+        c->pb_present[i] = false;
     c->i_data = 0;
     c->b_reorder = false;
     c->i_payload_type = CC_PAYLOAD_NONE;
@@ -108,7 +105,19 @@ static inline void cc_Extract( cc_data_t *c, enum cc_payload_type_e i_payload_ty
     c->i_payload_type        = i_payload_type;
     c->i_payload_other_count = 0;
 
-    if( i_payload_type == CC_PAYLOAD_GA94 )
+    if( i_payload_type == CC_PAYLOAD_RAW )
+    {
+        for( int i = 0; i + 2 < i_src; i += 3 )
+        {
+            if( c->i_data + 3 > CC_MAX_DATA_SIZE )
+                break;
+
+            const uint8_t *cc = &p_src[i];
+            cc_AppendData( c, cc[0], &cc[1] );
+        }
+        c->b_reorder = true;
+    }
+    else if( i_payload_type == CC_PAYLOAD_GA94 )
     {
         /* cc_data()
          *          u1 reserved(1)

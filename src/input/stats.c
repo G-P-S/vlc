@@ -141,14 +141,9 @@ void stats_CounterClean( counter_t *p_c )
 {
     if( p_c )
     {
-        int i = p_c->i_samples - 1 ;
-        while( i >= 0 )
-        {
-            counter_sample_t *p_s = p_c->pp_samples[i];
-            REMOVE_ELEM( p_c->pp_samples, p_c->i_samples, i );
-            free( p_s );
-            i--;
-        }
+        for( int i = 0; i < p_c->i_samples; i++ )
+            free( p_c->pp_samples[i] );
+        TAB_CLEAN(p_c->i_samples, p_c->pp_samples);
         free( p_c );
     }
 }
@@ -181,13 +176,12 @@ void stats_Update( counter_t *p_counter, uint64_t val, uint64_t *new_val )
 
         p_new->value = val;
         p_new->date = p_counter->last_update;
-        INSERT_ELEM( p_counter->pp_samples, p_counter->i_samples,
-                     0, p_new );
+        TAB_INSERT(p_counter->i_samples, p_counter->pp_samples, p_new, 0);
 
         if( p_counter->i_samples == 3 )
         {
             p_old = p_counter->pp_samples[2];
-            REMOVE_ELEM( p_counter->pp_samples, p_counter->i_samples, 2 );
+            TAB_ERASE(p_counter->i_samples, p_counter->pp_samples, 2);
             free( p_old );
         }
         break;
@@ -202,8 +196,7 @@ void stats_Update( counter_t *p_counter, uint64_t val, uint64_t *new_val )
 
             p_new->value = 0;
 
-            INSERT_ELEM( p_counter->pp_samples, p_counter->i_samples,
-                         p_counter->i_samples, p_new );
+            TAB_APPEND(p_counter->i_samples, p_counter->pp_samples, p_new);
         }
         if( p_counter->i_samples == 1 )
         {

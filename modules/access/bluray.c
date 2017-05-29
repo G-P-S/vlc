@@ -995,6 +995,7 @@ static es_out_id_t *esOutAdd(es_out_t *p_out, const es_format_t *p_fmt)
     es_format_t fmt;
     bool b_select = false;
 
+    es_format_Init(&fmt, p_fmt->i_cat, p_fmt->i_codec);
     es_format_Copy(&fmt, p_fmt);
 
     switch (fmt.i_cat) {
@@ -1747,8 +1748,6 @@ static int bluraySetTitle(demux_t *p_demux, int i_title)
         return VLC_EGENERIC;
     }
 
-    blurayResetParser(p_demux);
-
     return VLC_SUCCESS;
 }
 
@@ -1829,9 +1828,10 @@ static int blurayControl(demux_t *p_demux, int query, va_list args)
         if (bluraySetTitle(p_demux, i_title) != VLC_SUCCESS) {
             /* make sure GUI restores the old setting in title menu ... */
             p_demux->info.i_update |= INPUT_UPDATE_TITLE | INPUT_UPDATE_SEEKPOINT;
-            notifyDiscontinuity( p_sys );
             return VLC_EGENERIC;
         }
+        blurayResetParser( p_demux );
+        notifyDiscontinuity( p_sys );
         break;
     }
     case DEMUX_SET_SEEKPOINT:

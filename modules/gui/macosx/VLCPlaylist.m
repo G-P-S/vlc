@@ -304,7 +304,7 @@
     playlist_item_t *p_node = playlist_ItemGetById(p_playlist, [[[self model] rootItem] plItemId]);
 
     if (p_item && p_node) {
-        playlist_Control(p_playlist, PLAYLIST_VIEWPLAY, pl_Locked, p_node, p_item);
+        playlist_ViewPlay(p_playlist, p_node, p_item);
     }
     PL_UNLOCK;
 }
@@ -639,13 +639,13 @@
             continue;
 
         int i_pos = (i_position == -1) ? PLAYLIST_END : i_position + i_current_offset++;
-        playlist_item_t *p_item = playlist_NodeAddInput(p_playlist, p_input, p_parent,
-                                                        0, i_pos);
+        playlist_item_t *p_item = playlist_NodeAddInput(p_playlist, p_input,
+                                                        p_parent, i_pos);
         if (!p_item)
             continue;
 
         if (i == 0 && b_start) {
-            playlist_Control(p_playlist, PLAYLIST_VIEWPLAY, pl_Locked, p_parent, p_item);
+            playlist_ViewPlay(p_playlist, p_parent, p_item);
         }
         input_item_Release(p_input);
     }

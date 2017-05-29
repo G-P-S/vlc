@@ -46,6 +46,7 @@
 typedef struct
 {
     text_style_t*   font_style;
+    unsigned        i_cell_height;
     int             i_text_align;
     int             i_direction;
     bool            b_direction_set;
@@ -104,6 +105,7 @@ static ttml_style_t * ttml_style_New( )
     if( unlikely( !p_ttml_style ) )
         return NULL;
 
+    p_ttml_style->i_cell_height = 15;
     p_ttml_style->font_style = text_style_Create( STYLE_NO_DEFAULTS );
     if( unlikely( !p_ttml_style->font_style ) )
     {
@@ -199,7 +201,7 @@ static tt_node_t * FindNode( tt_node_t *p_node, const char *psz_nodename,
 }
 
 static void FillTextStyle( const char *psz_attr, const char *psz_val,
-                           text_style_t *p_text_style )
+                           const ttml_style_t *p_ttml_style, text_style_t *p_text_style )
 {
     if( !strcasecmp ( "tts:fontFamily", psz_attr ) )
     {
@@ -216,10 +218,15 @@ static void FillTextStyle( const char *psz_attr, const char *psz_val,
     {
         char* psz_end = NULL;
         float size = us_strtof( psz_val, &psz_end );
-        if( *psz_end == '%' )
-            p_text_style->f_font_relsize = size;
-        else
-            p_text_style->i_font_size = (int)( size + 0.5 );
+        if( size > 0.0 )
+        {
+            if( *psz_end == 'c' )
+                p_text_style->f_font_relsize = 100.0 * size / p_ttml_style->i_cell_height;
+            else if( *psz_end == '%' )
+                p_text_style->f_font_relsize = size / p_ttml_style->i_cell_height;
+            else
+                p_text_style->i_font_size = (int)( size + 0.5 );
+        }
     }
     else if( !strcasecmp( "tts:color", psz_attr ) )
     {
@@ -334,6 +341,19 @@ static void FillRegionStyle( const char *psz_attr, const char *psz_val,
     }
 }
 
+static void FillTTMLStylePrio( const vlc_dictionary_t *p_dict,
+                               ttml_style_t *p_ttml_style )
+{
+    void *value = vlc_dictionary_value_for_key( p_dict, "ttp:cellResolution" );
+    if( value != kVLCDictionaryNotFound )
+    {
+        const char *psz_val = value;
+        unsigned w, h;
+        if( sscanf( psz_val, "%u %u", &w, &h) == 2 && w && h )
+            p_ttml_style->i_cell_height = h;
+    }
+}
+
 static void FillTTMLStyle( const char *psz_attr, const char *psz_val,
                            ttml_style_t *p_ttml_style )
 {
@@ -396,17 +416,19 @@ static void FillTTMLStyle( const char *psz_attr, const char *psz_val,
     {
         p_ttml_style->b_preserve_space = !strcmp( "preserve", psz_val );
     }
-    else FillTextStyle( psz_attr, psz_val, p_ttml_style->font_style );
+    else FillTextStyle( psz_attr, psz_val, p_ttml_style, p_ttml_style->font_style );
 }
 
-static void DictionnaryMerge( const vlc_dictionary_t *p_src, vlc_dictionary_t *p_dst )
+static void DictionaryMerge( const vlc_dictionary_t *p_src, vlc_dictionary_t *p_dst )
 {
     for( int i = 0; i < p_src->i_size; ++i )
     {
         for ( const vlc_dictionary_entry_t* p_entry = p_src->p_entries[i];
                                             p_entry != NULL; p_entry = p_entry->p_next )
         {
-            if( !strncmp( "tts:", p_entry->psz_key, 4 ) &&
+            if( ( !strncmp( "tts:", p_entry->psz_key, 4 ) ||
+                  !strncmp( "ttp:", p_entry->psz_key, 4 ) ||
+                  !strcmp( "xml:space", p_entry->psz_key ) ) &&
                 !vlc_dictionary_has_key( p_dst, p_entry->psz_key ) )
                 vlc_dictionary_insert( p_dst, p_entry->psz_key, p_entry->p_value );
         }
@@ -423,7 +445,7 @@ static void DictMergeWithStyleID( ttml_context_t *p_ctx, const char *psz_id,
         const tt_node_t *p_node = FindNode( p_ctx->p_rootnode,
                                             "style", -1, psz_id );
         if( p_node )
-            DictionnaryMerge( &p_node->attr_dict, p_dst );
+            DictionaryMerge( &p_node->attr_dict, p_dst );
     }
 }
 
@@ -448,17 +470,19 @@ static void DictMergeWithRegionID( ttml_context_t *p_ctx, const char *psz_id,
             const tt_node_t *p_node = (const tt_node_t *) p_child;
             if( !tt_node_NameCompare( p_node->psz_node_name, "style" ) )
             {
-                DictionnaryMerge( &p_node->attr_dict, p_dst );
+                DictionaryMerge( &p_node->attr_dict, p_dst );
             }
         }
 
         /* Merge region attributes */
-        DictionnaryMerge( &p_regionnode->attr_dict, p_dst );
+        DictionaryMerge( &p_regionnode->attr_dict, p_dst );
     }
 }
 
 static void DictToTTMLStyle( const vlc_dictionary_t *p_dict, ttml_style_t *p_ttml_style )
 {
+    /* Units, defaults, that must be set first to compute styles */
+    FillTTMLStylePrio( p_dict, p_ttml_style );
     for( int i = 0; i < p_dict->i_size; ++i )
     {
         for ( vlc_dictionary_entry_t* p_entry = p_dict->p_entries[i];
@@ -479,7 +503,7 @@ static ttml_style_t * InheritTTMLStyles( ttml_context_t *p_ctx, tt_node_t *p_nod
     /* Merge dics backwards without overwriting */
     for( ; p_node; p_node = p_node->p_parent )
     {
-        DictionnaryMerge( &p_node->attr_dict, &merged );
+        DictionaryMerge( &p_node->attr_dict, &merged );
 
         const char *psz_styleid = (const char *)
                 vlc_dictionary_value_for_key( &p_node->attr_dict, "style" );
@@ -492,7 +516,7 @@ static ttml_style_t * InheritTTMLStyles( ttml_context_t *p_ctx, tt_node_t *p_nod
             DictMergeWithRegionID( p_ctx, psz_regionid, &merged );
     }
 
-    if( merged.i_size && merged.p_entries[0] && (p_ttml_style = ttml_style_New()) )
+    if( vlc_dictionary_keys_count( &merged ) && (p_ttml_style = ttml_style_New()) )
     {
         DictToTTMLStyle( &merged, p_ttml_style );
     }
@@ -638,6 +662,7 @@ static void AppendTextToRegion( ttml_context_t *p_ctx, const tt_textnode_t *p_tt
     p_segment = text_segment_New( p_ttnode->psz_text );
     if( p_segment )
     {
+        bool b_preserve_space = false;
         ttml_style_t *s = InheritTTMLStyles( p_ctx, p_ttnode->p_parent );
         if( s )
         {
@@ -647,8 +672,7 @@ static void AppendTextToRegion( ttml_context_t *p_ctx, const tt_textnode_t *p_tt
             p_segment->style = s->font_style;
             s->font_style = NULL;
 
-            if( !s->b_preserve_space )
-                StripSpacing( p_segment );
+            b_preserve_space = s->b_preserve_space;
             if( s->b_direction_set )
                 BIDIConvert( p_segment, s->i_direction );
 
@@ -662,6 +686,9 @@ static void AppendTextToRegion( ttml_context_t *p_ctx, const tt_textnode_t *p_tt
 
             ttml_style_Delete( s );
         }
+
+        if( !b_preserve_space )
+            StripSpacing( p_segment );
     }
 
     *p_region->pp_last_segment = p_segment;

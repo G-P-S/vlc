@@ -182,6 +182,7 @@ static int
 se_DirControl( stream_t* stream, int req, va_list args )
 {
     (void)stream;
+    (void)args;
 
     if( req == STREAM_IS_DIRECTORY )
         return VLC_SUCCESS;
@@ -335,6 +336,35 @@ vlc_stream_extractor_Attach( stream_t** source, char const* identifier,
                              char const* module_name )
 {
     return StreamExtractorAttach( source, identifier, module_name );
+}
+
+int
+stream_extractor_AttachParsed( stream_t** source, char const* data,
+                               char const** out_extra )
+{
+    vlc_array_t identifiers;
+
+    if( mrl_FragmentSplit( &identifiers, out_extra, data ) )
+        return VLC_EGENERIC;
+
+    size_t count = vlc_array_count( &identifiers );
+    size_t idx = 0;
+
+    while( idx < count )
+    {
+        char* id = vlc_array_item_at_index( &identifiers, idx );
+
+        if( vlc_stream_extractor_Attach( source, id, NULL ) )
+            break;
+
+        ++idx;
+    }
+
+    for( size_t i = 0; i < count; ++i )
+        free( vlc_array_item_at_index( &identifiers, i ) );
+    vlc_array_clear( &identifiers );
+
+    return idx == count ? VLC_SUCCESS : VLC_EGENERIC;
 }
 
 char*

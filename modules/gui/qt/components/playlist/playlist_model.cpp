@@ -286,8 +286,7 @@ void PLModel::activateItem( playlist_item_t *p_item )
         p_parent = p_parent->p_parent;
     }
     if( p_parent )
-        playlist_Control( p_playlist, PLAYLIST_VIEWPLAY, pl_Locked,
-                p_parent, p_item );
+        playlist_ViewPlay( p_playlist, p_parent, p_item );
 }
 
 /****************** Base model mandatory implementations *****************/
@@ -770,7 +769,7 @@ void PLModel::doDelete( QModelIndexList selected )
         playlist_item_t *p_root = playlist_ItemGetById( p_playlist,
                                                         item->id() );
         if( p_root != NULL )
-            playlist_NodeDelete( p_playlist, p_root, false );
+            playlist_NodeDelete( p_playlist, p_root );
         PL_UNLOCK;
 
         if( p_root != NULL )

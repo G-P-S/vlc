@@ -226,19 +226,6 @@ void input_item_CopyOptions( input_item_t *p_child,
     free( optv );
 }
 
-static void post_subitems( input_item_node_t *p_node )
-{
-    for( int i = 0; i < p_node->i_children; i++ )
-    {
-        vlc_event_send( &p_node->p_item->event_manager, &(vlc_event_t) {
-            .type = vlc_InputItemSubItemAdded,
-            .u.input_item_subitem_added.p_new_child =
-                p_node->pp_children[i]->p_item } );
-
-        post_subitems( p_node->pp_children[i] );
-    }
-}
-
 /* This won't hold the item, but can tell to interested third parties
  * Like the playlist, that there is a new sub item. With this design
  * It is not the input item's responsibility to keep all the ref of
@@ -572,11 +559,20 @@ int input_item_AddOption( input_item_t *p_input, const char *psz_option,
         err = VLC_ENOMEM;
         goto out;
     }
+
     p_input->optflagv = flagv;
+
+    char* psz_option_dup = strdup( psz_option );
+    if( unlikely( !psz_option_dup ) )
+    {
+        err = VLC_ENOMEM;
+        goto out;
+    }
+
+    TAB_APPEND(p_input->i_options, p_input->ppsz_options, psz_option_dup);
+
     flagv[p_input->optflagc++] = flags;
 
-    INSERT_ELEM( p_input->ppsz_options, p_input->i_options,
-                 p_input->i_options, strdup( psz_option ) );
 out:
     vlc_mutex_unlock( &p_input->lock );
     return err;
@@ -688,7 +684,7 @@ int input_item_AddSlave(input_item_t *p_item, input_item_slave_t *p_slave)
 
     vlc_mutex_lock( &p_item->lock );
 
-    INSERT_ELEM( p_item->pp_slaves, p_item->i_slaves, p_item->i_slaves, p_slave );
+    TAB_APPEND(p_item->i_slaves, p_item->pp_slaves, p_slave);
 
     vlc_mutex_unlock( &p_item->lock );
     return VLC_SUCCESS;
@@ -756,8 +752,7 @@ static int InputItemVaAddInfo( input_item_t *p_i,
         p_cat = info_category_New( psz_cat );
         if( !p_cat )
             return VLC_ENOMEM;
-        INSERT_ELEM( p_i->pp_categories, p_i->i_categories, p_i->i_categories,
-                     p_cat );
+        TAB_APPEND(p_i->i_categories, p_i->pp_categories, p_cat);
     }
     info_t *p_info = info_category_VaAddInfo( p_cat, psz_name, psz_format, args );
     if( !p_info || !p_info->psz_value )
@@ -815,7 +810,7 @@ int input_item_DelInfo( input_item_t *p_i,
     {
         /* Remove the complete categorie */
         info_category_Delete( p_cat );
-        REMOVE_ELEM( p_i->pp_categories, p_i->i_categories, i_cat );
+        TAB_ERASE(p_i->i_categories, p_i->pp_categories, i_cat);
     }
     vlc_mutex_unlock( &p_i->lock );
 
@@ -835,10 +830,7 @@ void input_item_ReplaceInfos( input_item_t *p_item, info_category_t *p_cat )
         p_item->pp_categories[i_cat] = p_cat;
     }
     else
-    {
-        INSERT_ELEM( p_item->pp_categories, p_item->i_categories, p_item->i_categories,
-                     p_cat );
-    }
+        TAB_APPEND(p_item->i_categories, p_item->pp_categories, p_cat);
     vlc_mutex_unlock( &p_item->lock );
 
     vlc_event_send( &p_item->event_manager,
@@ -857,10 +849,7 @@ void input_item_MergeInfos( input_item_t *p_item, info_category_t *p_cat )
         info_category_Delete( p_cat );
     }
     else
-    {
-        INSERT_ELEM( p_item->pp_categories, p_item->i_categories, p_item->i_categories,
-                     p_cat );
-    }
+        TAB_APPEND(p_item->i_categories, p_item->pp_categories, p_cat);
     vlc_mutex_unlock( &p_item->lock );
 
     vlc_event_send( &p_item->event_manager,
@@ -1099,15 +1088,6 @@ input_item_NewExt( const char *psz_uri, const char *psz_name,
     TAB_INIT( p_input->i_slaves, p_input->pp_slaves );
 
     vlc_event_manager_init( p_em, p_input );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemMetaChanged );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemSubItemAdded );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemSubItemTreeAdded );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemDurationChanged );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemPreparsedChanged );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemNameChanged );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemInfoChanged );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemErrorWhenReadingChanged );
-    vlc_event_manager_register_event_type( p_em, vlc_InputItemPreparseEnded );
 
     if( type != ITEM_TYPE_UNKNOWN )
         p_input->i_type = type;
@@ -1261,36 +1241,20 @@ input_item_node_t *input_item_node_Create( input_item_t *p_input )
     p_node->p_item = p_input;
     input_item_Hold( p_input );
 
-    p_node->p_parent = NULL;
     p_node->i_children = 0;
     p_node->pp_children = NULL;
 
     return p_node;
 }
 
-static void RecursiveNodeDelete( input_item_node_t *p_node )
+void input_item_node_Delete( input_item_node_t *p_node )
 {
     for( int i = 0; i < p_node->i_children; i++ )
-        RecursiveNodeDelete( p_node->pp_children[i] );
+        input_item_node_Delete( p_node->pp_children[i] );
 
     input_item_Release( p_node->p_item );
     free( p_node->pp_children );
     free( p_node );
-}
-
-void input_item_node_Delete( input_item_node_t *p_node )
-{
-    if( p_node->p_parent )
-        for( int i = 0; i < p_node->p_parent->i_children; i++ )
-            if( p_node->p_parent->pp_children[i] == p_node )
-            {
-                REMOVE_ELEM( p_node->p_parent->pp_children,
-                        p_node->p_parent->i_children,
-                        i );
-                break;
-            }
-
-    RecursiveNodeDelete( p_node );
 }
 
 input_item_node_t *input_item_node_AppendItem( input_item_node_t *p_node, input_item_t *p_item )
@@ -1313,20 +1277,22 @@ input_item_node_t *input_item_node_AppendItem( input_item_node_t *p_node, input_
     return p_new_child;
 }
 
-void input_item_node_AppendNode( input_item_node_t *p_parent, input_item_node_t *p_child )
+void input_item_node_AppendNode( input_item_node_t *p_parent,
+                                 input_item_node_t *p_child )
 {
-    assert( p_parent && p_child && p_child->p_parent == NULL );
-    INSERT_ELEM( p_parent->pp_children,
-                 p_parent->i_children,
-                 p_parent->i_children,
-                 p_child );
-    p_child->p_parent = p_parent;
+    assert(p_parent != NULL);
+    assert(p_child != NULL);
+    TAB_APPEND(p_parent->i_children, p_parent->pp_children, p_child);
+}
+
+void input_item_node_RemoveNode( input_item_node_t *parent,
+                                 input_item_node_t *child )
+{
+    TAB_REMOVE(parent->i_children, parent->pp_children, child);
 }
 
 void input_item_node_PostAndDelete( input_item_node_t *p_root )
 {
-    post_subitems( p_root );
-
     vlc_event_send( &p_root->p_item->event_manager, &(vlc_event_t) {
         .type = vlc_InputItemSubItemTreeAdded,
         .u.input_item_subitem_tree_added.p_root = p_root } );

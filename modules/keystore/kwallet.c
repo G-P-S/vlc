@@ -149,10 +149,13 @@ values2key( const char* const* ppsz_values, bool b_search )
         vlc_memstream_printf( &ms, "*" );
 
     /* Path section */
-    if ( ppsz_values[KEY_PATH] && ppsz_values[KEY_PATH][0] == '/')
-        vlc_memstream_printf( &ms, "%s", ppsz_values[KEY_PATH] );
-    else if ( ppsz_values[KEY_PATH] && ppsz_values[KEY_PATH][0] != '/' )
-        vlc_memstream_printf( &ms, "/%s", ppsz_values[KEY_PATH] );
+    if( ppsz_values[KEY_PATH] )
+    {
+        if( ppsz_values[KEY_PATH][0] != '/' )
+            vlc_memstream_putc( &ms, '/' );
+
+        vlc_memstream_puts( &ms, ppsz_values[KEY_PATH] );
+    }
     else if ( b_search )
         vlc_memstream_printf( &ms, "*" );
 
@@ -505,6 +508,7 @@ kwallet_network_wallet( vlc_keystore* p_keystore )
     {
         msg_Err( p_keystore, "kwallet_network_wallet : "
                  "dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
 
@@ -569,6 +573,7 @@ kwallet_is_enabled( vlc_keystore* p_keystore, int i_sid, bool* b_is_enabled )
     {
         msg_Err( p_keystore, "kwallet_is_enabled : "
                  "dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
 
@@ -693,11 +698,9 @@ kwallet_has_folder( vlc_keystore* p_keystore, const char* psz_folder_name, bool 
 
     /* argument init */
     dbus_message_iter_init_append( msg, &args );
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder_name ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder_name ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto end;
 
     /* sending message */
@@ -716,6 +719,7 @@ kwallet_has_folder( vlc_keystore* p_keystore, const char* psz_folder_name, bool 
     {
         msg_Err( p_keystore, "kwallet_has_folder :"
                  " dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
 
@@ -754,11 +758,9 @@ kwallet_create_folder( vlc_keystore* p_keystore, const char* psz_folder_name )
 
     /* argument init */
     dbus_message_iter_init_append( msg, &args );
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder_name ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder_name ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto end;
 
     /* sending message */
@@ -776,6 +778,7 @@ kwallet_create_folder( vlc_keystore* p_keystore, const char* psz_folder_name )
     {
         msg_Err( p_keystore, "kwallet_create_folder :"
                  " dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
 
@@ -821,11 +824,9 @@ kwallet_open( vlc_keystore* p_keystore )
 
     /* Init args */
     dbus_message_iter_init_append(msg, &args);
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_wallet ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT64, &ull_win_id ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_wallet ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT64, &ull_win_id ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto end;
 
     /* sending message */
@@ -843,6 +844,7 @@ kwallet_open( vlc_keystore* p_keystore )
     {
         msg_Err( p_keystore, "kwallet_open :"
                  " dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
     p_sys->i_handle = ui_reply;
@@ -892,13 +894,10 @@ kwallet_has_entry( vlc_keystore* p_keystore, char* psz_entry_name, bool *b_has_e
 
     /* argument init */
     dbus_message_iter_init_append( msg, &args );
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto end;
 
     /* sending message */
@@ -916,6 +915,7 @@ kwallet_has_entry( vlc_keystore* p_keystore, char* psz_entry_name, bool *b_has_e
     {
         msg_Err( p_keystore, "kwallet_has_entry :"
                  " dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
     *b_has_entry = b_reply;
@@ -952,15 +952,11 @@ kwallet_write_password( vlc_keystore* p_keystore, char* psz_entry_name, const ch
 
     /* argument init */
     dbus_message_iter_init_append( msg, &args );
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_secret ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_secret ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto end;
 
     /* sending message */
@@ -977,6 +973,7 @@ kwallet_write_password( vlc_keystore* p_keystore, char* psz_entry_name, const ch
     {
         msg_Err( p_keystore, "kwallet_write_password :"
                  " dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
 
@@ -1025,13 +1022,10 @@ kwallet_remove_entry( vlc_keystore* p_keystore, char* psz_entry_name )
 
     /* argument init */
     dbus_message_iter_init_append( msg, &args );
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) )
-        goto end;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto end;
 
     /* sending message */
@@ -1048,6 +1042,7 @@ kwallet_remove_entry( vlc_keystore* p_keystore, char* psz_entry_name )
     {
         msg_Err( p_keystore, "kwallet_remove entry :"
                  " dbus_message_get_args failed\n%s", error.message );
+        dbus_error_free( &error );
         goto end;
     }
 
@@ -1091,13 +1086,10 @@ kwallet_read_password_list( vlc_keystore* p_keystore, char* psz_entry_name,
 
     /* argument init */
     dbus_message_iter_init_append( msg, &args );
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) )
-        goto error;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) )
-        goto error;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) )
-        goto error;
-    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
+    if ( !dbus_message_iter_append_basic( &args, DBUS_TYPE_INT32, &p_sys->i_handle ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_folder ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &psz_entry_name ) ||
+         !dbus_message_iter_append_basic( &args, DBUS_TYPE_STRING, &p_sys->psz_app_id ) )
         goto error;
 
     /* sending message */

@@ -526,6 +526,10 @@ struct subs_format_t
         int i_magazine;
         int i_page;
     } teletext;
+    struct
+    {
+        uint8_t i_reorder_depth; /* Reorder depth or transport video */
+    } cc;
 
     text_style_t *p_style; /* Default styles to use */
 };
@@ -570,10 +574,14 @@ struct es_format_t
     unsigned        i_extra_languages;    /**< length in bytes of extra language data pointer */
     extra_languages_t *p_extra_languages; /**< extra language data needed by some decoders */
 
-    audio_format_t  audio;    /**< description of audio format */
-    audio_replay_gain_t audio_replay_gain; /*< audio replay gain information */
-    video_format_t video;     /**< description of video format */
-    subs_format_t  subs;      /**< description of subtitle format */
+    union {
+        struct {
+            audio_format_t  audio;    /**< description of audio format */
+            audio_replay_gain_t audio_replay_gain; /*< audio replay gain information */
+        };
+        video_format_t video;     /**< description of video format */
+        subs_format_t  subs;      /**< description of subtitle format */
+    };
 
     unsigned int   i_bitrate; /**< bitrate of this ES */
     int      i_profile;       /**< codec specific information (like real audio flavor, mpeg audio layer, h264 profile ...) */

@@ -36,10 +36,7 @@
 #include <vlc_rand.h>
 #include "playlist_internal.h"
 
-static void AddItem( playlist_t *p_playlist, playlist_item_t *p_item,
-                     playlist_item_t *p_node, int i_pos );
-static void GoAndPreparse( playlist_t *p_playlist, int i_mode,
-                           playlist_item_t * );
+static void playlist_Preparse( playlist_t *, playlist_item_t * );
 static void ChangeToNode( playlist_t *p_playlist, playlist_item_t *p_item );
 
 static int RecursiveAddIntoParent (
@@ -115,7 +112,7 @@ static void input_item_add_subitem_tree ( const vlc_event_t * p_event,
         }
         assert( i < p_parent->i_children );
 
-        playlist_NodeDelete( p_playlist, p_item, false );
+        playlist_NodeDeleteExplicit( p_playlist, p_item, 0 );
 
         /* If there is a pending request referring to the item we just deleted
          * it needs to be updated so that we do not try to play an entity that
@@ -166,15 +163,11 @@ static void input_item_add_subitem_tree ( const vlc_event_t * p_event,
     //control playback only if it was the current playing item that got subitems
     if( b_current )
     {
-        if( last_pos == pos || ( b_stop && !b_flat ) || !b_autostart )
+        if( ( b_stop && !b_flat ) || !b_autostart )
         {
-            /* We stop, either because no sub-item was actually created, or some
-            flags/settings want us to do so at this point */
-            PL_UNLOCK;
-            playlist_Stop( p_playlist );
-            return;
+            playlist_Control( p_playlist, PLAYLIST_STOP, pl_Locked );
         }
-        else
+        else if( last_pos != pos ) /* any children? */
         {
             /* Continue to play, either random or the first new item */
             playlist_item_t *p_play_item;
@@ -195,10 +188,35 @@ static void input_item_add_subitem_tree ( const vlc_event_t * p_event,
                     p_play_item = p_play_item->pp_children[0];
             }
 
-            playlist_Control( p_playlist, PLAYLIST_VIEWPLAY,
-                                  pl_Locked,
-                                  get_current_status_node( p_playlist ),
-                                  p_play_item );
+            playlist_ViewPlay( p_playlist, NULL, p_play_item );
+        }
+        else if( b_flat && p_playlist->current.i_size > 0 )
+        {
+            /* If the playlist is flat, empty nodes are automatically deleted;
+             * meaning that moving from the current index (the index of a now
+             * removed node) to the next would result in a skip of one entry
+             * (as the empty node is deleted, the logical next item would be
+             * the one that now resides in its place).
+             *
+             * Imagine [ A, B, C, D ], where B (at index 1) is currently being
+             * played and deleted. C is the logically next item, but since the
+             * list now looks like [ A, C, D ], advancing to index 2 would mean
+             * D is played - and not C.
+             *
+             * By positioning the playlist-head at index 0 (A), when the
+             * playlist advance to the next item, C will correctly be played.
+             *
+             * Note: Of course, if the deleted item is at index 0, we should
+             * play whatever item is at position 0 since we cannot advance to
+             * index -1 (as there cannot possibly be any item there).
+             **/
+
+            if( last_pos )
+                ResetCurrentlyPlaying( p_playlist,
+                    ARRAY_VAL( p_playlist->current, last_pos - 1 ) );
+            else
+                playlist_ViewPlay( p_playlist, NULL,
+                    ARRAY_VAL( p_playlist->current, 0 ) );
         }
     }
 
@@ -251,7 +269,7 @@ playlist_item_t *playlist_ItemNewFromInput( playlist_t *p_playlist,
     p_item->p_input = p_input;
     p_item->i_id = p->i_last_playlist_id;
     p_item->p_parent = NULL;
-    p_item->i_children = -1;
+    p_item->i_children = (p_input->i_type == ITEM_TYPE_NODE) ? 0 : -1;
     p_item->pp_children = NULL;
     p_item->i_nb_played = 0;
     p_item->i_flags = 0;
@@ -416,7 +434,7 @@ void playlist_Clear( playlist_t * p_playlist, bool b_locked )
     PL_LOCK_IF( !b_locked );
 
     for( int i = p_root->i_children - 1; i >= 0 ;i-- )
-        playlist_NodeDelete( p_playlist, p_root->pp_children[i], false );
+        playlist_NodeDelete( p_playlist, p_root->pp_children[i] );
 
     PL_UNLOCK_IF( !b_locked );
 }
@@ -427,18 +445,16 @@ void playlist_Clear( playlist_t * p_playlist, bool b_locked )
 /**
  * Playlist add
  *
- * Add an item to the playlist or the media library
+ * Add an item to the playlist
  * \param p_playlist the playlist to add into
  * \param psz_uri the mrl to add to the playlist
- * \param psz_name a text giving a name or description of this item
- * \param i_mode the mode used when adding
+ * \param play_now whether to start playing immediately or not
  * \return VLC_SUCCESS or a VLC error code
  */
-int playlist_Add( playlist_t *p_playlist, const char *psz_uri,
-                  const char *psz_name, int i_mode )
+int playlist_Add( playlist_t *p_playlist, const char *psz_uri, bool play_now )
 {
-    return playlist_AddExt( p_playlist, psz_uri, psz_name,
-                            i_mode, 0, NULL, 0, true );
+    return playlist_AddExt( p_playlist, psz_uri, NULL, play_now,
+                            0, NULL, 0, true );
 }
 
 /**
@@ -447,7 +463,7 @@ int playlist_Add( playlist_t *p_playlist, const char *psz_uri,
  * \param p_playlist the playlist to add into
  * \param psz_uri the mrl to add to the playlist
  * \param psz_name a text giving a name or description of this item
- * \param i_mode the mode used when adding
+ * \param play_now whether to start playing immediately or not
  * \param i_options the number of options
  * \param ppsz_options an array of options
  * \param i_option_flags options flags
@@ -455,19 +471,16 @@ int playlist_Add( playlist_t *p_playlist, const char *psz_uri,
  * \return VLC_SUCCESS or a VLC error code
 */
 int playlist_AddExt( playlist_t *p_playlist, const char * psz_uri,
-                     const char *psz_name, int i_mode,
+                     const char *psz_name, bool play_now,
                      int i_options, const char *const *ppsz_options,
                      unsigned i_option_flags,
                      bool b_playlist )
 {
-    int i_ret;
-    input_item_t *p_input;
-
-    p_input = input_item_New( psz_uri, psz_name );
-    if( p_input == NULL )
+    input_item_t *p_input = input_item_New( psz_uri, psz_name );
+    if( !p_input )
         return VLC_ENOMEM;
     input_item_AddOptions( p_input, i_options, ppsz_options, i_option_flags );
-    i_ret = playlist_AddInput( p_playlist, p_input, i_mode, b_playlist );
+    int i_ret = playlist_AddInput( p_playlist, p_input, play_now, b_playlist );
     input_item_Release( p_input );
     return i_ret;
 }
@@ -482,16 +495,16 @@ int playlist_AddExt( playlist_t *p_playlist, const char * psz_uri,
  * \return VLC_SUCCESS or VLC_ENOMEM or VLC_EGENERIC
 */
 int playlist_AddInput( playlist_t* p_playlist, input_item_t *p_input,
-                       int i_mode, bool b_playlist )
+                       bool play_now, bool b_playlist )
 {
-    playlist_item_t *item;
-
     PL_LOCK;
-    item = b_playlist ? p_playlist->p_playing
-                      : p_playlist->p_media_library;
+    playlist_item_t *item = b_playlist ? p_playlist->p_playing
+                                       : p_playlist->p_media_library;
 
-    item = playlist_NodeAddInput( p_playlist, p_input, item, i_mode,
-                                  PLAYLIST_END );
+    item = playlist_NodeAddInput( p_playlist, p_input, item, PLAYLIST_END );
+
+    if( likely(item != NULL) && play_now )
+        playlist_ViewPlay( p_playlist, NULL, item );
     PL_UNLOCK;
     return (item != NULL) ? VLC_SUCCESS : VLC_ENOMEM;
 }
@@ -502,7 +515,6 @@ int playlist_AddInput( playlist_t* p_playlist, input_item_t *p_input,
  * \param p_playlist the playlist to add into
  * \param p_input the input item to add
  * \param p_parent the parent item to add into
- * \param i_mode the mode used when addin
  * \param i_pos the position in the playlist where to add. If this is
  *        PLAYLIST_END the item will be added at the end of the playlist
  *        regardless of its size
@@ -510,8 +522,7 @@ int playlist_AddInput( playlist_t* p_playlist, input_item_t *p_input,
  */
 playlist_item_t * playlist_NodeAddInput( playlist_t *p_playlist,
                                          input_item_t *p_input,
-                                         playlist_item_t *p_parent,
-                                         int i_mode, int i_pos )
+                                         playlist_item_t *p_parent, int i_pos )
 {
     PL_ASSERT_LOCKED;
 
@@ -519,11 +530,15 @@ playlist_item_t * playlist_NodeAddInput( playlist_t *p_playlist,
     assert( p_parent && p_parent->i_children != -1 );
 
     playlist_item_t *p_item = playlist_ItemNewFromInput( p_playlist, p_input );
-    if( likely(p_item != NULL) )
-    {
-        AddItem( p_playlist, p_item, p_parent, i_pos );
-        GoAndPreparse( p_playlist, i_mode, p_item );
-    }
+    if( unlikely(p_item == NULL) )
+        return NULL;
+
+    ARRAY_APPEND(p_playlist->items, p_item);
+
+    playlist_NodeInsert( p_parent, p_item, i_pos );
+    playlist_SendAddNotify( p_playlist, p_item );
+    playlist_Preparse( p_playlist, p_item );
+
     return p_item;
 }
 
@@ -538,29 +553,28 @@ playlist_item_t * playlist_NodeAddInput( playlist_t *p_playlist,
  *              parent's children
  * \return the position in parent item just behind the last new item inserted
  */
-int playlist_NodeAddCopy (
-    playlist_t *p_playlist, playlist_item_t *p_item,
+int playlist_NodeAddCopy( playlist_t *p_playlist, playlist_item_t *p_item,
     playlist_item_t *p_parent, int i_pos )
 {
     PL_ASSERT_LOCKED;
     assert( p_parent != NULL && p_item != NULL );
     assert( p_parent->i_children > -1 );
 
-    if( i_pos == PLAYLIST_END ) i_pos = p_parent->i_children;
+    if( i_pos == PLAYLIST_END )
+        i_pos = p_parent->i_children;
 
     bool b_flat = false;
 
-    playlist_item_t *p_up = p_parent;
-    while( p_up )
+    for( playlist_item_t* p_up = p_parent; p_up; p_up = p_up->p_parent )
     {
-        if( p_up == p_playlist->p_playing )
-            if( !pl_priv(p_playlist)->b_tree ) b_flat = true;
+        if( p_up == p_playlist->p_playing && !pl_priv(p_playlist)->b_tree )
+            b_flat = true;
+
         if( p_up == p_item )
             /* TODO: We don't support copying a node into itself (yet),
             because we insert items as we copy. Instead, we should copy
             all items first and then insert. */
             return i_pos;
-        p_up = p_up->p_parent;
     }
 
     return RecursiveInsertCopy( p_playlist, p_item, p_parent, i_pos, b_flat );
@@ -583,44 +597,14 @@ int playlist_InsertInputItemTree (
     playlist_t *p_playlist, playlist_item_t *p_parent,
     input_item_node_t *p_node, int i_pos, bool b_flat )
 {
-    playlist_item_t *p_first_leaf = NULL;
-    return RecursiveAddIntoParent ( p_playlist, p_parent, p_node, i_pos, b_flat, &p_first_leaf );
+    return RecursiveAddIntoParent( p_playlist, p_parent, p_node, i_pos, b_flat,
+                                   &(playlist_item_t*){ NULL } );
 }
 
 
 /*****************************************************************************
  * Playlist item misc operations
  *****************************************************************************/
-
-/**
- * Find an item within a root, given its input id.
- *
- * \param p_playlist the playlist object
- * \param p_item the input item
- * \param p_root root playlist item
- * \return the first found item, or NULL if not found
- */
-playlist_item_t *playlist_ItemFindFromInputAndRoot( playlist_t *p_playlist,
-                                                    input_item_t *p_item,
-                                                    playlist_item_t *p_root )
-{
-    for( int i = 0 ; i< p_root->i_children ; i++ )
-    {
-        if( p_root->pp_children[i]->p_input == p_item )
-        {
-            return p_root->pp_children[i];
-        }
-        else if( p_root->pp_children[i]->i_children >= 0 )
-        {
-            playlist_item_t *p_search =
-                 playlist_ItemFindFromInputAndRoot( p_playlist, p_item,
-                                                    p_root->pp_children[i] );
-            if( p_search ) return p_search;
-        }
-    }
-    return NULL;
-}
-
 
 static int ItemIndex ( playlist_item_t *p_item )
 {
@@ -655,12 +639,12 @@ int playlist_TreeMove( playlist_t * p_playlist, playlist_item_t *p_item,
     playlist_item_t *p_detach = p_item->p_parent;
     int i_index = ItemIndex( p_item );
 
-    REMOVE_ELEM( p_detach->pp_children, p_detach->i_children, i_index );
+    TAB_ERASE(p_detach->i_children, p_detach->pp_children, i_index);
 
     if( p_detach == p_node && i_index < i_newpos )
         i_newpos--;
 
-    INSERT_ELEM( p_node->pp_children, p_node->i_children, i_newpos, p_item );
+    TAB_INSERT(p_node->i_children, p_node->pp_children, p_item, i_newpos);
     p_item->p_parent = p_node;
 
     pl_priv( p_playlist )->b_reset_currently_playing = true;
@@ -693,13 +677,13 @@ int playlist_TreeMoveMany( playlist_t *p_playlist,
         playlist_item_t *p_item = pp_items[i];
         int i_index = ItemIndex( p_item );
         playlist_item_t *p_parent = p_item->p_parent;
-        REMOVE_ELEM( p_parent->pp_children, p_parent->i_children, i_index );
+        TAB_ERASE(p_parent->i_children, p_parent->pp_children, i_index);
         if ( p_parent == p_node && i_index < i_newpos ) i_newpos--;
     }
     for( int i = i_items - 1; i >= 0; i-- )
     {
         playlist_item_t *p_item = pp_items[i];
-        INSERT_ELEM( p_node->pp_children, p_node->i_children, i_newpos, p_item );
+        TAB_INSERT(p_node->i_children, p_node->pp_children, p_item, i_newpos);
         p_item->p_parent = p_node;
     }
 
@@ -732,64 +716,39 @@ void playlist_SendAddNotify( playlist_t *p_playlist, playlist_item_t *item )
  */
 mtime_t playlist_GetNodeDuration( playlist_item_t* node )
 {
-    mtime_t mt_duration = 0;
+    mtime_t duration = input_item_GetDuration( node->p_input );
+    if( duration == -1 )
+        duration = 0;
 
-    if( node->i_children != -1 )
-        for( int i = 0; i < node->i_children; i++ )
-        {
-            input_item_t* p_input = node->pp_children[i]->p_input;
-            if ( p_input->i_type == ITEM_TYPE_NODE )
-                mt_duration += playlist_GetNodeDuration( node->pp_children[i] );
-            else
-                mt_duration += input_item_GetDuration( p_input );
-        }
+    for( int i = 0; i < node->i_children; i++ )
+        duration += playlist_GetNodeDuration( node->pp_children[i] );
 
-    return mt_duration;
+    return duration;
 }
 
 /***************************************************************************
  * The following functions are local
  ***************************************************************************/
 
-/* Enqueue an item for preparsing, and play it, if needed */
-static void GoAndPreparse( playlist_t *p_playlist, int i_mode,
-                           playlist_item_t *p_item )
+/* Enqueue an item for preparsing */
+static void playlist_Preparse( playlist_t *p_playlist,
+                               playlist_item_t *p_item )
 {
     playlist_private_t *sys = pl_priv(p_playlist);
+    input_item_t *input = p_item->p_input;
 
     PL_ASSERT_LOCKED;
-    if( (i_mode & PLAYLIST_GO ) )
-    {
-        sys->request.b_request = true;
-        sys->request.i_skip = 0;
-        sys->request.p_item = p_item;
-        if( sys->p_input != NULL )
-            input_Stop( sys->p_input );
-        vlc_cond_signal( &sys->signal );
-    }
     /* Preparse if no artist/album info, and hasn't been preparsed already
        and if user has some preparsing option (auto-preparse variable)
        enabled*/
-    char *psz_artist = input_item_GetArtist( p_item->p_input );
-    char *psz_album = input_item_GetAlbum( p_item->p_input );
+    char *psz_artist = input_item_GetArtist( input );
+    char *psz_album = input_item_GetAlbum( input );
 
-    if( sys->b_preparse && !input_item_IsPreparsed( p_item->p_input )
+    if( sys->b_preparse && !input_item_IsPreparsed( input )
      && (EMPTY_STR(psz_artist) || EMPTY_STR(psz_album)) )
-        libvlc_MetadataRequest( p_playlist->obj.libvlc, p_item->p_input, 0, -1,
-                                p_item );
+        libvlc_MetadataRequest( p_playlist->obj.libvlc, input, 0, -1, p_item );
     free( psz_artist );
     free( psz_album );
-}
-
-/* Add the playlist item to the requested node and fire a notification */
-static void AddItem( playlist_t *p_playlist, playlist_item_t *p_item,
-                     playlist_item_t *p_node, int i_pos )
-{
-    PL_ASSERT_LOCKED;
-    ARRAY_APPEND(p_playlist->items, p_item);
-
-    playlist_NodeInsert( p_playlist, p_item, p_node, i_pos );
-    playlist_SendAddNotify( p_playlist, p_item );
 }
 
 /* Actually convert an item to a node */
@@ -836,7 +795,7 @@ static int RecursiveAddIntoParent (
         {
             p_new_item = playlist_NodeAddInput( p_playlist,
                                                 p_child_node->p_item,
-                                                p_parent, 0, i_pos );
+                                                p_parent, i_pos );
             if( !p_new_item ) return i_pos;
 
             i_pos++;
@@ -885,7 +844,7 @@ static int RecursiveInsertCopy (
             if( likely(p_new_input != NULL) )
             {
                 p_new_item = playlist_NodeAddInput( p_playlist, p_new_input,
-                                                    p_parent, 0, i_pos );
+                                                    p_parent, i_pos );
                 input_item_Release( p_new_input );
             }
         }

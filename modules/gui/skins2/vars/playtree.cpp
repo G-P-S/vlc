@@ -59,7 +59,7 @@ void Playtree::delSelected()
                 playlist_ItemGetById( m_pPlaylist, it->getId() );
             if( pItem )
             {
-                playlist_NodeDelete( m_pPlaylist, pItem, false );
+                playlist_NodeDelete( m_pPlaylist, pItem );
             }
             playlist_Unlock( m_pPlaylist );
 
@@ -80,8 +80,7 @@ void Playtree::action( VarTree *pElem )
         playlist_ItemGetById( m_pPlaylist, pElem->getId() );
     if( pItem )
     {
-        playlist_Control( m_pPlaylist, PLAYLIST_VIEWPLAY,
-                          pl_Locked, pItem->p_parent, pItem );
+        playlist_ViewPlay( m_pPlaylist, pItem->p_parent, pItem );
     }
 
     playlist_Unlock( m_pPlaylist );
@@ -256,9 +255,9 @@ void Playtree::buildTree()
     clear();
     playlist_Lock( m_pPlaylist );
 
-    for( int i = 0; i < m_pPlaylist->p_root->i_children; i++ )
+    for( int i = 0; i < m_pPlaylist->root.i_children; i++ )
     {
-        buildNode( m_pPlaylist->p_root->pp_children[i], *this );
+        buildNode( m_pPlaylist->root.pp_children[i], *this );
     }
 
     playlist_Unlock( m_pPlaylist );
@@ -272,7 +271,7 @@ void Playtree::onUpdateSlider()
 
 void Playtree::insertItems( VarTree& elem, const std::list<std::string>& files, bool start )
 {
-    bool first = true;
+    bool first = start;
     VarTree* p_elem = &elem;
     playlist_item_t* p_node = NULL;
     int i_pos = -1;
@@ -320,9 +319,10 @@ void Playtree::insertItems( VarTree& elem, const std::list<std::string>& files, 
         goto fin;
 
     for( std::list<std::string>::const_iterator it = files.begin();
-         it != files.end(); ++it, i_pos++, first = false )
+         it != files.end(); ++it, i_pos++ )
     {
         input_item_t *pItem;
+        playlist_item_t *pPlItem;
 
         if( strstr( it->c_str(), "://" ) )
             pItem = input_item_New( it->c_str(), NULL );
@@ -338,12 +338,13 @@ void Playtree::insertItems( VarTree& elem, const std::list<std::string>& files, 
         if( pItem == NULL)
             continue;
 
-        int i_mode = 0;
-        if( first && start )
-            i_mode |= PLAYLIST_GO;
+        pPlItem = playlist_NodeAddInput( m_pPlaylist, pItem, p_node, i_pos );
 
-        playlist_NodeAddInput( m_pPlaylist, pItem, p_node,
-                               i_mode, i_pos );
+        if( likely(pPlItem != NULL) && first )
+        {
+            first = false;
+            playlist_ViewPlay( m_pPlaylist, NULL, pPlItem );
+        }
     }
 
 fin:

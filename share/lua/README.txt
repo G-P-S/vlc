@@ -285,7 +285,6 @@ playlist.get( [what, [tree]] ): Get the playlist.
       .id: The item's id.
       .flags: a table with the following members if the corresponding flag is
               set:
-          .skip
           .disabled
           .ro
       .name:
@@ -325,14 +324,13 @@ sd.add_node( ... ): Add a node to the service discovery.
       .arturl: the node's ArtURL (OPTIONAL)
       .category: the node's category (OPTIONAL)
 sd.add_item( ... ): Add an item to the service discovery.
-  The item object has the same members as the one in playlist.add() along with:
-      .category: the item's category (OPTIONAL)
+  The item object has the same members as the one in playlist.add().
   Returns the input item.
 sd.remove_item( item ): remove the item.
 
 n = vlc.sd.add_node( {title="Node"} )
-n:add_subitem( ... ): Same as sd.add_item(), but as a subitem of n.
-n:add_subnode( ... ): Same as sd.add_node(), but as a subnode of n.
+n:add_subitem( ... ): Same as sd.add_item(), but as a child item of node n.
+n:add_subnode( ... ): Same as sd.add_node(), but as a subnode of node n.
 
 d = vlc.sd.add_item( ... ) Get an item object to perform following set operations on it:
 d:set_name(): the item's name in playlist

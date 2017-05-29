@@ -295,8 +295,7 @@ static void ReadDir(intf_thread_t *intf)
 
         dir_entry->file = IsFile(sys->current_dir, entry);
         dir_entry->path = xstrdup(entry);
-        INSERT_ELEM(sys->dir_entries, sys->n_dir_entries,
-             sys->n_dir_entries, dir_entry);
+        TAB_APPEND(sys->n_dir_entries, sys->dir_entries, dir_entry);
         continue;
     }
 
@@ -375,8 +374,7 @@ static bool PlaylistAddChild(intf_sys_t *sys, playlist_item_t *p_child,
     free(name);
     p_pl_item->item = input_item_Hold(p_child->p_input);
 
-    INSERT_ELEM(sys->plist, sys->plist_entries,
-                 sys->plist_entries, p_pl_item);
+    TAB_APPEND(sys->plist_entries, sys->plist, p_pl_item);
 
     return true;
 
@@ -416,7 +414,7 @@ static void PlaylistRebuild(intf_thread_t *intf)
     playlist_t *p_playlist = pl_Get(intf);
 
     PlaylistDestroy(sys);
-    PlaylistAddNode(sys, p_playlist->p_root, "");
+    PlaylistAddNode(sys, &p_playlist->root, "");
 }
 
 static int ItemChanged(vlc_object_t *p_this, const char *variable,
@@ -1312,7 +1310,7 @@ static void AddItem(intf_thread_t *intf, const char *path)
     if (node == NULL)
         node = playlist->p_playing;
 
-    playlist_NodeAddInput(playlist, item, node, 0, PLAYLIST_END);
+    playlist_NodeAddInput(playlist, item, node, PLAYLIST_END);
     playlist_Unlock(playlist);
 
     input_item_Release(item);
@@ -1341,7 +1339,7 @@ static bool HandlePlaylistKey(intf_thread_t *intf, int key)
     case 'o':
     case 'O':
         playlist_Lock(p_playlist);
-        playlist_RecursiveNodeSort(p_playlist, p_playlist->p_root,
+        playlist_RecursiveNodeSort(p_playlist, &p_playlist->root,
                                    SORT_TITLE_NODES_FIRST,
                                    (key == 'o')? ORDER_NORMAL : ORDER_REVERSE);
         sys->need_update = true;
@@ -1367,7 +1365,7 @@ static bool HandlePlaylistKey(intf_thread_t *intf, int key)
 
         PL_LOCK;
         item = playlist_ItemGetByInput(p_playlist, input);
-        playlist_NodeDelete(p_playlist, item, false);
+        playlist_NodeDelete(p_playlist, item);
 
         if (sys->box_idx >= sys->box_lines_total - 1)
             sys->box_idx = sys->box_lines_total - 2;
@@ -1403,8 +1401,7 @@ static bool HandlePlaylistKey(intf_thread_t *intf, int key)
                 item = NULL;
             }
 
-            playlist_Control(p_playlist, PLAYLIST_VIEWPLAY, true,
-                             parent, item);
+            playlist_ViewPlay(p_playlist, parent, item);
         } else {   /* We only want to set the current node */
             playlist_Control(p_playlist, PLAYLIST_STOP, true);
             if (sys->node != NULL)

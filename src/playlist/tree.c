@@ -74,10 +74,8 @@ playlist_item_t * playlist_NodeCreate( playlist_t *p_playlist,
     input_item_Release( p_new_input );
 
     if( p_item == NULL )  return NULL;
-    p_item->i_children = 0;
 
-    if( p_parent != NULL )
-        playlist_NodeInsert( p_playlist, p_item, p_parent, i_pos );
+    playlist_NodeInsert( p_parent, p_item, i_pos );
     playlist_SendAddNotify( p_playlist, p_item );
 
     p_item->i_flags |= i_flags;
@@ -91,18 +89,26 @@ playlist_item_t * playlist_NodeCreate( playlist_t *p_playlist,
  * \param p_playlist the playlist
  * \param p_root the node
  */
-void playlist_NodeDelete( playlist_t *p_playlist, playlist_item_t *p_root,
-                          bool b_force )
+void playlist_NodeDelete( playlist_t *p_playlist, playlist_item_t *p_root )
+{
+    playlist_NodeDeleteExplicit( p_playlist, p_root,
+        PLAYLIST_DELETE_STOP_IF_CURRENT );
+}
+
+void playlist_NodeDeleteExplicit( playlist_t *p_playlist,
+    playlist_item_t *p_root, int flags )
 {
     PL_ASSERT_LOCKED;
 
+    /* Delete the node */
+    if( p_root->i_flags & PLAYLIST_RO_FLAG &&
+        !( flags & PLAYLIST_DELETE_FORCE ) )
+        return;
+
     /* Delete the children */
     for( int i = p_root->i_children - 1 ; i >= 0; i-- )
-        playlist_NodeDelete( p_playlist, p_root->pp_children[i], b_force );
-
-    /* Delete the node */
-    if( p_root->i_flags & PLAYLIST_RO_FLAG && !b_force )
-        return;
+        playlist_NodeDeleteExplicit( p_playlist,
+            p_root->pp_children[i], flags | PLAYLIST_DELETE_FORCE );
 
     pl_priv(p_playlist)->b_reset_currently_playing = true;
 
@@ -115,14 +121,13 @@ void playlist_NodeDelete( playlist_t *p_playlist, playlist_item_t *p_root,
             ARRAY_REMOVE( p_playlist->items, i );
     }
 
-    /* Check if it is the current item */
     if( get_current_status_item( p_playlist ) == p_root )
     {
-        /* Stop */
-        playlist_Control( p_playlist, PLAYLIST_STOP, pl_Locked );
-        msg_Info( p_playlist, "stopping playback" );
-        /* This item can't be the next one to be played ! */
+        /* a deleted item cannot be currently playing */
         set_current_status_item( p_playlist, NULL );
+
+        if( flags & PLAYLIST_DELETE_STOP_IF_CURRENT )
+            playlist_Control( p_playlist, PLAYLIST_STOP, pl_Locked );
     }
 
     for( i = 0; i < p_playlist->current.i_size; i++ )
@@ -136,40 +141,25 @@ void playlist_NodeDelete( playlist_t *p_playlist, playlist_item_t *p_root,
     /* Remove the item from its parent */
     playlist_item_t *p_parent = p_root->p_parent;
     if( p_parent != NULL )
-    {
-        for( int i = 0; i < p_parent->i_children ; i++ )
-        {
-            if( p_parent->pp_children[i] == p_root )
-            {
-                REMOVE_ELEM( p_parent->pp_children, p_parent->i_children, i );
-                assert( p_root->p_parent == p_parent );
-            }
-        }
-    }
+        TAB_REMOVE(p_parent->i_children, p_parent->pp_children, p_root);
 
     playlist_ItemRelease( p_playlist, p_root );
 }
 
-int playlist_NodeInsert( playlist_t *p_playlist,
-                         playlist_item_t *p_item,
-                         playlist_item_t *p_parent,
+int playlist_NodeInsert( playlist_item_t *p_parent, playlist_item_t *p_item,
                          int i_position )
 {
-    PL_ASSERT_LOCKED;
-    (void)p_playlist;
     assert( p_parent && p_parent->i_children != -1 );
     if( i_position == -1 ) i_position = p_parent->i_children ;
     assert( i_position <= p_parent->i_children);
 
-    INSERT_ELEM( p_parent->pp_children,
-                 p_parent->i_children,
-                 i_position,
-                 p_item );
+    TAB_INSERT(p_parent->i_children, p_parent->pp_children,
+               p_item, i_position);
     p_item->p_parent = p_parent;
 
     /* Inherit special flags from parent (sd cases) */
     if( ( p_parent->i_flags & PLAYLIST_NO_INHERIT_FLAG ) == 0 )
-        p_item->i_flags |= (p_parent->i_flags & (PLAYLIST_RO_FLAG | PLAYLIST_SKIP_FLAG));
+        p_item->i_flags |= (p_parent->i_flags & PLAYLIST_RO_FLAG);
 
     return VLC_SUCCESS;
 }
