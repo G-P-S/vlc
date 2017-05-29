@@ -900,7 +900,7 @@ sap_announce_t *CreateAnnounce( services_discovery_t *p_sd, uint32_t *i_source, 
         if (likely(str != NULL))
             for (char *p = strchr(str, '.'); p != NULL; p = strchr(p, '.'))
                 *(p++) = '|';
-        services_discovery_AddItem(p_sd, p_input, str ? str : psz_value);
+        services_discovery_AddItemCat(p_sd, p_input, str ? str : psz_value);
         free(str);
     }
     else
@@ -908,7 +908,7 @@ sap_announce_t *CreateAnnounce( services_discovery_t *p_sd, uint32_t *i_source, 
         /* backward compatibility with VLC 0.7.3-2.0.0 senders */
         psz_value = GetAttribute(p_sap->p_sdp->pp_attributes,
                                  p_sap->p_sdp->i_attributes, "x-plgroup");
-        services_discovery_AddItem(p_sd, p_input, psz_value);
+        services_discovery_AddItemCat(p_sd, p_input, psz_value);
     }
 
     TAB_APPEND( p_sys->i_announces, p_sys->pp_announces, p_sap );
@@ -1471,8 +1471,7 @@ static int InitSocket( services_discovery_t *p_sd, const char *psz_address,
         return VLC_EGENERIC;
 
     shutdown( i_fd, SHUT_WR );
-    INSERT_ELEM (p_sd->p_sys->pi_fd, p_sd->p_sys->i_fd,
-                 p_sd->p_sys->i_fd, i_fd);
+    TAB_APPEND(p_sd->p_sys->i_fd, p_sd->p_sys->pi_fd, i_fd);
     return VLC_SUCCESS;
 }
 
@@ -1565,16 +1564,8 @@ static int RemoveAnnounce( services_discovery_t *p_sd,
         p_announce->p_item = NULL;
     }
 
-    for( i = 0; i< p_sd->p_sys->i_announces; i++)
-    {
-        if( p_sd->p_sys->pp_announces[i] == p_announce )
-        {
-            REMOVE_ELEM( p_sd->p_sys->pp_announces, p_sd->p_sys->i_announces,
-                         i);
-            break;
-        }
-    }
-
+    TAB_REMOVE(p_sd->p_sys->i_announces, p_sd->p_sys->pp_announces,
+               p_announce);
     free( p_announce );
 
     return VLC_SUCCESS;

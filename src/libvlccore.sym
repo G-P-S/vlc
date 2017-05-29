@@ -411,6 +411,7 @@ vlc_stream_ReadLine
 vlc_stream_ReadPartial
 vlc_stream_Seek
 vlc_stream_Tell
+vlc_stream_NewMRL
 vlc_stream_NewURL
 vlc_stream_vaControl
 vlc_stream_ReadDir
@@ -567,10 +568,6 @@ vlc_CPU
 vlc_error
 vlc_event_attach
 vlc_event_detach
-vlc_event_manager_fini
-vlc_event_manager_init
-vlc_event_manager_register_event_type
-vlc_event_send
 vlc_fourcc_GetCodec
 vlc_fourcc_GetCodecAudio
 vlc_fourcc_GetCodecFromString
@@ -764,9 +761,5 @@ vlc_renderer_item_demux_filter
 vlc_renderer_item_flags
 vlc_rd_get_names
 vlc_rd_new
-vlc_rd_event_manager
-vlc_rd_start
-vlc_rd_stop
-vlc_rd_add_item
-vlc_rd_remove_item
+vlc_rd_release
 vlc_rd_probe_add

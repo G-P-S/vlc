@@ -168,7 +168,6 @@ struct input_item_node_t
     input_item_t *         p_item;
     int                    i_children;
     input_item_node_t      **pp_children;
-    input_item_node_t      *p_parent;
 };
 
 VLC_API void input_item_CopyOptions( input_item_t *p_child, input_item_t *p_parent );
@@ -182,7 +181,7 @@ VLC_API void input_item_SetName( input_item_t *p_item, const char *psz_name );
  * It is not the input item's responsibility to keep all the ref of
  * the input item children.
  *
- * Sends a vlc_InputItemSubItemTreeAdded and a vlc_InputItemSubItemAdded event
+ * Sends a vlc_InputItemSubItemTreeAdded event
  */
 VLC_API void input_item_PostSubItem( input_item_t *p_parent, input_item_t *p_child );
 
@@ -204,6 +203,12 @@ VLC_API input_item_node_t * input_item_node_AppendItem( input_item_node_t *p_nod
 VLC_API void input_item_node_AppendNode( input_item_node_t *p_parent, input_item_node_t *p_child );
 
 /**
+ * Remove a node from its parent.
+ */
+void input_item_node_RemoveNode( input_item_node_t *parent,
+                                 input_item_node_t *child );
+
+/**
  * Delete a node created with input_item_node_Create() and all its children.
  */
 VLC_API void input_item_node_Delete( input_item_node_t *p_node );
@@ -214,8 +219,6 @@ VLC_API void input_item_node_Delete( input_item_node_t *p_node );
  * Sends a vlc_InputItemSubItemTreeAdded event to notify that the item pointed to
  * by the given root node has created new subitems that are pointed to by all the
  * children of the node.
- *
- * Also sends vlc_InputItemSubItemAdded event for every child under the given root node;
  *
  * In the end deletes the node and all its children nodes.
  */

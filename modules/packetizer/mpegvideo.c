@@ -145,7 +145,7 @@ struct decoder_sys_t
 
 static block_t *Packetize( decoder_t *, block_t ** );
 static void PacketizeFlush( decoder_t * );
-static block_t *GetCc( decoder_t *p_dec, bool pb_present[4] );
+static block_t *GetCc( decoder_t *p_dec, bool pb_present[4], int * );
 
 static void PacketizeReset( void *p_private, bool b_broken );
 static block_t *PacketizeParse( void *p_private, bool *pb_ts_used, block_t * );
@@ -281,11 +281,12 @@ static void PacketizeFlush( decoder_t *p_dec )
 /*****************************************************************************
  * GetCc:
  *****************************************************************************/
-static block_t *GetCc( decoder_t *p_dec, bool pb_present[4] )
+static block_t *GetCc( decoder_t *p_dec, bool pb_present[4], int *pi_reorder_depth )
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     block_t *p_cc;
     int i;
+    *pi_reorder_depth = 0;
 
     for( i = 0; i < 4; i++ )
         pb_present[i] = p_sys->cc.pb_present[i];
@@ -526,9 +527,12 @@ static block_t *ParseMPEGBlock( decoder_t *p_dec, block_t *p_frag )
 
             p_pic->i_pts = date_Get( &datepts );
 
-            date_Increment( &p_sys->dts,  i_num_fields );
+            if( date_Get( &p_sys->dts ) != VLC_TS_INVALID )
+            {
+                date_Increment( &p_sys->dts,  i_num_fields );
 
-            p_pic->i_length = date_Get( &p_sys->dts ) - p_pic->i_dts;
+                p_pic->i_length = date_Get( &p_sys->dts ) - p_pic->i_dts;
+            }
             p_sys->i_prev_temporal_ref = p_sys->i_temporal_ref;
         }
         else /* General case, use demuxer's dts/pts when set or interpolate */
@@ -570,9 +574,12 @@ static block_t *ParseMPEGBlock( decoder_t *p_dec, block_t *p_frag )
                 p_pic->i_pts = VLC_TS_INVALID;
             }
 
-            date_Increment( &p_sys->dts,  i_num_fields );
+            if( date_Get( &p_sys->dts ) != VLC_TS_INVALID )
+            {
+                date_Increment( &p_sys->dts,  i_num_fields );
 
-            p_pic->i_length = date_Get( &p_sys->dts ) - p_pic->i_dts;
+                p_pic->i_length = date_Get( &p_sys->dts ) - p_pic->i_dts;
+            }
         }
 
 #if 0

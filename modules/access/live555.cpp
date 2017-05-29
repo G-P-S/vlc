@@ -90,7 +90,7 @@ static void Close( vlc_object_t * );
 #define FRAME_BUFFER_SIZE_LONGTEXT N_("RTSP start frame buffer size of the video " \
     "track, can be increased in case of broken pictures due " \
     "to too small buffer.")
-#define DEFAULT_FRAME_BUFFER_SIZE 100000
+#define DEFAULT_FRAME_BUFFER_SIZE 250000
 
 vlc_module_begin ()
     set_description( N_("RTP/RTSP/SDP demuxer (using Live555)" ) )
@@ -170,12 +170,11 @@ typedef struct
     unsigned int    i_buffer;
 
     bool            b_rtcp_sync;
-    bool            b_discontinuity;
+    bool            b_flushing_discontinuity;
     int             i_next_block_flags;
     char            waiting;
     int64_t         i_lastpts;
     int64_t         i_pcr;
-    int64_t         i_offset;
     double          f_npt;
 
     bool            b_selected;
@@ -836,7 +835,7 @@ static int SessionsSetup( demux_t *p_demux )
             tk->p_out_muxed = NULL;
             tk->waiting     = 0;
             tk->b_rtcp_sync = false;
-            tk->b_discontinuity = false;
+            tk->b_flushing_discontinuity = false;
             tk->i_next_block_flags = 0;
             tk->i_lastpts   = VLC_TS_INVALID;
             tk->i_pcr       = VLC_TS_INVALID;
@@ -1346,7 +1345,7 @@ static int Demux( demux_t *p_demux )
     if( b_send_pcr )
     {
         mtime_t i_minpcr = VLC_TS_INVALID;
-        bool b_discontinuity = false;
+        bool b_need_flush = false;
 
         /* Check for gap in pts value */
         for( i = 0; i < p_sys->i_track; i++ )
@@ -1358,15 +1357,15 @@ static int Demux( demux_t *p_demux )
                 continue;
 
             /* Check for gap in pts value */
-            b_discontinuity |= (tk->b_discontinuity);
+            b_need_flush |= (tk->b_flushing_discontinuity);
 
             if( i_minpcr == VLC_TS_INVALID || i_minpcr > tk->i_pcr )
                 i_minpcr = tk->i_pcr;
         }
 
-        if( p_sys->i_pcr > VLC_TS_INVALID && b_discontinuity )
+        if( p_sys->i_pcr > VLC_TS_INVALID && b_need_flush )
         {
-            es_out_Control( p_demux->out, ES_OUT_MODIFY_PCR_SYSTEM, true, VLC_TS_0 + i_minpcr );
+            es_out_Control( p_demux->out, ES_OUT_RESET_PCR );
             p_sys->i_pcr = i_minpcr;
             p_sys->f_npt = 0.;
 
@@ -1374,19 +1373,20 @@ static int Demux( demux_t *p_demux )
             {
                 live_track_t *tk = p_sys->track[i];
                 tk->i_lastpts = VLC_TS_INVALID;
-                tk->i_offset = 0;
                 tk->i_pcr = VLC_TS_INVALID;
                 tk->f_npt = 0.;
-                tk->b_discontinuity = false;
-                tk->i_next_block_flags = BLOCK_FLAG_DISCONTINUITY;
+                tk->b_flushing_discontinuity = false;
+                tk->i_next_block_flags |= BLOCK_FLAG_DISCONTINUITY;
             }
-            es_out_Control( p_demux->out, ES_OUT_SET_PCR, VLC_TS_0 + p_sys->i_pcr );
+            if( p_sys->i_pcr != VLC_TS_INVALID )
+                es_out_Control( p_demux->out, ES_OUT_SET_PCR, VLC_TS_0 + p_sys->i_pcr );
         }
         else if( p_sys->i_pcr == VLC_TS_INVALID ||
                  i_minpcr > p_sys->i_pcr + CLOCK_FREQ / 4 )
         {
             p_sys->i_pcr = i_minpcr;
-            es_out_Control( p_demux->out, ES_OUT_SET_PCR, VLC_TS_0 + p_sys->i_pcr );
+            if( p_sys->i_pcr != VLC_TS_INVALID )
+                es_out_Control( p_demux->out, ES_OUT_SET_PCR, VLC_TS_0 + p_sys->i_pcr );
         }
     }
 
@@ -1651,7 +1651,8 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                 {
                     live_track_t *tk = p_sys->track[i];
                     tk->b_rtcp_sync = false;
-                    tk->b_discontinuity = false;
+                    tk->b_flushing_discontinuity = false;
+                    tk->i_next_block_flags |= BLOCK_FLAG_DISCONTINUITY;
                     tk->i_lastpts = VLC_TS_INVALID;
                     tk->i_pcr = VLC_TS_INVALID;
                 }
@@ -2020,18 +2021,14 @@ static void StreamRead( void *p_private, unsigned int i_size,
     {
         msg_Dbg( p_demux, "tk->rtpSource->hasBeenSynchronizedUsingRTCP()" );
         p_sys->b_rtcp_sync = tk->b_rtcp_sync = true;
-        if( tk->i_pcr < i_pts )
+        if( tk->i_pcr != VLC_TS_INVALID )
         {
-            tk->i_offset = (tk->i_pcr > 0) ? i_pts + tk->i_pcr : 0;
-        }
-        else
-        {
-            tk->b_discontinuity = ( tk->i_pcr > VLC_TS_INVALID );
-            tk->i_pcr = VLC_TS_INVALID;
+            tk->i_next_block_flags |= BLOCK_FLAG_DISCONTINUITY;
+            const int64_t i_max_diff = CLOCK_FREQ * (( tk->fmt.i_cat == SPU_ES ) ? 60 : 1);
+            tk->b_flushing_discontinuity = (llabs(i_pts - tk->i_pcr) > i_max_diff);
+            tk->i_pcr = i_pts;
         }
     }
-
-    i_pts -= tk->i_offset;
 
     /* Update our global npt value */
     if( tk->f_npt > 0 &&
@@ -2052,7 +2049,22 @@ static void StreamRead( void *p_private, unsigned int i_size,
                 if( i_pts != tk->i_lastpts )
                     p_block->i_pts = VLC_TS_0 + i_pts;
                 /*FIXME: for h264 you should check that packetization-mode=1 in sdp-file */
-                p_block->i_dts = ( tk->fmt.i_codec == VLC_CODEC_MPGV ) ? VLC_TS_INVALID : (VLC_TS_0 + i_pts);
+                switch( tk->fmt.i_codec )
+                {
+                    case VLC_CODEC_MPGV:
+                    case VLC_CODEC_H264:
+                    case VLC_CODEC_HEVC:
+                    case VLC_CODEC_VP8:
+                        p_block->i_dts = VLC_TS_INVALID;
+                        break;
+                    default:
+                        p_block->i_dts = VLC_TS_0 + i_pts;
+                        break;
+                }
+
+                if( i_truncated_bytes )
+                    p_block->i_flags |= BLOCK_FLAG_CORRUPTED;
+
                 if( unlikely(tk->i_next_block_flags) )
                 {
                     p_block->i_flags |= tk->i_next_block_flags;

@@ -1,7 +1,9 @@
 /*****************************************************************************
- * chromaprint.hpp: Fingerprinter helper class
+ * d3d9_fmt.h : D3D9 helper calls
  *****************************************************************************
- * Copyright (C) 2012 VLC authors and VideoLAN
+ * Copyright © 2017 VLC authors, VideoLAN and VideoLabs
+ *
+ * Authors: Steve Lhomme <robux4@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -17,39 +19,19 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
-#ifndef CHROMAPRINT_HPP
-#define CHROMAPRINT_HPP
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#ifndef VLC_VIDEOCHROMA_D3D9_FMT_H_
+#define VLC_VIDEOCHROMA_D3D9_FMT_H_
 
-#include <QObject>
-#include <QString>
-#include <vlc_fingerprinter.h>
-#include <vlc_interface.h>
-
-class Chromaprint : public QObject
+/* VLC_CODEC_D3D9_OPAQUE */
+struct picture_sys_t
 {
-    Q_OBJECT
-
-public:
-    Chromaprint( intf_thread_t *p_intf = NULL );
-    virtual ~Chromaprint();
-    bool enqueue( input_item_t *p_item );
-    static int results_available( vlc_object_t *p_this, const char *,
-                                  vlc_value_t, vlc_value_t newval, void *param );
-    fingerprint_request_t * fetchResults();
-    void apply( fingerprint_request_t *, size_t i_id );
-    static bool isSupported( QString uri );
-
-signals:
-    void finished();
-
-private:
-    void finish() { emit finished(); }
-    intf_thread_t *p_intf;
-    fingerprinter_thread_t *p_fingerprinter;
+    LPDIRECT3DSURFACE9 surface;
 };
 
-#endif // CHROMAPRINT_HPP
+static inline void ReleasePictureSys(picture_sys_t *p_sys)
+{
+    IDirect3DSurface9_Release(p_sys->surface);
+}
+
+#endif /* VLC_VIDEOCHROMA_D3D9_FMT_H_ */

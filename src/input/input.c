@@ -37,13 +37,13 @@
 #include <sys/stat.h>
 
 #include "input_internal.h"
-#include "mrl_helpers.h"
 #include "event.h"
 #include "es_out.h"
 #include "es_out_timeshift.h"
 #include "demux.h"
 #include "item.h"
 #include "resource.h"
+#include "stream.h"
 
 #include <vlc_sout.h>
 #include <vlc_dialog.h>
@@ -94,7 +94,7 @@ static void InputMetaUser( input_thread_t *p_input, vlc_meta_t *p_meta );
 static void InputUpdateMeta( input_thread_t *p_input, demux_t *p_demux );
 static void InputGetExtraFiles( input_thread_t *p_input,
                                 int *pi_list, char ***pppsz_list,
-                                const char *psz_access, const char *psz_path );
+                                const char **psz_access, const char *psz_path );
 
 static void AppendAttachment( int *pi_attachment, input_attachment_t ***ppp_attachment,
                               const demux_t ***ppp_attachment_demux,
@@ -437,7 +437,7 @@ static input_thread_t *Create( vlc_object_t *p_parent, input_item_t *p_item,
                      }
                      else if( !strncmp( psz_start, "time=", 5 ) )
                      {
-                         p_seekpoint->i_time_offset = atoll(psz_start + 5) *
+                         p_seekpoint->i_time_offset = atof(psz_start + 5) *
                                                         CLOCK_FREQ;
                      }
                      psz_start = psz_end + 1;
@@ -1032,7 +1032,7 @@ static void GetVarSlaves( input_thread_t *p_input,
 
         if( unlikely( p_slave == NULL ) )
             break;
-        INSERT_ELEM( pp_slaves, i_slaves, i_slaves, p_slave );
+        TAB_APPEND(i_slaves, pp_slaves, p_slave);
     }
     free( psz_org );
 
@@ -1063,7 +1063,7 @@ static void LoadSlaves( input_thread_t *p_input )
             free( psz_uri );
             if( p_slave )
             {
-                INSERT_ELEM( pp_slaves, i_slaves, i_slaves, p_slave );
+                TAB_APPEND(i_slaves, pp_slaves, p_slave);
                 psz_subtitle = p_slave->psz_uri;
             }
         }
@@ -1105,7 +1105,7 @@ static void LoadSlaves( input_thread_t *p_input )
     {
         input_item_slave_t *p_slave = p_item->pp_slaves[i];
         if( !SlaveExists( pp_slaves, i_slaves, p_slave->psz_uri ) )
-            INSERT_ELEM( pp_slaves, i_slaves, i_slaves, p_slave );
+            TAB_APPEND(i_slaves, pp_slaves, p_slave);
         else
             input_item_slave_Delete( p_slave );
     }
@@ -1238,7 +1238,7 @@ static void InitPrograms( input_thread_t * p_input )
                  prgm = strtok_r( NULL, ",", &buf ) )
             {
                 vlc_value_t val = { .i_int = atoi( prgm ) };
-                INSERT_ELEM( list.p_values, list.i_count, list.i_count, val );
+                TAB_APPEND(list.i_count, list.p_values, val);
             }
 
             if( list.i_count > 0 )
@@ -1503,6 +1503,12 @@ do { \
         free( priv->attachment_demux);
         priv->attachment_demux = NULL;
     }
+
+    /* clean bookmarks */
+    for( int i = 0; i < priv->i_bookmark; ++i )
+        vlc_seekpoint_Delete( priv->pp_bookmark[i] );
+    TAB_CLEAN( priv->i_bookmark, priv->pp_bookmark );
+
     vlc_mutex_unlock( &input_priv(p_input)->p_item->lock );
 
     /* */
@@ -2262,53 +2268,24 @@ static int
 InputStreamHandleAnchor( input_source_t *source, stream_t **stream,
                          char const *anchor )
 {
-    vlc_array_t identifiers;
     char const* extra;
-
-    if( mrl_FragmentSplit( &identifiers, &extra, anchor ) )
+    if( stream_extractor_AttachParsed( stream, anchor, &extra ) )
     {
-        msg_Err( source, "unable to parse MRL-fragment: %s", anchor );
-        goto error;
+        msg_Err( source, "unable to attach stream-extractors for %s",
+            (*stream)->psz_url );
+
+        return VLC_EGENERIC;
     }
+
+    if( vlc_stream_directory_Attach( stream, NULL ) )
+        msg_Dbg( source, "attachment of directory-extractor failed for %s",
+            (*stream)->psz_url );
 
     MRLSections( extra ? extra : "",
         &source->i_title_start, &source->i_title_end,
         &source->i_seekpoint_start, &source->i_seekpoint_end );
 
-    while( vlc_array_count( &identifiers ) )
-    {
-        char* id = vlc_array_item_at_index( &identifiers, 0 );
-
-        if( vlc_stream_extractor_Attach( stream, id, NULL ) )
-        {
-            msg_Err( source, "unable to locate entity '%s' within stream", id );
-            break;
-        }
-        else
-            msg_Dbg( source, "successfully located entity '%s' within stream", id );
-
-        vlc_array_remove( &identifiers, 0 );
-        free( id );
-    }
-
-    size_t remaining = vlc_array_count( &identifiers );
-
-    for( size_t i = 0; i < remaining; ++i )
-        free( vlc_array_item_at_index( &identifiers, i ) );
-
-    vlc_array_clear( &identifiers );
-
-    if( remaining == 0 )
-    {
-        if( vlc_stream_directory_Attach( stream, NULL ) )
-            msg_Dbg( source, "attach of directory extractor failed" );
-
-        return VLC_SUCCESS;
-    }
-
-error:
-    return VLC_EGENERIC;
-
+    return VLC_SUCCESS;
 }
 
 static demux_t *InputDemuxNew( input_thread_t *p_input, input_source_t *p_source,
@@ -2445,7 +2422,7 @@ static input_source_t *InputSourceNew( input_thread_t *p_input,
         char **tab;
 
         TAB_INIT( count, tab );
-        InputGetExtraFiles( p_input, &count, &tab, psz_access, psz_path );
+        InputGetExtraFiles( p_input, &count, &tab, &psz_access, psz_path );
         if( count > 0 )
         {
             char *list = NULL;
@@ -2468,7 +2445,6 @@ static input_source_t *InputSourceNew( input_thread_t *p_input,
                 var_SetString( p_input, "concat-list", list );
                 free( list );
             }
-            psz_access = "concat";
         }
         TAB_CLEAN( count, tab );
     }
@@ -2868,7 +2844,6 @@ static void InputGetExtraFilesPattern( input_thread_t *p_input,
 {
     int i_list;
     char **ppsz_list;
-
     TAB_INIT( i_list, ppsz_list );
 
     char *psz_base = strdup( psz_path );
@@ -2883,24 +2858,29 @@ static void InputGetExtraFilesPattern( input_thread_t *p_input,
     /* Try to list files */
     for( int i = i_start; i <= i_stop; i++ )
     {
-        struct stat st;
-        char *psz_file;
-
-        if( asprintf( &psz_file, psz_format, psz_base, i ) < 0 )
+        char *psz_probe;
+        if( asprintf( &psz_probe, psz_format, psz_base, i ) < 0 )
             break;
 
-        char *psz_tmp_path = get_path( psz_file );
+        char *psz_path = get_path( psz_probe );
 
-        if( vlc_stat( psz_tmp_path, &st ) || !S_ISREG( st.st_mode ) || !st.st_size )
+        struct stat st;
+        if( psz_path == NULL ||
+            vlc_stat( psz_path, &st ) || !S_ISREG( st.st_mode ) || !st.st_size )
         {
-            free( psz_file );
-            free( psz_tmp_path );
+            free( psz_path );
+            free( psz_probe );
             break;
         }
 
-        msg_Dbg( p_input, "Detected extra file `%s'", psz_file );
-        TAB_APPEND( i_list, ppsz_list, psz_file );
-        free( psz_tmp_path );
+        msg_Dbg( p_input, "Detected extra file `%s'", psz_path );
+
+        char* psz_uri = vlc_path2uri( psz_path, NULL );
+        if( psz_uri )
+            TAB_APPEND( i_list, ppsz_list, psz_uri );
+
+        free( psz_path );
+        free( psz_probe );
     }
     free( psz_base );
 exit:
@@ -2910,39 +2890,46 @@ exit:
 
 static void InputGetExtraFiles( input_thread_t *p_input,
                                 int *pi_list, char ***pppsz_list,
-                                const char *psz_access, const char *psz_path )
+                                const char **ppsz_access, const char *psz_path )
 {
-    static const struct
+    static const struct pattern
     {
+        const char *psz_access_force;
         const char *psz_match;
         const char *psz_format;
         int i_start;
         int i_stop;
-    } p_pattern[] = {
+    } patterns[] = {
         /* XXX the order is important */
-        { ".001",         "%s.%.3d",        2, 999 },
-        { NULL, NULL, 0, 0 }
+        { "concat", ".001", "%s.%.3d", 2, 999 },
+        { NULL, ".part1.rar","%s.part%.1d.rar", 2, 9 },
+        { NULL, ".part01.rar","%s.part%.2d.rar", 2, 99, },
+        { NULL, ".part001.rar", "%s.part%.3d.rar", 2, 999 },
+        { NULL, ".rar", "%s.r%.2d", 0, 99 },
     };
 
     TAB_INIT( *pi_list, *pppsz_list );
 
-    if( ( psz_access && *psz_access && strcmp( psz_access, "file" ) ) || !psz_path )
+    if( ( **ppsz_access && strcmp( *ppsz_access, "file" ) ) || !psz_path )
         return;
 
     const size_t i_path = strlen(psz_path);
 
-    for( int i = 0; p_pattern[i].psz_match != NULL; i++ )
+    for( size_t i = 0; i < ARRAY_SIZE( patterns ); ++i )
     {
-        const size_t i_ext = strlen(p_pattern[i].psz_match );
+        const struct pattern* pat = &patterns[i];
+        const size_t i_ext = strlen( pat->psz_match );
 
         if( i_path < i_ext )
             continue;
-        if( !strcmp( &psz_path[i_path-i_ext], p_pattern[i].psz_match ) )
+
+        if( !strcmp( &psz_path[i_path-i_ext], pat->psz_match ) )
         {
-            InputGetExtraFilesPattern( p_input, pi_list, pppsz_list,
-                                       psz_path,
-                                       p_pattern[i].psz_match, p_pattern[i].psz_format,
-                                       p_pattern[i].i_start, p_pattern[i].i_stop );
+            InputGetExtraFilesPattern( p_input, pi_list, pppsz_list, psz_path,
+                pat->psz_match, pat->psz_format, pat->i_start, pat->i_stop );
+
+            if( *pi_list > 0 && pat->psz_access_force )
+                *ppsz_access = pat->psz_access_force;
             return;
         }
     }

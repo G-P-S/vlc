@@ -3718,7 +3718,6 @@ AS_IF([test "${enable_qt}" != "no"], [
     ])
 ])
 AS_IF([test "${enable_qt}" != "no"], [
-  VLC_ADD_PLUGIN([qt])
   ALIASES="${ALIASES} qvlc"
 ])
 AC_SUBST(QT_VERSION)
@@ -3823,8 +3822,6 @@ then
       AC_MSG_ERROR([ibtool was not found, but is required for --enable-macosx])
     ])
   ])
-
-  VLC_ADD_PLUGIN([macosx])
 fi
 AM_CONDITIONAL(ENABLE_MACOSX_UI, [test "$enable_macosx" != "no" -a "${SYS}" = "darwin"])
 
@@ -4232,8 +4229,6 @@ AC_CONFIG_FILES([
   lib/Makefile
   bin/Makefile
   test/Makefile
-  modules/gui/macosx/Makefile
-  modules/gui/qt/Makefile
   modules/hw/mmal/Makefile
   share/vlc.appdata.xml.in
 ])

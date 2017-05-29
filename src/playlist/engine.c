@@ -29,6 +29,7 @@
 #include <assert.h>
 
 #include <vlc_common.h>
+#include <vlc_arrays.h>
 #include <vlc_sout.h>
 #include <vlc_playlist.h>
 #include <vlc_interface.h>
@@ -110,13 +111,9 @@ static int RateCallback( vlc_object_t *p_this, char const *psz_cmd,
 
     PL_LOCK;
 
-    if( pl_priv(p_playlist)->p_input == NULL )
-    {
-        PL_UNLOCK;
-        return VLC_SUCCESS;
-    }
+    if( pl_priv(p_playlist)->p_input )
+        var_SetFloat( pl_priv( p_playlist )->p_input, "rate", newval.f_float );
 
-    var_SetFloat( pl_priv( p_playlist )->p_input, "rate", newval.f_float );
     PL_UNLOCK;
     return VLC_SUCCESS;
 }
@@ -127,46 +124,35 @@ static int RateOffsetCallback( vlc_object_t *obj, char const *psz_cmd,
     playlist_t *p_playlist = (playlist_t *)obj;
     VLC_UNUSED(oldval); VLC_UNUSED(p_data); VLC_UNUSED(newval);
 
-    static const float pf_rate[] = {
+    static const float rates[] = {
         1.0/64, 1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0/3, 1.0/2, 2.0/3,
         1.0/1,
         3.0/2, 2.0/1, 3.0/1, 4.0/1, 8.0/1, 16.0/1, 32.0/1, 64.0/1,
     };
-    const size_t i_rate_count = sizeof(pf_rate)/sizeof(*pf_rate);
-
-    float f_rate;
-    struct input_thread_t *input;
 
     PL_LOCK;
-    input = pl_priv( p_playlist )->p_input;
-    f_rate = var_GetFloat( input ? (vlc_object_t *)input : obj, "rate" );
+    input_thread_t *input = pl_priv( p_playlist )->p_input;
+    float current_rate = var_GetFloat( input ? VLC_OBJECT( input ) : obj, "rate" );
     PL_UNLOCK;
 
-    if( !strcmp( psz_cmd, "rate-faster" ) )
+    const bool faster = !strcmp( psz_cmd, "rate-faster" );
+    float rate = current_rate * ( faster ? 1.1f : 0.9f );
+
+    /* find closest rate (if any) in the desired direction */
+    for( size_t i = 0; i < ARRAY_SIZE( rates ); ++i )
     {
-        /* compensate for input rounding errors */
-        float r = f_rate * 1.1f;
-        for( size_t i = 0; i < i_rate_count; i++ )
-            if( r < pf_rate[i] )
-            {
-                f_rate = pf_rate[i];
-                break;
-            }
-    }
-    else
-    {
-        /* compensate for input rounding errors */
-        float r = f_rate * .9f;
-        for( size_t i = 1; i < i_rate_count; i++ )
-            if( r <= pf_rate[i] )
-            {
-                f_rate = pf_rate[i - 1];
-                break;
-            }
+        if( ( faster && rates[i] > rate ) ||
+            (!faster && rates[i] >= rate && i ) )
+        {
+            rate = faster ? rates[i] : rates[i-1];
+            break;
+        }
     }
 
-    var_SetFloat( p_playlist, "rate", f_rate );
-    return VLC_SUCCESS;
+    msg_Dbg( p_playlist, "adjusting rate from %f to %f (%s)",
+        current_rate, rate, faster ? "faster" : "slower" );
+
+    return var_SetFloat( p_playlist, "rate", rate );
 }
 
 static int VideoSplitterCallback( vlc_object_t *p_this, char const *psz_cmd,
@@ -207,7 +193,9 @@ playlist_t *playlist_Create( vlc_object_t *p_parent )
     if( !p )
         return NULL;
 
-    assert( offsetof( playlist_private_t, public_data ) == 0 );
+    static_assert( offsetof( playlist_private_t, public_data ) == 0,
+                   "playlist_private_t.public_data must be at offset 0" );
+
     p_playlist = &p->public_data;
 
     p->input_tree = NULL;
@@ -233,24 +221,31 @@ playlist_t *playlist_Create( vlc_object_t *p_parent )
     pl_priv(p_playlist)->b_tree = var_InheritBool( p_parent, "playlist-tree" );
     pl_priv(p_playlist)->b_preparse = var_InheritBool( p_parent, "auto-preparse" );
 
+    p_playlist->root.p_input = NULL;
+    p_playlist->root.pp_children = NULL;
+    p_playlist->root.i_children = 0;
+    p_playlist->root.i_nb_played = 0;
+    p_playlist->root.i_id = 0;
+    p_playlist->root.i_flags = 0;
+
     /* Create the root, playing items and meida library nodes */
-    playlist_item_t *root, *playing, *ml;
+    playlist_item_t *playing, *ml;
 
     PL_LOCK;
-    root = playlist_NodeCreate( p_playlist, NULL, NULL, PLAYLIST_END, 0 );
-    playing = playlist_NodeCreate( p_playlist, _( "Playlist" ), root,
-                                   PLAYLIST_END, PLAYLIST_RO_FLAG | PLAYLIST_NO_INHERIT_FLAG );
+    playing = playlist_NodeCreate( p_playlist, _( "Playlist" ),
+                                   &p_playlist->root, PLAYLIST_END,
+                                   PLAYLIST_RO_FLAG|PLAYLIST_NO_INHERIT_FLAG );
     if( var_InheritBool( p_parent, "media-library") )
-        ml = playlist_NodeCreate( p_playlist, _( "Media Library" ), root,
-                                  PLAYLIST_END, PLAYLIST_RO_FLAG | PLAYLIST_NO_INHERIT_FLAG );
+        ml = playlist_NodeCreate( p_playlist, _( "Media Library" ),
+                                  &p_playlist->root, PLAYLIST_END,
+                                  PLAYLIST_RO_FLAG|PLAYLIST_NO_INHERIT_FLAG );
     else
         ml = NULL;
     PL_UNLOCK;
 
-    if( unlikely(root == NULL || playing == NULL) )
+    if( unlikely(playing == NULL) )
         abort();
 
-    p_playlist->p_root = root;
     p_playlist->p_playing = playing;
     p_playlist->p_media_library = ml;
 
@@ -333,7 +328,16 @@ void playlist_Destroy( playlist_t *p_playlist )
     ARRAY_RESET( p_playlist->current );
 
     /* Remove all remaining items */
-    playlist_NodeDelete( p_playlist, p_playlist->p_root, true );
+    if( p_playlist->p_media_library != NULL )
+    {
+        playlist_NodeDeleteExplicit( p_playlist, p_playlist->p_media_library,
+            PLAYLIST_DELETE_FORCE );
+    }
+
+    playlist_NodeDeleteExplicit( p_playlist, p_playlist->p_playing,
+        PLAYLIST_DELETE_FORCE );
+
+    assert( p_playlist->root.i_children <= 0 );
     PL_UNLOCK;
 
     vlc_cond_destroy( &p_sys->signal );

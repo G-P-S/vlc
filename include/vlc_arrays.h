@@ -119,12 +119,6 @@ static inline void *realloc_down( void *ptr, size_t size )
 #define TAB_INSERT( count, tab, p, index )      \
     TAB_INSERT_CAST( , count, tab, p, index )
 
-#define INSERT_ELEM( p_ar, i_oldsize, i_pos, elem ) \
-    TAB_INSERT( i_oldsize, p_ar, elem, i_pos )
-
-#define REMOVE_ELEM( p_ar, i_size, i_pos )  \
-    TAB_ERASE( i_size, p_ar, i_pos )
-
 /**
  * Binary search in a sorted array. The key must be comparable by < and >
  * \param entries array of entries
@@ -507,8 +501,8 @@ vlc_dictionary_all_keys( const vlc_dictionary_t * p_dict )
 }
 
 static inline void
-__vlc_dictionary_insert( vlc_dictionary_t * p_dict, const char * psz_key,
-                         void * p_value, bool rebuild )
+vlc_dictionary_insert_impl_( vlc_dictionary_t * p_dict, const char * psz_key,
+                             void * p_value, bool rebuild )
 {
     if( !p_dict->p_entries )
         vlc_dictionary_init( p_dict, 1 );
@@ -539,7 +533,7 @@ __vlc_dictionary_insert( vlc_dictionary_t * p_dict, const char * psz_key,
                 p_entry = p_dict->p_entries[i];
                 while( p_entry )
                 {
-                    __vlc_dictionary_insert( &new_dict, p_entry->psz_key,
+                    vlc_dictionary_insert_impl_( &new_dict, p_entry->psz_key,
                                              p_entry->p_value,
                                              false /* To avoid multiple rebuild loop */);
                     p_entry = p_entry->p_next;
@@ -556,7 +550,7 @@ __vlc_dictionary_insert( vlc_dictionary_t * p_dict, const char * psz_key,
 static inline void
 vlc_dictionary_insert( vlc_dictionary_t * p_dict, const char * psz_key, void * p_value )
 {
-    __vlc_dictionary_insert( p_dict, psz_key, p_value, true );
+    vlc_dictionary_insert_impl_( p_dict, psz_key, p_value, true );
 }
 
 static inline void

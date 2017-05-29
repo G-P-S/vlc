@@ -214,30 +214,12 @@ int vlclua_dir_list( const char *luadirname, char ***pppsz_dir_list )
         i++;
     free( datadir );
 
-#if !(defined(__APPLE__) || defined(_WIN32))
-    char *psz_libpath = config_GetLibDir();
-    if( likely(psz_libpath != NULL) )
-    {
-        if( likely(asprintf( &ppsz_dir_list[i], "%s"DIR_SEP"lua"DIR_SEP"%s",
-                             psz_libpath, luadirname ) != -1) )
-            i++;
-        free( psz_libpath );
-    }
-#endif
-
     char *psz_datapath = config_GetDataDir();
     if( likely(psz_datapath != NULL) )
     {
         if( likely(asprintf( &ppsz_dir_list[i], "%s"DIR_SEP"lua"DIR_SEP"%s",
                               psz_datapath, luadirname ) != -1) )
             i++;
-
-#if defined(__APPLE__)
-        if( likely(asprintf( &ppsz_dir_list[i],
-                             "%s"DIR_SEP"share"DIR_SEP"lua"DIR_SEP"%s",
-                             psz_datapath, luadirname ) != -1) )
-            i++;
-#endif
         free( psz_datapath );
     }
 
@@ -450,8 +432,7 @@ void vlclua_read_options( vlc_object_t *p_this, lua_State *L,
             {
                 char *psz_option = strdup( lua_tostring( L, -1 ) );
                 msg_Dbg( p_this, "Option: %s", psz_option );
-                INSERT_ELEM( *pppsz_options, *pi_options, *pi_options,
-                             psz_option );
+                TAB_APPEND( *pi_options, *pppsz_options, psz_option );
             }
             else
             {
@@ -566,8 +547,7 @@ static int vlc_sd_probe_Open( vlc_object_t *obj )
             if( temp )
                 *temp = '\0';
 
-            if( vlc_dictionary_value_for_key( &name_d, *ppsz_file ) ==
-                    kVLCDictionaryNotFound )
+            if( !vlc_dictionary_has_key( &name_d, *ppsz_file ) )
                 vlc_dictionary_insert( &name_d, *ppsz_file, &name_d );
             free( *ppsz_file );
         }

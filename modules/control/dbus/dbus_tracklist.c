@@ -89,7 +89,7 @@ DBUS_METHOD( AddTrack )
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
 
     playlist_t *p_playlist = PL;
-    playlist_item_t *node;
+    playlist_item_t *node, *plitem;
 
     PL_LOCK;
     node = p_playlist->p_playing;
@@ -109,8 +109,10 @@ DBUS_METHOD( AddTrack )
         }
     }
 
-    playlist_NodeAddInput( p_playlist, item, node,
-                           (b_play == TRUE) ? PLAYLIST_GO : 0, i_pos );
+    plitem = playlist_NodeAddInput( p_playlist, item, node, i_pos );
+    if( likely(plitem != NULL) && b_play )
+        playlist_ViewPlay( p_playlist, NULL, plitem );
+
     PL_UNLOCK;
 
     input_item_Release( item );
@@ -209,8 +211,7 @@ DBUS_METHOD( GoTo )
 
         if( item->i_id == i_track_id )
         {
-            playlist_Control( p_playlist, PLAYLIST_VIEWPLAY, true,
-                              item->p_parent, item );
+            playlist_ViewPlay( p_playlist, item->p_parent, item );
             break;
         }
     }
@@ -256,7 +257,7 @@ DBUS_METHOD( RemoveTrack )
 
         if( item->i_id == i_id )
         {
-            playlist_NodeDelete( p_playlist, item, false );
+            playlist_NodeDelete( p_playlist, item );
             break;
         }
     }
@@ -463,8 +464,6 @@ PropertiesChangedSignal( intf_thread_t    *p_intf,
     DBusConnection  *p_conn = p_intf->p_sys->p_conn;
     DBusMessageIter changed_properties, invalidated_properties;
     const char *psz_interface_name = DBUS_MPRIS_TRACKLIST_INTERFACE;
-    char **ppsz_properties = NULL;
-    int i_properties = 0;
 
     SIGNAL_INIT( DBUS_INTERFACE_PROPERTIES,
                  DBUS_MPRIS_OBJECT_PATH,
@@ -486,26 +485,11 @@ PropertiesChangedSignal( intf_thread_t    *p_intf,
                                                     &invalidated_properties )) )
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
 
-    i_properties    = vlc_dictionary_keys_count( p_changed_properties );
-    ppsz_properties = vlc_dictionary_all_keys( p_changed_properties );
 
-    if( unlikely(!ppsz_properties) )
-    {
-        dbus_message_iter_abandon_container( &args, &invalidated_properties );
-        return DBUS_HANDLER_RESULT_NEED_MEMORY;
-    }
-
-    for( int i = 0; i < i_properties; i++ )
-    {
-        if( !strcmp( ppsz_properties[i], "Tracks" ) )
-            dbus_message_iter_append_basic( &invalidated_properties,
-                                            DBUS_TYPE_STRING,
-                                            &ppsz_properties[i] );
-
-        free( ppsz_properties[i] );
-    }
-
-    free( ppsz_properties );
+    if( vlc_dictionary_has_key( p_changed_properties, "Tracks" ) )
+        dbus_message_iter_append_basic( &invalidated_properties,
+                                        DBUS_TYPE_STRING,
+                                        &(char const*){ "Tracks" } );
 
     if( unlikely(!dbus_message_iter_close_container( &args,
                     &invalidated_properties )) )

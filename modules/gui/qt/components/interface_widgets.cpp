@@ -170,10 +170,10 @@ bool VideoWidget::request( struct vout_window_t *p_wnd )
             QPlatformNativeInterface *qni = qApp->platformNativeInterface();
             assert(qni != NULL);
 
-            p_wnd->handle.wl = reinterpret_cast<wl_surface*>(
+            p_wnd->handle.wl = static_cast<wl_surface*>(
                 qni->nativeResourceForWindow(QByteArrayLiteral("surface"),
                                              window));
-            p_wnd->display.wl = reinterpret_cast<wl_display*>(
+            p_wnd->display.wl = static_cast<wl_display*>(
                 qni->nativeResourceForIntegration(QByteArrayLiteral("wl_display")));
             break;
         }
@@ -265,7 +265,7 @@ bool VideoWidget::nativeEvent( const QByteArray& eventType, void* message, long*
 #if defined(QT5_HAS_XCB)
     if ( eventType == "xcb_generic_event_t" )
     {
-        const xcb_generic_event_t* xev = reinterpret_cast<const xcb_generic_event_t*>( message );
+        const xcb_generic_event_t* xev = static_cast<const xcb_generic_event_t*>( message );
 
         if ( xev->response_type == XCB_CONFIGURE_NOTIFY )
             reportSize();

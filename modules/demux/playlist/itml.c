@@ -199,7 +199,8 @@ static bool parse_dict( demux_t *p_demux, input_item_node_t *p_input_node,
                                                  NULL ) )
                 {
                     p_handler = NULL;
-                    FREE_ATT_KEY();
+                    FREENULL( psz_key );
+                    FREENULL( psz_value );
                 }
                 else
                     goto end;
@@ -241,7 +242,7 @@ static bool parse_dict( demux_t *p_demux, input_item_node_t *p_input_node,
             {
                 p_handler->pf_handler.smpl( p_track, psz_key, psz_value );
             }
-            FREE_ATT();
+            FREENULL(psz_value);
             p_handler = NULL;
             break;
         }
@@ -326,9 +327,9 @@ static bool parse_track_dict( demux_t *p_demux, input_item_node_t *p_input_node,
 
     if( !p_track->location )
     {
-        msg_Err( p_demux, "Track needs Location" );
+        msg_Warn( p_demux, "ignoring track without Location entry" );
         free_track( p_track );
-        return false;
+        return true;
     }
 
     msg_Info( p_demux, "Adding '%s'", p_track->location );
@@ -366,13 +367,12 @@ static void free_track( track_elem_t *p_track )
     if ( !p_track )
         return;
 
-    FREENULL( p_track->name );
-    FREENULL( p_track->artist );
-    FREENULL( p_track->album );
-    FREENULL( p_track->genre );
-    FREENULL( p_track->trackNum );
-    FREENULL( p_track->location );
-    p_track->duration = 0;
+    free( p_track->name );
+    free( p_track->artist );
+    free( p_track->album );
+    free( p_track->genre );
+    free( p_track->trackNum );
+    free( p_track->location );
     free( p_track );
 }
 

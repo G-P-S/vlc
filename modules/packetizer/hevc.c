@@ -69,7 +69,7 @@ static block_t *PacketizeParse(void *p_private, bool *pb_ts_used, block_t *);
 static block_t *ParseNALBlock(decoder_t *, bool *pb_ts_used, block_t *);
 static int PacketizeValidate(void *p_private, block_t *);
 static bool ParseSEICallback( const hxxx_sei_data_t *, void * );
-static block_t *GetCc( decoder_t *, bool pb_present[4] );
+static block_t *GetCc( decoder_t *, bool pb_present[4], int * );
 
 struct decoder_sys_t
 {
@@ -300,8 +300,9 @@ static void PacketizeFlush( decoder_t *p_dec )
 /*****************************************************************************
  * GetCc:
  *****************************************************************************/
-static block_t *GetCc( decoder_t *p_dec, bool pb_present[4] )
+static block_t *GetCc( decoder_t *p_dec, bool pb_present[4], int *pi_reorder_depth )
 {
+    *pi_reorder_depth = 0;
     return cc_storage_get_current( p_dec->p_sys->p_ccs, pb_present );
 }
 
@@ -728,8 +729,11 @@ static void SetOutputBlockProperties(decoder_t *p_dec, block_t *p_output)
         uint8_t i_num_clock_ts = hevc_get_num_clock_ts(p_sys->p_active_sps,
                                                        p_sys->p_timing);
         const mtime_t i_start = date_Get(&p_sys->dts);
-        date_Increment(&p_sys->dts, i_num_clock_ts);
-        p_output->i_length = date_Get(&p_sys->dts) - i_start;
+        if( i_start != VLC_TS_INVALID )
+        {
+            date_Increment(&p_sys->dts, i_num_clock_ts);
+            p_output->i_length = date_Get(&p_sys->dts) - i_start;
+        }
         p_sys->pts = VLC_TS_INVALID;
     }
     hevc_release_sei_pic_timing(p_sys->p_timing);
@@ -748,13 +752,11 @@ static block_t *ParseNALBlock(decoder_t *p_dec, bool *pb_ts_used, block_t *p_fra
     if(p_sys->b_need_ts)
     {
         if(p_frag->i_dts > VLC_TS_INVALID)
-        {
             date_Set(&p_sys->dts, p_frag->i_dts);
-            *pb_ts_used = true;
-        }
         p_sys->pts = p_frag->i_pts;
         if(date_Get( &p_sys->dts ) != VLC_TS_INVALID)
             p_sys->b_need_ts = false;
+        *pb_ts_used = true;
     }
 
     if(unlikely(p_frag->i_buffer < 5))
@@ -789,8 +791,11 @@ static block_t *ParseNALBlock(decoder_t *p_dec, bool *pb_ts_used, block_t *p_fra
     p_output = GatherAndValidateChain(p_output);
     if(p_output)
     {
-        p_sys->b_need_ts = true;
         SetOutputBlockProperties( p_dec, p_output );
+        if(p_frag->i_dts > VLC_TS_INVALID)
+            date_Set(&p_sys->dts, p_frag->i_dts);
+        p_sys->pts = p_frag->i_pts;
+        *pb_ts_used = true;
     }
 
     return p_output;

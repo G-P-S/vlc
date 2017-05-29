@@ -1270,8 +1270,7 @@ static int Playlist( vlc_object_t *p_this, char const *psz_cmd,
             p_item = p_parent = p_playlist->items.p_elems[i_pos-1];
             while( p_parent->p_parent )
                 p_parent = p_parent->p_parent;
-            playlist_Control( p_playlist, PLAYLIST_VIEWPLAY, pl_Locked,
-                    p_parent, p_item );
+            playlist_ViewPlay( p_playlist, p_parent, p_item );
         }
         else
             msg_rc( vlc_ngettext("Playlist has only %u element",
@@ -1296,8 +1295,7 @@ static int Playlist( vlc_object_t *p_this, char const *psz_cmd,
         if( p_item )
         {
             msg_rc( "Trying to add %s to playlist.", newval.psz_string );
-            int i_ret = playlist_AddInput( p_playlist, p_item,
-                                           PLAYLIST_GO, true );
+            int i_ret = playlist_AddInput( p_playlist, p_item, true, true );
             input_item_Release( p_item );
             if( i_ret != VLC_SUCCESS )
             {
@@ -1313,8 +1311,9 @@ static int Playlist( vlc_object_t *p_this, char const *psz_cmd,
         if( p_item )
         {
             msg_rc( "trying to enqueue %s to playlist", newval.psz_string );
-            if( playlist_AddInput( p_playlist, p_item,
-                                   0, true ) != VLC_SUCCESS )
+            int ret =  playlist_AddInput( p_playlist, p_item, false, true );
+            input_item_Release( p_item );
+            if( ret != VLC_SUCCESS )
             {
                 return VLC_EGENERIC;
             }
@@ -1323,14 +1322,14 @@ static int Playlist( vlc_object_t *p_this, char const *psz_cmd,
     else if( !strcmp( psz_cmd, "playlist" ) )
     {
         msg_rc( "+----[ Playlist ]" );
-        print_playlist( p_intf, p_playlist->p_root, 0 );
+        print_playlist( p_intf, &p_playlist->root, 0 );
         msg_rc( "+----[ End of playlist ]" );
     }
 
     else if( !strcmp( psz_cmd, "sort" ))
     {
         PL_LOCK;
-        playlist_RecursiveNodeSort( p_playlist, p_playlist->p_root,
+        playlist_RecursiveNodeSort( p_playlist, &p_playlist->root,
                                     SORT_ARTIST, ORDER_NORMAL );
         PL_UNLOCK;
     }

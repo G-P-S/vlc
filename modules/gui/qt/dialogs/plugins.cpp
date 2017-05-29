@@ -870,6 +870,11 @@ AddonsListModel::AddonsListModel( AddonsManager *AM_, QObject *parent )
 
 }
 
+AddonsListModel::~AddonsListModel()
+{
+    qDeleteAll( addons );
+}
+
 void AddonsListModel::addonAdded(  addon_entry_t *p_entry )
 {
     beginInsertRows( QModelIndex(), addons.count(), addons.count() );
@@ -903,9 +908,7 @@ Qt::ItemFlags AddonsListModel::flags( const QModelIndex &index ) const
     int i_state = data( index, StateRole ).toInt();
 
     if ( i_state == ADDON_UNINSTALLING || i_state == ADDON_INSTALLING )
-    {
-        i_flags &= !Qt::ItemIsEnabled;
-    }
+        i_flags &= ~Qt::ItemIsEnabled;
 
     i_flags |= Qt::ItemIsEditable;
 
