@@ -316,7 +316,7 @@ static int OpenDecoder( vlc_object_t *p_this )
         return VLC_EGENERIC;
     }
 
-    msg_Info( p_dec, "######## Decoder found for %s codec, %u codec id, %s  ", psz_namecodec, i_codec_id );
+    msg_Info( p_dec, "######## Decoder %s found for %s codec, %u codec id, %s  ", p_codec->name, psz_namecodec, i_codec_id );
 
     /* *** get a p_context *** */
     p_context = avcodec_alloc_context3(p_codec);
