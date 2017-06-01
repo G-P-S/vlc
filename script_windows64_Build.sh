@@ -1,2 +1,2 @@
 ./bootstrap
-make -C win32/
+make -C win32/ package-win-common
