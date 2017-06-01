@@ -1,1 +1,1 @@
-./configure --disable-wayland --disable-dca --disable-upnp --disable-chromaprint
+./configure  CFLAGS="-g" CXXFLAGS="-g" --enable-debug
