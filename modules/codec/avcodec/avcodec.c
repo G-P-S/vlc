@@ -278,7 +278,7 @@ static int OpenDecoder( vlc_object_t *p_this )
         return VLC_EGENERIC;
     }
     
-    msg_Dbg( p_dec, "######## Need to decode this codec: (%s)", psz_namecodec );
+    msg_Err( p_dec, "######## Need to decode this codec: (%s)", psz_namecodec );
 
     /* Initialization must be done before avcodec_find_decoder() */
     vlc_init_avcodec(p_this);
@@ -286,19 +286,19 @@ static int OpenDecoder( vlc_object_t *p_this )
     /* *** ask ffmpeg for a decoder *** */
     char *psz_decoder = var_CreateGetString( p_this, "avcodec-codec" );
     
-    msg_Dbg( p_dec, "######## Ask avcodec to get (%s) decoder", psz_decoder );
+    msg_Err( p_dec, "######## Ask avcodec to get (%s) decoder", psz_decoder );
     
     if( psz_decoder && *psz_decoder )
     {
         p_codec = avcodec_find_decoder_by_name( psz_decoder );
         if( !p_codec )
         {
-            msg_Dbg( p_dec, "######## Decoder `%s' not found", psz_decoder );
+            msg_Err( p_dec, "######## Decoder `%s' not found", psz_decoder );
             msg_Err( p_this, "Decoder `%s' not found", psz_decoder );
         }
         else if( p_codec->id != i_codec_id )
         {
-            msg_Dbg( p_dec, "######## Decoder `%s' found can't handle %s", psz_decoder, psz_namecodec );
+            msg_Err( p_dec, "######## Decoder `%s' found can't handle %s", psz_decoder, psz_namecodec );
             msg_Err( p_this, "Decoder `%s' can't handle %4.4s",
                     psz_decoder, (char*)&p_dec->fmt_in.i_codec );
             p_codec = NULL;
@@ -307,16 +307,16 @@ static int OpenDecoder( vlc_object_t *p_this )
     free( psz_decoder );
     if( !p_codec )
     {
-        msg_Dbg( p_dec, "######## Try to find a decoder for %u codec id", i_codec_id );
+        msg_Err( p_dec, "######## Try to find a decoder for %u codec id", i_codec_id );
         p_codec = avcodec_find_decoder( i_codec_id );
     }
     if( !p_codec )
     {
-        msg_Dbg( p_dec, "######## Decoder not found for %s codec", psz_namecodec );
+        msg_Err( p_dec, "######## Decoder not found for %s codec", psz_namecodec );
         return VLC_EGENERIC;
     }
 
-    msg_Dbg( p_dec, "######## Decoder found for %s codec, %u codec id, %s  ", psz_namecodec, i_codec_id );
+    msg_Err( p_dec, "######## Decoder found for %s codec, %u codec id, %s  ", psz_namecodec, i_codec_id );
 
     /* *** get a p_context *** */
     p_context = avcodec_alloc_context3(p_codec);
