@@ -356,7 +356,10 @@ static int OpenDecoder( vlc_object_t *p_this )
 
     if( p_codec && p_context )
     {
-        msg_Info( p_dec, "######## Decoder %s found (%s)", p_codec->name, p_codec->long_name );
+        msg_Info( p_dec, "######## Decoder found" );
+        msg_Info( p_dec, "######## Decoder = %s", p_codec->long_name );
+        msg_Info( p_dec, "######## Decoder capabilities %i", p_codec->capabilities );
+        msg_Info( p_dec, "######## Decoder = %s", p_codec->name );
     }
     
     return i_result;
