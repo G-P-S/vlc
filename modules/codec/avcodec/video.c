@@ -317,6 +317,8 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     }
 
     p_sys->p_context->get_format = ffmpeg_GetFormat;
+    msg_Info( p_dec, "######## get format for ffmpeg set" );
+
     /* Always use our get_buffer wrapper so we can calculate the
      * PTS correctly */
 #if LIBAVCODEC_VERSION_MAJOR >= 55
