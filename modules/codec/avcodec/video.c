@@ -317,7 +317,7 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     }
 
     p_sys->p_context->get_format = ffmpeg_GetFormat;
-    msg_Info( p_dec, "######## get format for ffmpeg set" );
+    msg_Info( p_dec, "######## get_format callback set" );
 
     /* Always use our get_buffer wrapper so we can calculate the
      * PTS correctly */
@@ -1410,6 +1410,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
         p_sys->b_direct_rendering = false;
         p_sys->p_va = p_va;
         p_context->draw_horiz_band = NULL;
+        msg_Info( p_dec, "######## Return PixelFormat %i", pi_fmt[i]);
         return pi_fmt[i];
     }
 
@@ -1420,5 +1421,6 @@ end:
     /* Fallback to default behaviour */
     msg_Info( p_dec, "######## no acceleration, falling back to default behavior");
     p_sys->p_va = NULL;
-    return avcodec_default_get_format( p_context, pi_fmt );
+//    return avcodec_default_get_format( p_context, pi_fmt );
+    return AV_PIX_FMT_NONE; // return null PixelFormat
 }
