@@ -1358,6 +1358,11 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
         if (hwaccel)
             can_hwaccel = true;
     }
+    
+    if(can_hwaccel)
+        msg_Info( p_dec, "######## Hardware decoding is available");
+    else
+        msg_Info( p_dec, "######## Hardware decoding is NOT available");
 
     if (!can_hwaccel)
         goto end;

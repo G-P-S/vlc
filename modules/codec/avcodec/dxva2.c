@@ -485,6 +485,8 @@ static void Close(vlc_va_t *va)
 
 static int Open(vlc_va_t *va, AVCodecContext *ctx, const es_format_t *fmt)
 {
+    msg_Info( va, "######## Open module DXVA2" );
+    
     vlc_va_sys_t *sys = calloc(1, sizeof (*sys));
     if (unlikely(sys == NULL))
         return VLC_ENOMEM;
@@ -541,6 +543,7 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, const es_format_t *fmt)
     return VLC_SUCCESS;
 
 error:
+    msg_Info( va, "######## DXVA2 module error, close" );
     Close(va);
     return VLC_EGENERIC;
 }
