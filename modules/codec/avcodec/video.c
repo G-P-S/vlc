@@ -1418,5 +1418,6 @@ end:
     /* Fallback to default behaviour */
     msg_Info( p_dec, "######## no acceleration, falling back to default behavior");
     p_sys->p_va = NULL;
-    return avcodec_default_get_format( p_context, pi_fmt );
+    return NULL;
+//    return avcodec_default_get_format( p_context, pi_fmt );
 }
