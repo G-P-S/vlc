@@ -17,70 +17,48 @@ endif
 FFMPEGCONF = \
 	--cc="$(CC)" \
 	--pkg-config="$(PKG_CONFIG)" \
-	--disable-doc \
-	--disable-encoder=vorbis \
-	--enable-libgsm \
-	--enable-libopenjpeg \
-	--disable-debug \
-	--disable-avdevice \
-	--disable-devices \
-	--disable-avfilter \
-	--disable-filters \
-	--disable-protocol=concat \
-	--disable-bsfs \
-	--disable-bzlib \
-        --disable-avresample \
-        --disable-everything
+    --disable-everything \
+	--enable-hwaccels
 
-ifdef USE_FFMPEG
+# DEMUXERS
 FFMPEGCONF += \
-	--disable-swresample \
-	--disable-iconv
-endif
+	--enable-demuxer=aac \
+	--enable-demuxer=mp3 \
+	--enable-demuxer=mp4 \
+	--enable-demuxer=mov \
+	--enable-demuxer=avi \
+	--enable-demuxer=matroska
+
+# DECODERS
+FFMPEGCONF += \
+	--enable-decoder=pcm_s16le \
+	--enable-decoder=pcm_s16be \
+	--enable-decoder=aac \
+	--enable-decoder=flac \
+
+# PARSERS
+FFMPEGCONF += \
+	--enable-parser=h264 \
+	--enable-parser=hevc \
+	--enable-parser=aac \
+	--enable-parser=flac 
+
+# PROTOCOLS
+FFMPEGCONF += \
+	--enable-protocol=file \
+	--enable-protocol=http \
+
 
 DEPS_ffmpeg = zlib gsm openjpeg
 
-# Optional dependencies
-ifndef BUILD_NETWORK
-FFMPEGCONF += --disable-network
-endif
 ifdef BUILD_ENCODERS
-FFMPEGCONF += --enable-libmp3lame --enable-libvpx --disable-decoder=libvpx --disable-decoder=libvpx_vp8 --disable-decoder=libvpx_vp9
-DEPS_ffmpeg += lame $(DEPS_lame) vpx $(DEPS_vpx)
-else
-FFMPEGCONF += --disable-encoders --disable-muxers
-endif
-
-# Small size
-ifdef ENABLE_SMALL
-FFMPEGCONF += --enable-small
-endif
-ifeq ($(ARCH),arm)
-ifdef HAVE_ARMV7A
-FFMPEGCONF += --enable-thumb
-endif
+$(WARNING You are trying to build encoders, you should not.)
 endif
 
 ifdef HAVE_CROSS_COMPILE
 FFMPEGCONF += --enable-cross-compile --disable-programs
 ifndef HAVE_DARWIN_OS
 FFMPEGCONF += --cross-prefix=$(HOST)-
-endif
-endif
-
-# ARM stuff
-ifeq ($(ARCH),arm)
-ifndef HAVE_DARWIN_OS
-FFMPEGCONF += --arch=arm
-endif
-ifdef HAVE_NEON
-FFMPEGCONF += --enable-neon
-endif
-ifdef HAVE_ARMV7A
-FFMPEGCONF += --cpu=cortex-a8
-endif
-ifdef HAVE_ARMV6
-FFMPEGCONF += --cpu=armv6 --disable-neon
 endif
 endif
 
