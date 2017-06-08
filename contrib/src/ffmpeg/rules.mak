@@ -32,7 +32,7 @@ FFMPEGCONF = \
 	--disable-avresample \
 	--disable-decoders \
     --disable-encoders \
-    --disable-muxer \
+    --disable-muxers \
     --enable-hwaccels
 
 ifdef USE_FFMPEG
