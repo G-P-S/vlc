@@ -30,7 +30,10 @@ FFMPEGCONF = \
 	--disable-bsfs \
 	--disable-bzlib \
 	--disable-avresample \
-	--disable-decoders
+	--disable-decoders \
+    --disable-encoders \
+    --disable-muxer \
+    --enable-hwaccels
 
 ifdef USE_FFMPEG
 FFMPEGCONF += \
@@ -44,12 +47,12 @@ DEPS_ffmpeg = zlib gsm openjpeg
 ifndef BUILD_NETWORK
 FFMPEGCONF += --disable-network
 endif
-ifdef BUILD_ENCODERS
-FFMPEGCONF += --enable-libmp3lame --enable-libvpx --disable-decoder=libvpx --disable-decoder=libvpx_vp8 --disable-decoder=libvpx_vp9
-DEPS_ffmpeg += lame $(DEPS_lame) vpx $(DEPS_vpx)
-else
-FFMPEGCONF += --disable-encoders --disable-muxers
-endif
+#ifdef BUILD_ENCODERS
+#FFMPEGCONF += --enable-libmp3lame --enable-libvpx --disable-decoder=libvpx --disable-decoder=libvpx_vp8 --disable-decoder=libvpx_vp9
+#DEPS_ffmpeg += lame $(DEPS_lame) vpx $(DEPS_vpx)
+#else
+#FFMPEGCONF += --disable-encoders --disable-muxers
+#endif
 
 # Small size
 ifdef ENABLE_SMALL
