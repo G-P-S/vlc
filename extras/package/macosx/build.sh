@@ -121,14 +121,6 @@ spopd
 
 
 #
-# FFMpeg building
-#
-
-# info "Building FFMpeg"
-# ${vlcroot}/script_build_ffmpeg.sh > $out
-
-
-#
 # vlc/bootstrap
 #
 

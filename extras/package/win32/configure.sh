@@ -6,22 +6,18 @@ OPTIONS="
       --enable-faad
       --enable-flac
       --enable-theora
-      --disable-twolame
+      --enable-twolame
       --enable-quicktime
       --enable-avcodec --enable-merge-ffmpeg
       --enable-dca
       --enable-mpc
       --enable-libass
-      --disable-x264
-      --disable-h263
-      --disable-h264
-      --disable-mpeg2video
-      --disable-vc1
+      --enable-x264
       --enable-schroedinger
       --enable-realrtsp
       --enable-live555
       --enable-dvdread
-      --disable-shout
+      --enable-shout
       --enable-goom
       --enable-caca
       --disable-sdl

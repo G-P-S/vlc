@@ -1,1 +1,1 @@
-./configure  CFLAGS="-g" CXXFLAGS="-g" --disable-qt
+./configure  CFLAGS="-g" CXXFLAGS="-g" --enable-debug
