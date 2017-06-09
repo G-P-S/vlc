@@ -13,6 +13,10 @@ OPTIONS="
       --enable-mpc
       --enable-libass
       --disable-x264
+      --disable-h263
+      --disable-h264
+      --disable-mpeg2video
+      --disable-vc1
       --enable-schroedinger
       --enable-realrtsp
       --enable-live555
