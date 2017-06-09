@@ -8,7 +8,7 @@ OPTIONS="
       --enable-theora
       --disable-twolame
       --enable-quicktime
-      --disable-avcodec --enable-merge-ffmpeg
+      --enable-avcodec --enable-merge-ffmpeg
       --enable-dca
       --enable-mpc
       --enable-libass
