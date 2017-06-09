@@ -34,10 +34,10 @@ FFMPEGCONF = \
     --disable-encoders \
     --disable-muxers \
     --enable-hwaccels \
-    --disable-h263 \
-    --disable-h264 \
-    --disable-mpeg2video \
-    --disable-vc1    
+    --disable-decoder=h263 \
+    --disable-decoder=h264 \
+    --disable-decoder=mpeg2video \
+    --disable-decoder=vc1    
 
 ifdef USE_FFMPEG
 FFMPEGCONF += \
