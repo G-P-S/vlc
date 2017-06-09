@@ -124,8 +124,8 @@ spopd
 # FFMpeg building
 #
 
-info "Building FFMpeg"
-${vlcroot}/script_build_ffmpeg.sh > $out
+# info "Building FFMpeg"
+# ${vlcroot}/script_build_ffmpeg.sh > $out
 
 
 #
@@ -149,7 +149,6 @@ if [ "${vlcroot}/configure" -nt Makefile ]; then
   ${vlcroot}/extras/package/macosx/configure.sh \
       --build=$TRIPLET \
       --host=$TRIPLET \
-      --disable-chromaprint \
       --with-macosx-version-min=$MINIMAL_OSX_VERSION \
       --with-macosx-sdk=$SDKROOT > $out
 fi

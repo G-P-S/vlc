@@ -1,4 +1,5 @@
 rm -rdf contrib/contrib/x86_64-apple-darwin10
+rm -rdf build
 
 mkdir -p build
 cd build

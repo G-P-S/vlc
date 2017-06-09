@@ -17,7 +17,8 @@ esac
 OPTIONS="
         --prefix=`pwd`/vlc_install_dir
         --enable-macosx
-        --enable-merge-ffmpeg
+        --disable-merge-ffmpeg
+        --disable-avcodec
         --enable-growl
         --enable-faad
         --enable-flac
@@ -36,6 +37,7 @@ OPTIONS="
         --disable-sdl
         --disable-samplerate
         --disable-macosx-dialog-provider
+        --disable-chromaprint
         --with-macosx-version-min=10.6
 "
 
