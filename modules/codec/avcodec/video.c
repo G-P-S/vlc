@@ -1379,7 +1379,6 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     p_va = vlc_va_New( VLC_OBJECT(p_dec), p_context, &p_dec->fmt_in );
     if( p_va == NULL )
     {
-        msg_Info( p_dec, "######## p_va is null (vlc_va_t: accelerated video decoding back-end for libavcodec)");
         goto end;
     }
 
@@ -1410,16 +1409,14 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
         p_sys->b_direct_rendering = false;
         p_sys->p_va = p_va;
         p_context->draw_horiz_band = NULL;
-        msg_Info( p_dec, "######## Return PixelFormat %i", pi_fmt[i]);
         return pi_fmt[i];
     }
 
-    msg_Info( p_dec, "######## call vlc_va_Delete( p_va )");
     vlc_va_Delete( p_va );
 
 end:
     /* Fallback to default behaviour */
-    msg_Info( p_dec, "######## no acceleration, falling back to default behavior");
+    msg_Info( p_dec, "######## no acceleration, disable rendering");
     p_sys->p_va = NULL;
 //    return avcodec_default_get_format( p_context, pi_fmt );
     return AV_PIX_FMT_NONE; // return null PixelFormat
