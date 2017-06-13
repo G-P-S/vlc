@@ -82,15 +82,6 @@ decoder_GetDisplayRate
 decoder_GetInputAttachments
 decoder_NewAudioBuffer
 decoder_NewSubpicture
-decoder_SynchroChoose
-decoder_SynchroDate
-decoder_SynchroDecode
-decoder_SynchroEnd
-decoder_SynchroInit
-decoder_SynchroNewPicture
-decoder_SynchroRelease
-decoder_SynchroReset
-decoder_SynchroTrash
 demux_Delete
 demux_PacketizerDestroy
 demux_PacketizerNew
@@ -201,8 +192,6 @@ input_item_node_AppendItem
 input_item_node_AppendNode
 input_item_node_Create
 input_item_node_Delete
-input_item_node_PostAndDelete
-input_item_PostSubItem
 input_item_ReplaceInfos
 input_item_SetDuration
 input_item_SetMeta

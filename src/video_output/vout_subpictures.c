@@ -284,13 +284,13 @@ static void SpuRenderText(spu_t *spu, bool *rerender_text,
  * A few scale functions helpers.
  */
 
-#define SCALE_UNIT (1000)
+#define SCALE_UNIT (10000)
 typedef struct {
-    int w;
-    int h;
+    unsigned w;
+    unsigned h;
 } spu_scale_t;
 
-static spu_scale_t spu_scale_create(int w, int h)
+static spu_scale_t spu_scale_create(unsigned w, unsigned h)
 {
     spu_scale_t s = { .w = w, .h = h };
     if (s.w <= 0)
@@ -303,24 +303,24 @@ static spu_scale_t spu_scale_unit(void)
 {
     return spu_scale_create(SCALE_UNIT, SCALE_UNIT);
 }
-static spu_scale_t spu_scale_createq(int64_t wn, int64_t wd, int64_t hn, int64_t hd)
+static spu_scale_t spu_scale_createq(uint64_t wn, uint64_t wd, uint64_t hn, uint64_t hd)
 {
     return spu_scale_create(wn * SCALE_UNIT / wd,
                             hn * SCALE_UNIT / hd);
 }
-static int spu_scale_w(int v, const spu_scale_t s)
+static int spu_scale_w(unsigned v, const spu_scale_t s)
 {
     return v * s.w / SCALE_UNIT;
 }
-static int spu_scale_h(int v, const spu_scale_t s)
+static int spu_scale_h(unsigned v, const spu_scale_t s)
 {
     return v * s.h / SCALE_UNIT;
 }
-static int spu_invscale_w(int v, const spu_scale_t s)
+static int spu_invscale_w(unsigned v, const spu_scale_t s)
 {
     return v * SCALE_UNIT / s.w;
 }
-static int spu_invscale_h(int v, const spu_scale_t s)
+static int spu_invscale_h(unsigned v, const spu_scale_t s)
 {
     return v * SCALE_UNIT / s.h;
 }
@@ -329,15 +329,15 @@ static int spu_invscale_h(int v, const spu_scale_t s)
  * A few area functions helpers
  */
 typedef struct {
-    int x;
-    int y;
-    int width;
-    int height;
+    unsigned x;
+    unsigned y;
+    unsigned width;
+    unsigned height;
 
     spu_scale_t scale;
 } spu_area_t;
 
-static spu_area_t spu_area_create(int x, int y, int w, int h, spu_scale_t s)
+static spu_area_t spu_area_create(unsigned x, unsigned y, unsigned w, unsigned h, spu_scale_t s)
 {
     spu_area_t a = { .x = x, .y = y, .width = w, .height = h, .scale = s };
     return a;
@@ -372,14 +372,11 @@ static spu_area_t spu_area_unscaled(spu_area_t a, spu_scale_t s)
 }
 static bool spu_area_overlap(spu_area_t a, spu_area_t b)
 {
-    const int dx = 0;
-    const int dy = 0;
-
     a = spu_area_scaled(a);
     b = spu_area_scaled(b);
 
-    return __MAX(a.x - dx, b.x) < __MIN(a.x + a.width  + dx, b.x + b.width ) &&
-           __MAX(a.y - dy, b.y) < __MIN(a.y + a.height + dy, b.y + b.height);
+    return __MAX(a.x, b.x) < __MIN(a.x + a.width, b.x + b.width ) &&
+           __MAX(a.y, b.y) < __MIN(a.y + a.height, b.y + b.height);
 }
 
 /**
@@ -432,17 +429,21 @@ static void SpuAreaFitInside(spu_area_t *area, const spu_area_t *boundary)
 {
     spu_area_t a = spu_area_scaled(*area);
 
-    const int i_error_x = (a.x + a.width) - boundary->width;
-    if (i_error_x > 0)
-        a.x -= i_error_x;
-    if (a.x < 0)
-        a.x = 0;
+    if((a.x + a.width) > boundary->width)
+    {
+        if(boundary->width > a.width)
+            a.x = boundary->width - a.width;
+        else
+            a.x = 0;
+    }
 
-    const int i_error_y = (a.y + a.height) - boundary->height;
-    if (i_error_y > 0)
-        a.y -= i_error_y;
-    if (a.y < 0)
-        a.y = 0;
+    if((a.y + a.height) > boundary->height)
+    {
+        if(boundary->height > a.height)
+            a.y = boundary->height - a.height;
+        else
+            a.y = 0;
+    }
 
     *area = spu_area_unscaled(a, area->scale);
 }
@@ -690,14 +691,15 @@ static void SpuRenderRegion(spu_t *spu,
      */
     const bool using_palette = region->fmt.i_chroma == VLC_CODEC_YUVP;
     const bool force_palette = using_palette && sys->force_palette;
-    const bool force_crop    = force_palette && sys->force_crop;
+    const bool crop_requested = (force_palette && sys->force_crop) ||
+                                region->i_max_width || region->i_max_height;
     bool changed_palette     = false;
 
     /* Compute the margin which is expressed in destination pixel unit
      * The margin is applied only to subtitle and when no forced crop is
      * requested (dvd menu) */
     int y_margin = 0;
-    if (!force_crop && subpic->b_subtitle)
+    if (!crop_requested && subpic->b_subtitle)
         y_margin = spu_invscale_h(sys->margin, scale_size);
 
     /* Place the picture
@@ -872,11 +874,32 @@ static void SpuRenderRegion(spu_t *spu,
     }
 
     /* Force cropping if requested */
-    if (force_crop) {
-        int crop_x     = spu_scale_w(sys->crop.x,     scale_size);
-        int crop_y     = spu_scale_h(sys->crop.y,     scale_size);
-        int crop_width = spu_scale_w(sys->crop.width, scale_size);
-        int crop_height= spu_scale_h(sys->crop.height,scale_size);
+    if (crop_requested) {
+        int crop_x, crop_y, crop_width, crop_height;
+        if(sys->force_crop){
+            crop_x     = sys->crop.x;
+            crop_y     = sys->crop.y;
+            crop_width = sys->crop.width;
+            crop_height= sys->crop.height;
+        }
+        else
+        {
+            crop_x = x_offset;
+            crop_y = y_offset;
+            crop_width = region_fmt.i_visible_width;
+            crop_height = region_fmt.i_visible_height;
+        }
+
+        if(region->i_max_width && region->i_max_width < crop_width)
+            crop_width = region->i_max_width;
+
+        if(region->i_max_height && region->i_max_height < crop_height)
+            crop_height = region->i_max_height;
+
+        crop_x     = spu_scale_w(crop_x,     scale_size);
+        crop_y     = spu_scale_h(crop_y,     scale_size);
+        crop_width = spu_scale_w(crop_width, scale_size);
+        crop_height= spu_scale_h(crop_height,scale_size);
 
         /* Find the intersection */
         if (crop_x + crop_width <= x_offset ||
@@ -1044,8 +1067,8 @@ static subpicture_t *SpuRenderSubpictures(spu_t *spu,
              * FIXME The current scaling ensure that the heights match, the width being
              * cropped.
              */
-            spu_scale_t scale = spu_scale_createq((int64_t)fmt_dst->i_visible_height                 * fmt_dst->i_sar_den * region_fmt.i_sar_num,
-                                                  (int64_t)subpic->i_original_picture_height * fmt_dst->i_sar_num * region_fmt.i_sar_den,
+            spu_scale_t scale = spu_scale_createq((uint64_t)fmt_dst->i_visible_height * fmt_dst->i_sar_den * region_fmt.i_sar_num,
+                                                  (uint64_t)subpic->i_original_picture_height * fmt_dst->i_sar_num * region_fmt.i_sar_den,
                                                   fmt_dst->i_visible_height,
                                                   subpic->i_original_picture_height);
 

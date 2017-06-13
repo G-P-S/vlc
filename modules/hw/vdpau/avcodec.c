@@ -70,12 +70,6 @@ static vlc_vdp_video_field_t *CreateSurface(vlc_va_t *va)
     return field;
 }
 
-static void DestroySurface(vlc_vdp_video_field_t *field)
-{
-    assert(field != NULL);
-    field->destroy(field);
-}
-
 static vlc_vdp_video_field_t *GetSurface(vlc_va_t *va)
 {
     vlc_va_sys_t *sys = va->sys;
@@ -109,7 +103,7 @@ static int Lock(vlc_va_t *va, picture_t *pic, uint8_t **data)
         msleep(VOUT_OUTMEM_SLEEP);
     }
 
-    pic->context = field;
+    pic->context = &field->context;
     *data = (void *)(uintptr_t)field->frame->surface;
     return VLC_SUCCESS;
 }
@@ -195,7 +189,7 @@ static int Open(vlc_va_t *va, AVCodecContext *avctx, enum PixelFormat pix_fmt,
     {
         msg_Err(va, "not enough video RAM");
         while (i > 0)
-            DestroySurface(sys->pool[--i]);
+            vlc_vdp_video_destroy(sys->pool[--i]);
         goto error;
     }
 
@@ -224,7 +218,7 @@ static void Close(vlc_va_t *va, AVCodecContext *avctx)
     vlc_va_sys_t *sys = va->sys;
 
     for (unsigned i = 0; sys->pool[i] != NULL; i++)
-        DestroySurface(sys->pool[i]);
+        vlc_vdp_video_destroy(sys->pool[i]);
     vdp_release_x11(sys->vdp);
     av_freep(&avctx->hwaccel_context);
     free(sys);

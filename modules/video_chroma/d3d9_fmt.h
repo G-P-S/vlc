@@ -23,11 +23,28 @@
 #ifndef VLC_VIDEOCHROMA_D3D9_FMT_H_
 #define VLC_VIDEOCHROMA_D3D9_FMT_H_
 
-/* VLC_CODEC_D3D9_OPAQUE */
+#include <vlc_picture.h>
+
+typedef struct vlc_va_surface_t vlc_va_surface_t;
+
+/* owned by the vout for VLC_CODEC_D3D9_OPAQUE */
 struct picture_sys_t
 {
     LPDIRECT3DSURFACE9 surface;
 };
+
+/* owned by the hardware decoder */
+struct va_pic_context
+{
+    picture_context_t          s;
+    struct picture_sys_t       picsys;
+    vlc_va_surface_t           *va_surface;
+};
+
+static inline void AcquirePictureSys(picture_sys_t *p_sys)
+{
+    IDirect3DSurface9_AddRef(p_sys->surface);
+}
 
 static inline void ReleasePictureSys(picture_sys_t *p_sys)
 {

@@ -99,7 +99,8 @@ codec_LTLIBRARIES += $(LTLIBwma_fixed)
 libcdg_plugin_la_SOURCES = codec/cdg.c
 codec_LTLIBRARIES += libcdg_plugin.la
 
-liblibmpeg2_plugin_la_SOURCES = codec/libmpeg2.c
+liblibmpeg2_plugin_la_SOURCES = codec/libmpeg2.c \
+	codec/synchro.c codec/synchro.h
 liblibmpeg2_plugin_la_CFLAGS = $(AM_CFLAGS) $(CFLAGS_libmpeg2)
 liblibmpeg2_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(codecdir)'
 liblibmpeg2_plugin_la_LIBADD = $(LIBS_libmpeg2)
@@ -316,6 +317,7 @@ EXTRA_LTLIBRARIES += liboggspots_plugin.la
 codec_LTLIBRARIES += $(LTLIBoggspots)
 
 libvideotoolbox_plugin_la_SOURCES = video_chroma/copy.c video_chroma/copy.h \
+	codec/vt_utils.c codec/vt_utils.h \
 	codec/videotoolbox.m codec/hxxx_helper.c codec/hxxx_helper.h \
 	packetizer/hxxx_nal.h packetizer/hxxx_nal.c \
 	packetizer/hxxx_sei.h packetizer/hxxx_sei.c \

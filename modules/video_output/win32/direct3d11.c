@@ -150,6 +150,7 @@ struct vout_display_sys_t
     const d3d_format_t       *picQuadConfig;
     ID3D11PixelShader        *picQuadPixelShader;
 
+    DXGI_FORMAT              decoderFormat;
     picture_sys_t            stagingSys;
 
     ID3D11RenderTargetView   *d3drenderTargetView;
@@ -573,57 +574,6 @@ static void Close(vlc_object_t *object)
     free(vd->sys);
 }
 
-/* map texture planes to resource views */
-static int AllocateShaderView(vout_display_t *vd, const d3d_format_t *format,
-                              int slice_index, picture_sys_t *picsys)
-{
-    HRESULT hr;
-    vout_display_sys_t *sys = vd->sys;
-    int i;
-    D3D11_SHADER_RESOURCE_VIEW_DESC resviewDesc = { 0 };
-    D3D11_TEXTURE2D_DESC texDesc;
-    ID3D11Texture2D_GetDesc(picsys->texture[0], &texDesc);
-
-    if (texDesc.ArraySize == 1)
-    {
-        resviewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        resviewDesc.Texture2D.MipLevels = 1;
-    }
-    else
-    {
-        resviewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-        resviewDesc.Texture2DArray.MipLevels = -1;
-        resviewDesc.Texture2DArray.ArraySize = 1;
-        resviewDesc.Texture2DArray.FirstArraySlice = slice_index;
-    }
-    for (i=0; i<D3D11_MAX_SHADER_VIEW; i++)
-    {
-        if (!picsys->texture[i])
-            picsys->resourceView[i] = NULL;
-        else
-        {
-            resviewDesc.Format = format->resourceFormat[i];
-            hr = ID3D11Device_CreateShaderResourceView(sys->d3ddevice, picsys->resource[i], &resviewDesc, &picsys->resourceView[i]);
-            if (FAILED(hr)) {
-                msg_Err(vd, "Could not Create the Texture ResourceView %d slice %d. (hr=0x%lX)", i, slice_index, hr);
-                break;
-            }
-        }
-    }
-
-    if (i != D3D11_MAX_SHADER_VIEW)
-    {
-        while (--i >= 0)
-        {
-            ID3D11ShaderResourceView_Release(picsys->resourceView[i]);
-            picsys->resourceView[i] = NULL;
-        }
-        return VLC_EGENERIC;
-    }
-
-    return VLC_SUCCESS;
-}
-
 static int AllocateTextures(vout_display_t *vd, const d3d_format_t *cfg,
                             video_format_t *fmt, unsigned pool_size,
                             ID3D11Texture2D *textures[],
@@ -707,6 +657,9 @@ error:
 
 static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
 {
+    /* compensate for extra hardware decoding pulling extra pictures from our pool */
+    pool_size += 2;
+
     vout_display_sys_t *sys = vd->sys;
     ID3D11Texture2D  *textures[pool_size * D3D11_MAX_SHADER_VIEW];
     picture_t **pictures = NULL;
@@ -769,6 +722,7 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
 
         picsys->slice_index = picture_count;
         picsys->formatTexture = sys->picQuadConfig->formatTexture;
+        picsys->decoderFormat = sys->decoderFormat;
         picsys->context = sys->d3dcontext;
 
         picture_resource_t resource = {
@@ -794,6 +748,8 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
         /* we need a staging texture */
         video_format_t staging_fmt;
         video_format_Copy(&staging_fmt, &surface_fmt);
+        staging_fmt.i_width = staging_fmt.i_visible_width;
+        staging_fmt.i_height = staging_fmt.i_visible_height;
         if (AllocateTextures(vd, sys->picQuadConfig, &staging_fmt, 1, textures, true,
                              false))
             goto error;
@@ -806,7 +762,8 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
         for (unsigned plane = 0; plane < D3D11_MAX_SHADER_VIEW; plane++)
             sys->stagingSys.texture[plane] = textures[plane];
 
-        if (AllocateShaderView(vd, sys->picQuadConfig, 0, &sys->stagingSys))
+        if (AllocateShaderView(VLC_OBJECT(vd), sys->d3ddevice, sys->picQuadConfig,
+                               textures, 0, sys->stagingSys.resourceView))
             goto error;
     } else
 #endif
@@ -817,7 +774,9 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
         sys->picQuad.i_height   = surface_fmt.i_height;
 
         for (picture_count = 0; picture_count < pool_size; picture_count++) {
-            if (AllocateShaderView(vd, sys->picQuadConfig, picture_count, pictures[picture_count]->p_sys))
+            if (AllocateShaderView(VLC_OBJECT(vd), sys->d3ddevice, sys->picQuadConfig,
+                                   pictures[picture_count]->p_sys->texture, picture_count,
+                                   pictures[picture_count]->p_sys->resourceView))
                 goto error;
         }
     }
@@ -849,7 +808,7 @@ error:
         pool_cfg.picture_count = 0;
         sys->sys.pool = picture_pool_NewExtended( &pool_cfg );
     } else {
-        msg_Dbg(vd, "ID3D11VideoDecoderOutputView succeed with %d surfaces (%dx%d) context 0x%p",
+        msg_Dbg(vd, "D3D11 pool succeed with %d surfaces (%dx%d) context 0x%p",
                 picture_count, surface_fmt.i_width, surface_fmt.i_height, sys->d3dcontext);
     }
     return sys->sys.pool;
@@ -1150,8 +1109,9 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     if( sys->context_lock != INVALID_HANDLE_VALUE )
         WaitForSingleObjectEx( sys->context_lock, INFINITE, FALSE );
 #endif
+    struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
+    picture_sys_t *p_sys = pic_ctx ? &pic_ctx->picsys : picture->p_sys;
     if (!is_d3d11_opaque(picture->format.i_chroma) || sys->legacy_shader) {
-        picture_sys_t *p_sys = picture->p_sys;
         D3D11_TEXTURE2D_DESC texDesc;
         if (!is_d3d11_opaque(picture->format.i_chroma))
             Direct3D11UnmapPoolTexture(picture);
@@ -1168,6 +1128,33 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
                                                   0, 0, 0, 0,
                                                   p_sys->resource[KNOWN_DXGI_INDEX],
                                                   p_sys->slice_index, &box);
+    }
+    else
+    {
+        /* copy pixels from the context texture to the picture_sys texture */
+        D3D11_TEXTURE2D_DESC texDesc;
+        ID3D11Texture2D_GetDesc(p_sys->texture[0], &texDesc);
+        if (texDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+        {
+            /* for performance reason we don't want to allocate this during
+             * display, do it preferrably when creating the texture */
+            assert(p_sys->resourceView[0]!=NULL);
+        }
+        else
+        {
+            D3D11_BOX box = {
+                .top = picture->format.i_y_offset,
+                .bottom = picture->format.i_y_offset + texDesc.Height,
+                .left = picture->format.i_x_offset,
+                .right = picture->format.i_x_offset + texDesc.Width,
+                .back = 1,
+            };
+            ID3D11DeviceContext_CopySubresourceRegion(sys->d3dcontext,
+                                                      p_sys->resource[KNOWN_DXGI_INDEX],
+                                                      p_sys->slice_index, 0, 0, 0,
+                                                      pic_ctx->picsys.resource[KNOWN_DXGI_INDEX],
+                                                      pic_ctx->picsys.slice_index, &box);
+        }
     }
 
     if (subpicture) {
@@ -1233,8 +1220,11 @@ static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     /* Render the quad */
     if (!is_d3d11_opaque(picture->format.i_chroma) || sys->legacy_shader)
         DisplayD3DPicture(sys, &sys->picQuad, sys->stagingSys.resourceView);
-    else
-        DisplayD3DPicture(sys, &sys->picQuad, picture->p_sys->resourceView);
+    else {
+        struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
+        picture_sys_t *p_sys = pic_ctx ? &pic_ctx->picsys : picture->p_sys;
+        DisplayD3DPicture(sys, &sys->picQuad, p_sys->resourceView);
+    }
 
     if (subpicture) {
         // draw the additional vertices
@@ -1455,9 +1445,17 @@ static const d3d_format_t *GetDirectRenderingFormat(vout_display_t *vd, vlc_four
     return FindD3D11Format( vd->sys->d3ddevice, i_src_chroma, 0, is_d3d11_opaque(i_src_chroma), supportFlags );
 }
 
-static const d3d_format_t *GetDisplayFormatByDepth(vout_display_t *vd, uint8_t bit_depth)
+static const d3d_format_t *GetDirectDecoderFormat(vout_display_t *vd, vlc_fourcc_t i_src_chroma)
+{
+    UINT supportFlags = D3D11_FORMAT_SUPPORT_DECODER_OUTPUT;
+    return FindD3D11Format( vd->sys->d3ddevice, i_src_chroma, 0, is_d3d11_opaque(i_src_chroma), supportFlags );
+}
+
+static const d3d_format_t *GetDisplayFormatByDepth(vout_display_t *vd, uint8_t bit_depth, bool from_processor)
 {
     UINT supportFlags = D3D11_FORMAT_SUPPORT_SHADER_LOAD;
+    if (from_processor)
+        supportFlags |= D3D11_FORMAT_SUPPORT_VIDEO_PROCESSOR_OUTPUT;
     return FindD3D11Format( vd->sys->d3ddevice, 0, bit_depth, false, supportFlags );
 }
 
@@ -1567,6 +1565,11 @@ static int Direct3D11Open(vout_display_t *vd, video_format_t *fmt)
     // look for the requested pixel format first
     sys->picQuadConfig = GetDirectRenderingFormat(vd, fmt->i_chroma);
 
+    /* look for a decoder format that can be decoded but not used in shaders */
+    const d3d_format_t *decoder_format = NULL;
+    if ( !sys->picQuadConfig && is_d3d11_opaque(fmt->i_chroma) )
+        decoder_format = GetDirectDecoderFormat(vd, fmt->i_chroma);
+
     // look for any pixel format that we can handle with enough pixels per channel
     if ( !sys->picQuadConfig )
     {
@@ -1587,21 +1590,26 @@ static int Direct3D11Open(vout_display_t *vd, video_format_t *fmt)
             break;
         }
 
-        sys->picQuadConfig = GetDisplayFormatByDepth(vd, bits_per_channel);
+        sys->picQuadConfig = GetDisplayFormatByDepth(vd, bits_per_channel, decoder_format!=NULL);
     }
 
     // look for any pixel format that we can handle
     if ( !sys->picQuadConfig )
-        sys->picQuadConfig = GetDisplayFormatByDepth(vd, 0);
+        sys->picQuadConfig = GetDisplayFormatByDepth(vd, 0, false);
 
     if ( !sys->picQuadConfig )
     {
        msg_Err(vd, "Could not get a suitable texture pixel format");
        return VLC_EGENERIC;
     }
+
+    /* we will need a converter from 420_OPAQUE to our display format */
+    if ( decoder_format )
+        sys->decoderFormat = decoder_format->formatTexture;
+    fmt->i_chroma = sys->picQuadConfig->fourcc;
+
     msg_Dbg( vd, "Using pixel format %s for chroma %4.4s", sys->picQuadConfig->name,
                  (char *)&fmt->i_chroma );
-    fmt->i_chroma = sys->picQuadConfig->fourcc;
     DxgiFormatMask( sys->picQuadConfig->formatTexture, fmt );
 
     /* check the region pixel format */
@@ -2762,7 +2770,9 @@ static int Direct3D11MapSubpicture(vout_display_t *vd, int *subpicture_region_co
             for (unsigned plane = 0; plane < D3D11_MAX_SHADER_VIEW; plane++) {
                 d3dquad->picSys.texture[plane] = textures[plane];
             }
-            if (AllocateShaderView(vd, sys->d3dregion_format, 0, &d3dquad->picSys)) {
+            if (AllocateShaderView(VLC_OBJECT(vd), sys->d3ddevice, sys->d3dregion_format,
+                                   d3dquad->picSys.texture, 0,
+                                   d3dquad->picSys.resourceView)) {
                 msg_Err(vd, "Failed to create %dx%d shader view for OSD",
                         r->fmt.i_visible_width, r->fmt.i_visible_height);
                 free(d3dquad);

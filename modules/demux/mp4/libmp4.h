@@ -87,6 +87,7 @@ typedef int64_t stime_t;
 #define ATOM_stbl VLC_FOURCC( 's', 't', 'b', 'l' )
 #define ATOM_stts VLC_FOURCC( 's', 't', 't', 's' )
 #define ATOM_ctts VLC_FOURCC( 'c', 't', 't', 's' )
+#define ATOM_cslg VLC_FOURCC( 'c', 's', 'l', 'g' )
 #define ATOM_stsd VLC_FOURCC( 's', 't', 's', 'd' )
 #define ATOM_stsz VLC_FOURCC( 's', 't', 's', 'z' )
 #define ATOM_stz2 VLC_FOURCC( 's', 't', 'z', '2' )
@@ -275,6 +276,7 @@ typedef int64_t stime_t;
 #define ATOM_user VLC_FOURCC( 'u', 's', 'e', 'r' )
 #define ATOM_key  VLC_FOURCC( 'k', 'e', 'y', ' ' )
 #define ATOM_iviv VLC_FOURCC( 'i', 'v', 'i', 'v' )
+#define ATOM_mean VLC_FOURCC( 'm', 'e', 'a', 'n' )
 #define ATOM_name VLC_FOURCC( 'n', 'a', 'm', 'e' )
 #define ATOM_priv VLC_FOURCC( 'p', 'r', 'i', 'v' )
 #define ATOM_drmi VLC_FOURCC( 'd', 'r', 'm', 'i' )
@@ -353,7 +355,9 @@ typedef int64_t stime_t;
 #define ATOM_chpl VLC_FOURCC( 'c', 'h', 'p', 'l' )
 #define ATOM_HMMT VLC_FOURCC( 'H', 'M', 'M', 'T' )
 #define ATOM_disk VLC_FOURCC( 'd', 'i', 's', 'k' )
+#define ATOM_ID32 VLC_FOURCC( 'I', 'D', '3', '2' )
 #define ATOM_WLOC VLC_FOURCC( 'W', 'L', 'O', 'C' )
+#define ATOM_ITUN VLC_FOURCC( '-', '-', '-', '-' )
 
 #define ATOM_meta VLC_FOURCC( 'm', 'e', 't', 'a' )
 #define ATOM_atID VLC_FOURCC( 'a', 't', 'I', 'D' )
@@ -381,6 +385,7 @@ typedef int64_t stime_t;
 
 #define HANDLER_mdta VLC_FOURCC('m', 'd', 't', 'a')
 #define HANDLER_mdir VLC_FOURCC('m', 'd', 'i', 'r')
+#define HANDLER_ID32 ATOM_ID32
 
 #define SAMPLEGROUP_rap  VLC_FOURCC('r', 'a', 'p', ' ')
 
@@ -608,6 +613,16 @@ typedef struct MP4_Box_data_ctts_s
     int32_t *pi_sample_offset;
 
 } MP4_Box_data_ctts_t;
+
+typedef struct MP4_Box_data_cslg_s
+{
+    int64_t ct_to_dts_shift;
+    int64_t i_least_delta;
+    int64_t i_max_delta;
+    int64_t i_composition_starttime;
+    int64_t i_composition_endtime;
+
+} MP4_Box_data_cslg_t;
 
 // https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html#//apple_ref/doc/uid/TP40000939-CH205-125526
 typedef struct MP4_Box_data_colr_s
@@ -1626,6 +1641,7 @@ typedef union MP4_Box_data_s
     MP4_Box_data_lcont_t *p_lcont;
     MP4_Box_data_stts_t *p_stts;
     MP4_Box_data_ctts_t *p_ctts;
+    MP4_Box_data_cslg_t *p_cslg;
     MP4_Box_data_colr_t *p_colr;
 
     MP4_Box_data_sbgp_t *p_sbgp;

@@ -8,7 +8,6 @@ include/vlc_block_helper.h
 include/vlc_charset.h
 include/vlc_codec.h
 include/vlc_codecs.h
-include/vlc_codec_synchro.h
 include/vlc_common.h
 include/vlc_config_cat.h
 include/vlc_config.h
@@ -81,7 +80,6 @@ src/input/clock.h
 src/input/control.c
 src/input/decoder.c
 src/input/decoder.h
-src/input/decoder_synchro.c
 src/input/demux.c
 src/input/demux.h
 src/input/es_out.c
@@ -470,7 +468,6 @@ modules/demux/mkv/util.hpp
 modules/demux/mkv/virtual_segment.cpp
 modules/demux/mkv/virtual_segment.hpp
 modules/demux/mod.c
-modules/demux/mp4/id3genres.h
 modules/demux/mp4/libmp4.c
 modules/demux/mp4/libmp4.h
 modules/demux/mp4/mp4.c
@@ -489,7 +486,6 @@ modules/demux/ogg.c
 modules/demux/playlist/asx.c
 modules/demux/playlist/b4s.c
 modules/demux/playlist/dvb.c
-modules/demux/playlist/gvp.c
 modules/demux/playlist/ifo.c
 modules/demux/playlist/itml.c
 modules/demux/playlist/itml.h
@@ -944,6 +940,7 @@ modules/lua/meta.c
 modules/lua/vlc.c
 modules/lua/vlc.h
 modules/meta_engine/folder.c
+modules/meta_engine/ID3Genres.h
 modules/meta_engine/taglib.cpp
 modules/misc/audioscrobbler.c
 modules/misc/gnutls.c
@@ -1049,7 +1046,7 @@ modules/text_renderer/sapi.cpp
 modules/text_renderer/svg.c
 modules/text_renderer/tdummy.c
 modules/video_chroma/chain.c
-modules/video_chroma/cvpx_i420.c
+modules/video_chroma/cvpx.c
 modules/video_chroma/d3d11_surface.c
 modules/video_chroma/dxa9.c
 modules/video_chroma/grey_yuv.c

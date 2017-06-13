@@ -56,7 +56,7 @@ struct decoder_sys_t
     AVCODEC_COMMON_MEMBERS
 
     /* Video decoder specific part */
-    mtime_t i_pts;
+    date_t  pts;
 
     /* Closed captions for decoders */
     cc_data_t cc;
@@ -305,6 +305,16 @@ static int lavc_UpdateVideoFormat(decoder_t *dec, AVCodecContext *ctx,
     if (val)
         return val;
 
+    /* always have date in fields/ticks units */
+    if(dec->p_sys->pts.i_divider_num)
+        date_Change(&dec->p_sys->pts, fmt_out.i_frame_rate *
+                                      __MAX(ctx->ticks_per_frame, 1),
+                                      fmt_out.i_frame_rate_base);
+    else
+        date_Init(&dec->p_sys->pts, fmt_out.i_frame_rate *
+                                    __MAX(ctx->ticks_per_frame, 1),
+                                    fmt_out.i_frame_rate_base);
+
     const int i_cc_reorder = dec->fmt_out.subs.cc.i_reorder_depth;
     fmt_out.p_palette = dec->fmt_out.video.p_palette;
     dec->fmt_out.video.p_palette = NULL;
@@ -545,7 +555,8 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
         p_dec->i_extra_picture_buffers = 2 * p_context->thread_count;
 
     /* ***** misc init ***** */
-    p_sys->i_pts = VLC_TS_INVALID;
+    date_Init(&p_sys->pts, 1, 30001);
+    date_Set(&p_sys->pts, VLC_TS_INVALID);
     p_sys->b_first_frame = true;
     p_sys->i_late_frames = 0;
     p_sys->b_from_preroll = false;
@@ -594,7 +605,7 @@ static void Flush( decoder_t *p_dec )
     decoder_sys_t *p_sys = p_dec->p_sys;
     AVCodecContext *p_context = p_sys->p_context;
 
-    p_sys->i_pts = VLC_TS_INVALID; /* To make sure we recover properly */
+    date_Set(&p_sys->pts, VLC_TS_INVALID); /* To make sure we recover properly */
     p_sys->i_late_frames = 0;
     cc_Flush( &p_sys->cc );
 
@@ -620,7 +631,7 @@ static bool check_block_validity( decoder_sys_t *p_sys, block_t *block )
 
     if( block->i_flags & (BLOCK_FLAG_DISCONTINUITY|BLOCK_FLAG_CORRUPTED) )
     {
-        p_sys->i_pts = VLC_TS_INVALID; /* To make sure we recover properly */
+        date_Set( &p_sys->pts, VLC_TS_INVALID ); /* To make sure we recover properly */
         cc_Flush( &p_sys->cc );
 
         p_sys->i_late_frames = 0;
@@ -652,10 +663,7 @@ static bool check_block_being_late( decoder_sys_t *p_sys, block_t *block, mtime_
 
     if( current_time - p_sys->i_late_frames_start > (5*CLOCK_FREQ))
     {
-        if( p_sys->i_pts > VLC_TS_INVALID )
-        {
-            p_sys->i_pts = VLC_TS_INVALID; /* To make sure we recover properly */
-        }
+        date_Set( &p_sys->pts, VLC_TS_INVALID ); /* To make sure we recover properly */
         if( block )
             block_Release( block );
         p_sys->i_late_frames--;
@@ -691,27 +699,16 @@ static void interpolate_next_pts( decoder_t *p_dec, AVFrame *frame )
     decoder_sys_t *p_sys = p_dec->p_sys;
     AVCodecContext *p_context = p_sys->p_context;
 
-    if( p_sys->i_pts <= VLC_TS_INVALID )
+    if( date_Get( &p_sys->pts ) == VLC_TS_INVALID ||
+        p_sys->pts.i_divider_num == 0 )
         return;
 
-    /* interpolate the next PTS */
-    if( p_dec->fmt_in.video.i_frame_rate > 0 &&
-        p_dec->fmt_in.video.i_frame_rate_base > 0 )
-    {
-        p_sys->i_pts += CLOCK_FREQ * (2 + frame->repeat_pict) *
-            p_dec->fmt_in.video.i_frame_rate_base /
-            (2 * p_dec->fmt_in.video.i_frame_rate);
-    }
-    else if( p_context->time_base.den > 0 )
-    {
-        int i_tick = p_context->ticks_per_frame;
-        if( i_tick <= 0 )
-            i_tick = 1;
+    int i_tick = p_context->ticks_per_frame;
+    if( i_tick <= 0 )
+        i_tick = 1;
 
-        p_sys->i_pts += CLOCK_FREQ * (2 + frame->repeat_pict) *
-            i_tick * p_context->time_base.num /
-            (2 * p_context->time_base.den);
-    }
+    /* interpolate the next PTS */
+    date_Increment( &p_sys->pts, i_tick + frame->repeat_pict );
 }
 
 static void update_late_frame_count( decoder_t *p_dec, block_t *p_block, mtime_t current_time, mtime_t i_pts )
@@ -746,6 +743,110 @@ static void update_late_frame_count( decoder_t *p_dec, block_t *p_block, mtime_t
    }
 }
 
+
+static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p_pic )
+{
+    decoder_sys_t *p_sys = p_dec->p_sys;
+    bool format_changed = false;
+
+#if (LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_VERSION_INT >= AV_VERSION_INT( 55, 16, 101 ) )
+#define FROM_AVRAT(default_factor, avrat) \
+(uint64_t)(default_factor) * (avrat).num / (avrat).den
+    const AVFrameSideData *metadata =
+            av_frame_get_side_data( frame,
+                                    AV_FRAME_DATA_MASTERING_DISPLAY_METADATA );
+    if ( metadata )
+    {
+        const AVMasteringDisplayMetadata *hdr_meta =
+                (const AVMasteringDisplayMetadata *) metadata->data;
+        if ( hdr_meta->has_luminance )
+        {
+#define ST2086_LUMA_FACTOR 10000
+            p_pic->format.mastering.max_luminance =
+                    FROM_AVRAT(ST2086_LUMA_FACTOR, hdr_meta->max_luminance);
+            p_pic->format.mastering.min_luminance =
+                    FROM_AVRAT(ST2086_LUMA_FACTOR, hdr_meta->min_luminance);
+        }
+        if ( hdr_meta->has_primaries )
+        {
+#define ST2086_RED   2
+#define ST2086_GREEN 0
+#define ST2086_BLUE  1
+#define LAV_RED    0
+#define LAV_GREEN  1
+#define LAV_BLUE   2
+#define ST2086_PRIM_FACTOR 50000
+            p_pic->format.mastering.primaries[ST2086_RED*2   + 0] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_RED][0]);
+            p_pic->format.mastering.primaries[ST2086_RED*2   + 1] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_RED][1]);
+            p_pic->format.mastering.primaries[ST2086_GREEN*2 + 0] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_GREEN][0]);
+            p_pic->format.mastering.primaries[ST2086_GREEN*2 + 1] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_GREEN][1]);
+            p_pic->format.mastering.primaries[ST2086_BLUE*2  + 0] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_BLUE][0]);
+            p_pic->format.mastering.primaries[ST2086_BLUE*2  + 1] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_BLUE][1]);
+            p_pic->format.mastering.white_point[0] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->white_point[0]);
+            p_pic->format.mastering.white_point[1] =
+                    FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->white_point[1]);
+        }
+
+        if ( memcmp( &p_dec->fmt_out.video.mastering,
+                     &p_pic->format.mastering,
+                     sizeof(p_pic->format.mastering) ) )
+        {
+            p_dec->fmt_out.video.mastering = p_pic->format.mastering;
+            format_changed = true;
+        }
+#undef FROM_AVRAT
+    }
+#endif
+#if (LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_VERSION_INT >= AV_VERSION_INT( 55, 60, 100 ) )
+    const AVFrameSideData *metadata_lt =
+            av_frame_get_side_data( frame,
+                                    AV_FRAME_DATA_CONTENT_LIGHT_LEVEL );
+    if ( metadata_lt )
+    {
+        const AVContentLightMetadata *light_meta =
+                (const AVContentLightMetadata *) metadata_lt->data;
+        p_pic->format.lighting.MaxCLL = light_meta->MaxCLL;
+        p_pic->format.lighting.MaxFALL = light_meta->MaxFALL;
+        if ( memcmp( &p_dec->fmt_out.video.lighting,
+                     &p_pic->format.lighting,
+                     sizeof(p_pic->format.lighting) ) )
+        {
+            p_dec->fmt_out.video.lighting  = p_pic->format.lighting;
+            format_changed = true;
+        }
+    }
+#endif
+
+    if (format_changed)
+        decoder_UpdateVideoFormat( p_dec );
+
+    const AVFrameSideData *p_avcc = av_frame_get_side_data( frame, AV_FRAME_DATA_A53_CC );
+    if( p_avcc )
+    {
+        cc_Extract( &p_sys->cc, CC_PAYLOAD_RAW, true, p_avcc->data, p_avcc->size );
+        if( p_sys->cc.i_data )
+        {
+            block_t *p_cc = block_Alloc( p_sys->cc.i_data );
+            if( p_cc )
+            {
+                memcpy( p_cc->p_buffer, p_sys->cc.p_data, p_sys->cc.i_data );
+                if( p_sys->cc.b_reorder )
+                    p_cc->i_dts = p_cc->i_pts = p_pic->date;
+                else
+                    p_cc->i_pts = p_cc->i_dts;
+                decoder_QueueCc( p_dec, p_cc, p_sys->cc.pb_present, 4 );
+            }
+            cc_Flush( &p_sys->cc );
+        }
+    }
+}
 
 /*****************************************************************************
  * DecodeBlock: Called to decode one or more frames
@@ -852,7 +953,7 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
         post_mt( p_sys );
 
         av_init_packet( &pkt );
-        if( p_block )
+        if( p_block && p_block->i_buffer > 0 )
         {
             pkt.data = p_block->p_buffer;
             pkt.size = p_block->i_buffer;
@@ -917,6 +1018,9 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
                 *error = true;
             }
             av_frame_free(&frame);
+            /* After draining, we need to reset decoder with a flush */
+            if( ret == AVERROR_EOF )
+                avcodec_flush_buffers( p_sys->p_context );
             break;
         }
         bool not_received_frame = ret;
@@ -954,11 +1058,11 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
             i_pts = frame->pkt_dts;
 
         if( i_pts == AV_NOPTS_VALUE )
-            i_pts = p_sys->i_pts;
+            i_pts = date_Get( &p_sys->pts );
 
         /* Interpolate the next PTS */
         if( i_pts > VLC_TS_INVALID )
-            p_sys->i_pts = i_pts;
+            date_Set( &p_sys->pts, i_pts );
 
         interpolate_next_pts( p_dec, frame );
 
@@ -1064,106 +1168,9 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
         p_pic->b_progressive = !frame->interlaced_frame;
         p_pic->b_top_field_first = frame->top_field_first;
 
-        bool format_changed = false;
-#if (LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_VERSION_INT >= AV_VERSION_INT( 55, 16, 101 ) )
-#define FROM_AVRAT(default_factor, avrat) \
-    (uint64_t)(default_factor) * (avrat).num / (avrat).den
-        const AVFrameSideData *metadata =
-                av_frame_get_side_data( frame,
-                                        AV_FRAME_DATA_MASTERING_DISPLAY_METADATA );
-        if ( metadata )
-        {
-            const AVMasteringDisplayMetadata *hdr_meta =
-                    (const AVMasteringDisplayMetadata *) metadata->data;
-            if ( hdr_meta->has_luminance )
-            {
-#define ST2086_LUMA_FACTOR 10000
-                p_pic->format.mastering.max_luminance =
-                        FROM_AVRAT(ST2086_LUMA_FACTOR, hdr_meta->max_luminance);
-                p_pic->format.mastering.min_luminance =
-                        FROM_AVRAT(ST2086_LUMA_FACTOR, hdr_meta->min_luminance);
-            }
-            if ( hdr_meta->has_primaries )
-            {
-#define ST2086_RED   2
-#define ST2086_GREEN 0
-#define ST2086_BLUE  1
-#define LAV_RED    0
-#define LAV_GREEN  1
-#define LAV_BLUE   2
-#define ST2086_PRIM_FACTOR 50000
-                p_pic->format.mastering.primaries[ST2086_RED*2   + 0] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_RED][0]);
-                p_pic->format.mastering.primaries[ST2086_RED*2   + 1] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_RED][1]);
-                p_pic->format.mastering.primaries[ST2086_GREEN*2 + 0] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_GREEN][0]);
-                p_pic->format.mastering.primaries[ST2086_GREEN*2 + 1] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_GREEN][1]);
-                p_pic->format.mastering.primaries[ST2086_BLUE*2  + 0] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_BLUE][0]);
-                p_pic->format.mastering.primaries[ST2086_BLUE*2  + 1] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->display_primaries[LAV_BLUE][1]);
-                p_pic->format.mastering.white_point[0] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->white_point[0]);
-                p_pic->format.mastering.white_point[1] =
-                        FROM_AVRAT(ST2086_PRIM_FACTOR, hdr_meta->white_point[1]);
-            }
-
-            if ( memcmp( &p_dec->fmt_out.video.mastering,
-                         &p_pic->format.mastering,
-                         sizeof(p_pic->format.mastering) ) )
-            {
-                p_dec->fmt_out.video.mastering = p_pic->format.mastering;
-                format_changed = true;
-            }
-#undef FROM_AVRAT
-        }
-#endif
-#if (LIBAVUTIL_VERSION_MICRO >= 100 && LIBAVUTIL_VERSION_INT >= AV_VERSION_INT( 55, 60, 100 ) )
-        const AVFrameSideData *metadata_lt =
-                av_frame_get_side_data( frame,
-                                        AV_FRAME_DATA_CONTENT_LIGHT_LEVEL );
-        if ( metadata_lt )
-        {
-            const AVContentLightMetadata *light_meta =
-                    (const AVContentLightMetadata *) metadata_lt->data;
-            p_pic->format.lighting.MaxCLL = light_meta->MaxCLL;
-            p_pic->format.lighting.MaxFALL = light_meta->MaxFALL;
-            if ( memcmp( &p_dec->fmt_out.video.lighting,
-                         &p_pic->format.lighting,
-                         sizeof(p_pic->format.lighting) ) )
-            {
-                p_dec->fmt_out.video.lighting  = p_pic->format.lighting;
-                format_changed = true;
-            }
-        }
-#endif
-
-        const AVFrameSideData *p_avcc = av_frame_get_side_data( frame, AV_FRAME_DATA_A53_CC );
-        if( p_avcc )
-        {
-            cc_Extract( &p_sys->cc, CC_PAYLOAD_RAW, true, p_avcc->data, p_avcc->size );
-            if( p_sys->cc.i_data )
-            {
-                block_t *p_cc = block_Alloc( p_sys->cc.i_data );
-                if( p_cc )
-                {
-                    memcpy( p_cc->p_buffer, p_sys->cc.p_data, p_sys->cc.i_data );
-                    if( p_sys->cc.b_reorder )
-                        p_cc->i_dts = p_cc->i_pts = i_pts;
-                    else
-                        p_cc->i_pts = p_cc->i_dts;
-                    decoder_QueueCc( p_dec, p_cc, p_sys->cc.pb_present, 4 );
-                }
-                cc_Flush( &p_sys->cc );
-            }
-        }
+        DecodeSidedata( p_dec, frame, p_pic );
 
         av_frame_free(&frame);
-
-        if (format_changed)
-            decoder_UpdateVideoFormat( p_dec );
 
         /* Send decoded frame to vout */
         if (i_pts > VLC_TS_INVALID)
