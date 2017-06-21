@@ -36,6 +36,11 @@
 
 #define COBJMACROS
 
+#define D3D_Device          IUnknown
+#define D3D_DecoderType     IUnknown
+#define D3D_DecoderDevice   IUnknown
+#define D3D_DecoderSurface  IUnknown
+typedef struct vlc_va_surface_t vlc_va_surface_t;
 #include "directx_va.h"
 
 #include "avcodec.h"
@@ -51,6 +56,12 @@ static const int PROF_H264_HIGH[]    = { FF_PROFILE_H264_CONSTRAINED_BASELINE,
 static const int PROF_HEVC_MAIN[]    = { FF_PROFILE_HEVC_MAIN, 0 };
 static const int PROF_HEVC_MAIN10[]  = { FF_PROFILE_HEVC_MAIN,
                                          FF_PROFILE_HEVC_MAIN_10, 0 };
+
+#include <winapifamily.h>
+#if defined(WINAPI_FAMILY)
+# undef WINAPI_FAMILY
+#endif
+#define WINAPI_FAMILY WINAPI_PARTITION_DESKTOP
 
 #include <d3d9.h>
 #include <dxva2api.h>
@@ -252,9 +263,6 @@ static const directx_va_mode_t DXVA_MODES[] = {
 
 static int FindVideoServiceConversion(vlc_va_t *, directx_sys_t *, const es_format_t *fmt);
 static void DestroyVideoDecoder(vlc_va_t *, directx_sys_t *);
-static void DestroyVideoService(vlc_va_t *, directx_sys_t *);
-static void DestroyDeviceManager(vlc_va_t *, directx_sys_t *);
-static void DestroyDevice(vlc_va_t *, directx_sys_t *);
 
 char *directx_va_GetDecoderName(const GUID *guid)
 {
@@ -311,7 +319,7 @@ int directx_va_Setup(vlc_va_t *va, directx_sys_t *dx_sys, AVCodecContext *avctx)
     }
 
     if ( avctx->active_thread_type & FF_THREAD_FRAME )
-        surface_count += dx_sys->thread_count;
+        surface_count += avctx->thread_count;
 
     if (surface_count > MAX_SURFACE_COUNT)
         return VLC_EGENERIC;
@@ -341,17 +349,18 @@ int directx_va_Setup(vlc_va_t *va, directx_sys_t *dx_sys, AVCodecContext *avctx)
                   dx_sys->surface_width, dx_sys->surface_height,
                   avctx->coded_width, avctx->coded_height);
 
-    dx_sys->pf_setup_avcodec_ctx(va);
-
     for (int i = 0; i < dx_sys->surface_count; i++) {
-        vlc_va_surface_t *surface = &dx_sys->surface[i];
-        surface->refcount = 0;
-        surface->order = 0;
-        surface->p_lock = &dx_sys->surface_lock;
-        surface->p_pic = dx_sys->pf_alloc_surface_pic(va, &fmt, i);
-        if (unlikely(surface->p_pic == NULL))
-            return VLC_EGENERIC;
+        vlc_va_surface_t *surface = malloc(sizeof(*surface));
+        if (unlikely(surface==NULL))
+        {
+            dx_sys->surface_count = i;
+            return VLC_ENOMEM;
+        }
+        atomic_init(&surface->refcount, 1);
+        dx_sys->surface[i] = surface;
     }
+
+    dx_sys->pf_setup_avcodec_ctx(va);
 
 ok:
     return VLC_SUCCESS;
@@ -362,92 +371,82 @@ void DestroyVideoDecoder(vlc_va_t *va, directx_sys_t *dx_sys)
     dx_sys->pf_destroy_surfaces(va);
 
     for (int i = 0; i < dx_sys->surface_count; i++)
+    {
         IUnknown_Release( dx_sys->hw_surface[i] );
+        directx_va_Release(dx_sys->surface[i]);
+    }
 
-    for (int i = 0; i < dx_sys->surface_count; i++)
-        if (dx_sys->surface[i].p_pic)
-            picture_Release(dx_sys->surface[i].p_pic);
-
-    if (dx_sys->decoder)
-        IUnknown_Release( dx_sys->decoder );
-
-    dx_sys->decoder = NULL;
     dx_sys->surface_count = 0;
 }
 
-/* FIXME it is nearly common with VAAPI */
-int directx_va_Get(vlc_va_t *va, directx_sys_t *dx_sys, picture_t *pic, uint8_t **data)
+static vlc_va_surface_t *GetSurface(directx_sys_t *dx_sys)
+{
+    for (int i = 0; i < dx_sys->surface_count; i++) {
+        vlc_va_surface_t *surface = dx_sys->surface[i];
+        uintptr_t expected = 1;
+
+        if (atomic_compare_exchange_strong(&surface->refcount, &expected, 2))
+        {
+            /* TODO do a copy to allow releasing locally and keep forward alive atomic_fetch_sub(&surface->refs, 1);*/
+            surface->decoderSurface = dx_sys->hw_surface[i];
+            return surface;
+        }
+    }
+    return NULL;
+}
+
+vlc_va_surface_t *directx_va_Get(vlc_va_t *va, directx_sys_t *dx_sys)
 {
     /* Check the device */
     if (dx_sys->pf_check_device(va)!=VLC_SUCCESS)
-        return VLC_EGENERIC;
+        return NULL;
 
-    vlc_mutex_lock( &dx_sys->surface_lock );
+    unsigned tries = (CLOCK_FREQ + VOUT_OUTMEM_SLEEP) / VOUT_OUTMEM_SLEEP;
+    vlc_va_surface_t *field;
 
-    /* Grab the oldest unused surface, in case none are, use the oldest used one
-     * XXX using the used one is a workaround in case a problem happens with libavcodec */
-    int i, old = -1, old_used = -1;
-
-    for (i = 0; i < dx_sys->surface_count; i++) {
-        vlc_va_surface_t *surface = &dx_sys->surface[i];
-        if (((old == -1 || surface->order < dx_sys->surface[old].order)) && !surface->refcount)
-            old = i;
-        if (old_used == -1 || surface->order < dx_sys->surface[old_used].order)
-            old_used = i;
-    }
-    if (old >= 0)
-        i = old;
-    else if (old_used >= 0)
+    while ((field = GetSurface(dx_sys)) == NULL)
     {
-        msg_Warn(va, "couldn't find a free decoding buffer, using index %d", old_used);
-        i = old_used;
+        if (--tries == 0)
+            return NULL;
+        /* Pool empty. Wait for some time as in src/input/decoder.c.
+         * XXX: Both this and the core should use a semaphore or a CV. */
+        msleep(VOUT_OUTMEM_SLEEP);
     }
-
-    vlc_va_surface_t *surface = &dx_sys->surface[i];
-
-    surface->refcount = 1;
-    surface->order = ++dx_sys->surface_order;
-    *data = (void *)dx_sys->hw_surface[i];
-    pic->context = surface;
-
-    vlc_mutex_unlock( &dx_sys->surface_lock );
-
-    return VLC_SUCCESS;
+    return field;
 }
 
-void directx_va_Release(void *opaque, uint8_t *data)
+void directx_va_AddRef(vlc_va_surface_t *surface)
 {
-    picture_t *pic = opaque;
-    vlc_va_surface_t *surface = pic->context;
-    vlc_mutex_lock( surface->p_lock );
+    atomic_fetch_add(&surface->refcount, 1);
+}
 
-    surface->refcount--;
-    pic->context = NULL;
-    picture_Release(pic);
-
-    vlc_mutex_unlock( surface->p_lock );
+void directx_va_Release(vlc_va_surface_t *surface)
+{
+    if (atomic_fetch_sub(&surface->refcount, 1) != 1)
+        return;
+    free(surface);
 }
 
 void directx_va_Close(vlc_va_t *va, directx_sys_t *dx_sys)
 {
     DestroyVideoDecoder(va, dx_sys);
-    DestroyVideoService(va, dx_sys);
-    DestroyDeviceManager(va, dx_sys);
-    DestroyDevice(va, dx_sys);
+    dx_sys->pf_destroy_video_service(va);
+    if (dx_sys->d3ddec)
+        IUnknown_Release(dx_sys->d3ddec);
+    if (dx_sys->pf_destroy_device_manager)
+        dx_sys->pf_destroy_device_manager(va);
+    dx_sys->pf_destroy_device(va);
+    if (dx_sys->d3ddev)
+        IUnknown_Release( dx_sys->d3ddev );
 
     if (dx_sys->hdecoder_dll)
         FreeLibrary(dx_sys->hdecoder_dll);
-
-    vlc_mutex_destroy( &dx_sys->surface_lock );
 }
 
 int directx_va_Open(vlc_va_t *va, directx_sys_t *dx_sys,
                     AVCodecContext *ctx, const es_format_t *fmt, bool b_dll)
 {
-    // TODO va->sys = sys;
     dx_sys->codec_id = ctx->codec_id;
-
-    vlc_mutex_init( &dx_sys->surface_lock );
 
     if (b_dll) {
         /* Load dll*/
@@ -466,13 +465,14 @@ int directx_va_Open(vlc_va_t *va, directx_sys_t *dx_sys,
     }
     msg_Dbg(va, "CreateDevice succeed");
 
-    if (dx_sys->pf_create_device_manager(va)) {
-        msg_Err(va, "D3dCreateDeviceManager failed");
+    if (dx_sys->pf_create_device_manager &&
+        dx_sys->pf_create_device_manager(va) != VLC_SUCCESS) {
+        msg_Err(va, "CreateDeviceManager failed");
         goto error;
     }
 
     if (dx_sys->pf_create_video_service(va)) {
-        msg_Err(va, "DxCreateVideoService failed");
+        msg_Err(va, "CreateVideoService failed");
         goto error;
     }
 
@@ -481,8 +481,6 @@ int directx_va_Open(vlc_va_t *va, directx_sys_t *dx_sys,
         msg_Err(va, "FindVideoServiceConversion failed");
         goto error;
     }
-
-    dx_sys->thread_count = ctx->thread_count;
 
     return VLC_SUCCESS;
 
@@ -521,13 +519,6 @@ static bool profile_supported(const directx_va_mode_t *mode, const es_format_t *
         }
     }
     return is_supported;
-}
-
-void DestroyVideoService(vlc_va_t *va, directx_sys_t *dx_sys)
-{
-    dx_sys->pf_destroy_video_service(va);
-    if (dx_sys->d3ddec)
-        IUnknown_Release(dx_sys->d3ddec);
 }
 
 /**
@@ -586,16 +577,4 @@ static int FindVideoServiceConversion(vlc_va_t *va, directx_sys_t *dx_sys, const
 
     p_list.pf_release(&p_list);
     return err;
-}
-
-void DestroyDeviceManager(vlc_va_t *va, directx_sys_t *dx_sys)
-{
-    dx_sys->pf_destroy_device_manager(va);
-}
-
-void DestroyDevice(vlc_va_t *va, directx_sys_t *dx_sys)
-{
-    dx_sys->pf_destroy_device(va);
-    if (dx_sys->d3ddev)
-        IUnknown_Release( dx_sys->d3ddev );
 }

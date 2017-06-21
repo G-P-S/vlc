@@ -40,14 +40,13 @@
 #include "va.h"
 
 #include <unknwn.h>
+#include <stdatomic.h>
 
 /* */
-typedef struct {
-    int                refcount;
-    unsigned int       order;
-    vlc_mutex_t        *p_lock;
-    picture_t          *p_pic;
-} vlc_va_surface_t;
+struct vlc_va_surface_t {
+    atomic_uintptr_t     refcount;
+    D3D_DecoderSurface *decoderSurface;
+};
 
 typedef struct input_list_t {
     void (*pf_release)(struct input_list_t *);
@@ -67,26 +66,22 @@ typedef struct
     const TCHAR           *psz_decoder_dll;
 
     /* Direct3D */
-    IUnknown              *d3ddev;
+    D3D_Device            *d3ddev;
 
     /* Video service */
     GUID                   input;
-    IUnknown               *d3ddec;
+    D3D_DecoderDevice      *d3ddec;
 
     /* Video decoder */
-    IUnknown               *decoder;
+    D3D_DecoderType        *decoder;
 
     /* */
     int          surface_count;
-    int          surface_order;
     int          surface_width;
     int          surface_height;
 
-    int          thread_count;
-
-    vlc_mutex_t      surface_lock;
-    vlc_va_surface_t surface[MAX_SURFACE_COUNT];
-    IUnknown         *hw_surface[MAX_SURFACE_COUNT];
+    vlc_va_surface_t     *surface[MAX_SURFACE_COUNT];
+    D3D_DecoderSurface  *hw_surface[MAX_SURFACE_COUNT];
 
     /**
      * Check that the decoder device is still available
@@ -118,27 +113,22 @@ typedef struct
     int (*pf_create_decoder_surfaces)(vlc_va_t *, int codec_id,
                                       const video_format_t *fmt);
     /**
-     * Destroy resources allocated with the surfaces except from hw_surface objects
+     * Destroy resources allocated with the surfaces and the associated decoder
      */
     void (*pf_destroy_surfaces)(vlc_va_t *);
     /**
      * Set the avcodec hw context after the decoder is created
      */
     void (*pf_setup_avcodec_ctx)(vlc_va_t *);
-    /**
-     * @brief pf_alloc_surface_pic
-     * @param fmt
-     * @return
-     */
-    picture_t *(*pf_alloc_surface_pic)(vlc_va_t *, const video_format_t *, unsigned);
 
 } directx_sys_t;
 
 int directx_va_Open(vlc_va_t *, directx_sys_t *, AVCodecContext *ctx, const es_format_t *fmt, bool b_dll);
 void directx_va_Close(vlc_va_t *, directx_sys_t *);
 int directx_va_Setup(vlc_va_t *, directx_sys_t *, AVCodecContext *avctx);
-int directx_va_Get(vlc_va_t *, directx_sys_t *, picture_t *pic, uint8_t **data);
-void directx_va_Release(void *opaque, uint8_t *data);
+vlc_va_surface_t *directx_va_Get(vlc_va_t *, directx_sys_t *);
+void directx_va_AddRef(vlc_va_surface_t *surface);
+void directx_va_Release(vlc_va_surface_t *surface);
 char *directx_va_GetDecoderName(const GUID *guid);
 
 #endif /* AVCODEC_DIRECTX_VA_H */

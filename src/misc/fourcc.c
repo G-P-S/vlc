@@ -365,15 +365,16 @@ static const vlc_fourcc_t p_I444_16B_fallback[] = {
     VLC_CODEC_I444_16B, VLC_CODEC_I444_16L, VLC_CODEC_FALLBACK_444_16, 0
 };
 
-/* No fallback for VDPAU chromas since there is no VDPAU -> YUV filter */
-static const vlc_fourcc_t p_VDPAU_VIDEO_420_fallback[] = {
-    VLC_CODEC_VDPAU_VIDEO_420, 0
+
+/* Fallbacks for cvpx */
+static const vlc_fourcc_t p_CVPX_VIDEO_NV12_fallback[] = {
+    VLC_CODEC_CVPX_NV12, VLC_CODEC_I420, 0,
 };
-static const vlc_fourcc_t p_VDPAU_VIDEO_422_fallback[] = {
-    VLC_CODEC_VDPAU_VIDEO_422, 0
+static const vlc_fourcc_t p_CVPX_VIDEO_UYVY_fallback[] = {
+    VLC_CODEC_CVPX_UYVY, VLC_CODEC_I420, 0,
 };
-static const vlc_fourcc_t p_VDPAU_VIDEO_444_fallback[] = {
-    VLC_CODEC_VDPAU_VIDEO_444, 0
+static const vlc_fourcc_t p_CVPX_VIDEO_I420_fallback[] = {
+    VLC_CODEC_CVPX_I420, VLC_CODEC_I420, 0,
 };
 
 static const vlc_fourcc_t p_I440_fallback[] = {
@@ -455,11 +456,9 @@ static const vlc_fourcc_t *pp_YUV_fallback[] = {
     p_UYVY_fallback,
     p_VYUY_fallback,
     p_NV12_fallback,
-    p_VDPAU_VIDEO_420_fallback,
-    p_VDPAU_VIDEO_422_fallback,
-    p_VDPAU_VIDEO_444_fallback,
-
-
+    p_CVPX_VIDEO_NV12_fallback,
+    p_CVPX_VIDEO_UYVY_fallback,
+    p_CVPX_VIDEO_I420_fallback,
     NULL,
 };
 
@@ -479,6 +478,9 @@ static const vlc_fourcc_t p_list_YUV[] = {
     VLC_CODEC_VDPAU_VIDEO_420,
     VLC_CODEC_VDPAU_VIDEO_422,
     VLC_CODEC_VDPAU_VIDEO_444,
+    VLC_CODEC_CVPX_NV12,
+    VLC_CODEC_CVPX_UYVY,
+    VLC_CODEC_CVPX_I420,
     0,
 };
 
@@ -529,6 +531,7 @@ static const vlc_fourcc_t *pp_RGB_fallback[] = {
     p_RGB16_fallback,
     p_RGB15_fallback,
     p_RGB8_fallback,
+
     NULL,
 };
 

@@ -22,11 +22,14 @@
 #endif
 
 #include "mp4.h"
-#include "id3genres.h"                             /* for ATOM_gnre */
+#include "../meta_engine/ID3Genres.h"  /* for ATOM_gnre */
 #include "languages.h"
 
 #include <vlc_meta.h>
 #include <vlc_charset.h>
+
+#include "../meta_engine/ID3Tag.h"
+#include "../meta_engine/ID3Meta.h"
 
 #include <assert.h>
 
@@ -319,6 +322,31 @@ static int ExtractIntlStrings( vlc_meta_t *p_meta, MP4_Box_t *p_box )
     return i_read == 0;
 }
 
+static void ExtractItunesInfoTriplets( vlc_meta_t *p_meta, MP4_Box_t *p_box )
+{
+    if( p_box->i_type != ATOM_ITUN )
+        return;
+    MP4_Box_t *p_mean = MP4_BoxGet( p_box, "mean" );
+    MP4_Box_t *p_name = MP4_BoxGet( p_box, "name" );
+    MP4_Box_t *p_data = MP4_BoxGet( p_box, "data" );
+    if( !p_mean || p_mean->data.p_binary->i_blob < 4 + 16 ||
+        !p_name || p_name->data.p_binary->i_blob < 5 ||
+        !p_data || !BOXDATA(p_data) )
+        return;
+
+    if( !strncmp( &((char*)p_mean->data.p_binary->p_blob)[4], "com.apple.iTunes",
+                  p_mean->data.p_binary->i_blob - 4 ) )
+    {
+        char *psz_name = strndup( &((char*)p_name->data.p_binary->p_blob)[4],
+                                 p_name->data.p_binary->i_blob - 4 );
+        char *psz_value = ExtractString( p_data );
+        if( psz_name && psz_value )
+            vlc_meta_AddExtra( p_meta, psz_name, psz_value );
+        free( psz_name );
+        free( psz_value );
+    }
+}
+
 static void SetupmdirMeta( vlc_meta_t *p_meta, MP4_Box_t *p_box )
 {
     const MP4_Box_t *p_data = MP4_BoxGet( p_box, "data" );
@@ -378,8 +406,8 @@ static void SetupmdirMeta( vlc_meta_t *p_meta, MP4_Box_t *p_box )
              BOXDATA(p_data)->e_wellknowntype == DATA_WKT_RESERVED )
         {
             const uint16_t i_genre = GetWBE(BOXDATA(p_data)->p_blob);
-            if( i_genre && i_genre <= NUM_GENRES )
-                vlc_meta_SetGenre( p_meta, ppsz_genres[i_genre - 1] );
+            if( i_genre && i_genre <= ID3_GENRES_COUNT )
+                vlc_meta_SetGenre( p_meta, ID3_ppsz_genres[i_genre - 1] );
         }
         break;
     }
@@ -421,6 +449,9 @@ static void SetupmdirMeta( vlc_meta_t *p_meta, MP4_Box_t *p_box )
         }
         break;
     }
+    case ATOM_ITUN:
+        ExtractItunesInfoTriplets( p_meta, p_box );
+        break;
     default:
         SetMeta( p_meta, p_box->i_type, NULL, p_box );
         break;
@@ -459,6 +490,27 @@ static void SetupmdtaMeta( vlc_meta_t *p_meta, MP4_Box_t *p_box, MP4_Box_t *p_ke
     }
 }
 
+static int ID3TAG_Parse_Handler( uint32_t i_tag, const uint8_t *p_payload,
+                                 size_t i_payload, void *p_priv )
+{
+    vlc_meta_t *p_meta = (vlc_meta_t *) p_priv;
+
+    (void) ID3HandleTag( p_payload, i_payload, i_tag, p_meta, NULL );
+
+    return VLC_SUCCESS;
+}
+
+static void SetupID3v2Meta( vlc_meta_t *p_meta, MP4_Box_t *p_box )
+{
+    const MP4_Box_t *p_binary = MP4_BoxGet( p_box, "ID32" );
+    if( p_binary == NULL || !BOXDATA(p_binary) || BOXDATA(p_binary)->i_blob < 6 + 20 + 1 )
+        return;
+
+    /* ID3v2 in 3GPP / ETSI TS 126 244 8.3, Header size 4 + 2 */
+    ID3TAG_Parse( &((uint8_t *)BOXDATA(p_binary)->p_blob)[6], BOXDATA(p_binary)->i_blob - 6,
+                  ID3TAG_Parse_Handler, p_meta );
+}
+
 void SetupMeta( vlc_meta_t *p_meta, MP4_Box_t *p_udta )
 {
     uint32_t i_handler = 0;
@@ -475,6 +527,10 @@ void SetupMeta( vlc_meta_t *p_meta, MP4_Box_t *p_udta )
                 SetupmdtaMeta( p_meta, p_box, p_keys );
                 break;
             }
+
+            case HANDLER_ID32:
+                SetupID3v2Meta( p_meta, p_box );
+                break;
 
             case HANDLER_mdir:
             default:

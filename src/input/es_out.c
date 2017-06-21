@@ -2765,8 +2765,16 @@ static int EsOutControlLocked( es_out_t *out, int i_query, va_list args )
         return VLC_SUCCESS;
     }
 
+    case ES_OUT_POST_SUBNODE:
+    {
+        input_item_node_t *node = va_arg(args, input_item_node_t *);
+        input_item_node_PostAndDelete(node);
+        return VLC_SUCCESS;
+    }
+
     default:
-        msg_Err( p_sys->p_input, "unknown query in es_out_Control" );
+        msg_Err( p_sys->p_input, "unknown query 0x%x in %s", i_query,
+                 __func__  );
         return VLC_EGENERIC;
     }
 }
@@ -3190,17 +3198,13 @@ static void EsOutUpdateInfo( es_out_t *out, es_out_id_t *es, const es_format_t *
        }
        if ( fmt->video.mastering.max_luminance )
        {
-           float luminance = (float)fmt->video.mastering.max_luminance /
-                                    10000.f;
            info_category_AddInfo( p_cat, _("Max luminance"), "%.4f cd/m²",
-                                  luminance );
+               fmt->video.mastering.max_luminance / 10000.f );
        }
        if ( fmt->video.mastering.min_luminance )
        {
-           float luminance = (float)fmt->video.mastering.min_luminance /
-                                    10000.f;
            info_category_AddInfo( p_cat, _("Min luminance"), "%.4f cd/m²",
-                                  luminance );
+               fmt->video.mastering.min_luminance / 10000.f );
        }
        if ( fmt->video.mastering.primaries[4] &&
             fmt->video.mastering.primaries[5] )

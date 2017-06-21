@@ -483,6 +483,23 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
      * wrapper, we can't */
     if ( !is_d3d9_opaque(picture->format.i_chroma) )
         Direct3D9UnlockSurface(picture);
+    else if (picture->context)
+    {
+        const struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
+        if (picture->p_sys && pic_ctx->picsys.surface != picture->p_sys->surface)
+        {
+            HRESULT hr;
+            RECT visibleSource;
+            visibleSource.left = 0;
+            visibleSource.top = 0;
+            visibleSource.right = picture->format.i_visible_width;
+            visibleSource.bottom = picture->format.i_visible_height;
+            hr = IDirect3DDevice9_StretchRect( sys->d3ddev, pic_ctx->picsys.surface, &visibleSource, surface, &visibleSource, D3DTEXF_NONE);
+            if (FAILED(hr)) {
+                msg_Err(vd, "Failed to copy the hw surface to the decoder surface (hr=0x%0lx)", hr );
+            }
+        }
+    }
 
     /* check if device is still available */
     HRESULT hr = IDirect3DDevice9_TestCooperativeLevel(sys->d3ddev);
@@ -840,9 +857,9 @@ static int Direct3D9FillPresentationParameters(vout_display_t *vd)
     d3dpp->Windowed               = TRUE;
     d3dpp->hDeviceWindow          = vd->sys->sys.hvideownd;
     d3dpp->BackBufferWidth        = __MAX((unsigned int)GetSystemMetrics(SM_CXVIRTUALSCREEN),
-                                          d3ddm.Width);
+                                          vd->source.i_width);
     d3dpp->BackBufferHeight       = __MAX((unsigned int)GetSystemMetrics(SM_CYVIRTUALSCREEN),
-                                          d3ddm.Height);
+                                          vd->source.i_height);
     d3dpp->SwapEffect             = D3DSWAPEFFECT_COPY;
     d3dpp->MultiSampleType        = D3DMULTISAMPLE_NONE;
     d3dpp->PresentationInterval   = D3DPRESENT_INTERVAL_DEFAULT;
@@ -1592,7 +1609,9 @@ static int Direct3D9ImportPicture(vout_display_t *vd,
     // When copying the entire buffer, the margin end up being blended in the actual picture
     // on nVidia (regardless of even/odd dimensions)
     if ( copy_rect.right & 1 ) copy_rect.right++;
+    if ( copy_rect.left & 1 ) copy_rect.left--;
     if ( copy_rect.bottom & 1 ) copy_rect.bottom++;
+    if ( copy_rect.top & 1 ) copy_rect.top--;
     hr = IDirect3DDevice9_StretchRect(sys->d3ddev, source, &copy_rect, destination,
                                       &copy_rect, D3DTEXF_NONE);
     IDirect3DSurface9_Release(destination);
