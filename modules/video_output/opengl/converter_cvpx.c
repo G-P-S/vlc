@@ -110,6 +110,7 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
 
     CVPixelBufferRef pixelBuffer = cvpxpic_get_ref(pic);
 
+    // make interop IOSurfaceRef (native decoded frame) to OpenGL
     IOSurfaceRef surface = CVPixelBufferGetIOSurface(pixelBuffer);
 
     for (unsigned i = 0; i < tc->tex_count; ++i)

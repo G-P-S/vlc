@@ -124,6 +124,12 @@ struct vout_display_sys_t
     bool has_first_frame;
 
     vout_display_place_t place;
+
+    // gpu callbacks
+    void (*gpuopen)(void *opaque, void *pDXDevice, unsigned *width, unsigned *height);
+    void (*gpuclose)(void *opaque);
+    void (*gpunewframe)(void *opaque, void *source, void *sourceRect);
+    void* opaque;
 };
 
 struct gl_sys
@@ -156,6 +162,10 @@ static int Open (vlc_object_t *this)
         sys->embed = NULL;
         sys->vgl = NULL;
         sys->gl = NULL;
+        sys->gpuopen = NULL;
+        sys->gpuclose = NULL;
+        sys->gpunewframe = NULL;
+        sys->opaque = NULL;
 
         /* Get the drawable object */
         id container = var_CreateGetAddress (vd, "drawable-nsobject");
@@ -309,6 +319,20 @@ static int Open (vlc_object_t *this)
         /* */
         vout_display_SendEventDisplaySize (vd, vd->fmt.i_visible_width, vd->fmt.i_visible_height);
         
+        // get gpu callbacks
+        sys->gpuopen            = var_InheritAddress(vd, "vmem-gpuopen");
+        sys->gpuclose           = var_InheritAddress(vd, "vmem-gpuclose");
+        sys->gpunewframe        = var_InheritAddress(vd, "vmem-gpunewframe");
+        sys->opaque             = var_InheritAddress(vd, "vmem-opaque");
+
+        // call gpu open callback
+        if (sys->gpuopen != NULL)
+        {
+            int fboId = 0;
+            sys->gpuopen(sys->opaque, &fboId, &vd->fmt.i_width, &vd->fmt.i_height);
+            vout_display_opengl_SetFboId(sys->vgl, fboId);
+        }
+
         return VLC_SUCCESS;
         
     error:
@@ -321,6 +345,9 @@ void Close (vlc_object_t *this)
 {
     vout_display_t *vd = (vout_display_t *)this;
     vout_display_sys_t *sys = vd->sys;
+
+    // call gpu close callback
+    if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(sys->opaque);
 
     @autoreleasepool {
         [sys->glView setVoutDisplay:nil];
@@ -386,11 +413,17 @@ static picture_pool_t *Pool (vout_display_t *vd, unsigned requested_count)
 
 static void PictureRender (vout_display_t *vd, picture_t *pic, subpicture_t *subpicture)
 {
-
+    //contrairement a Direct3d9, ici on fait pas la conversion to RGB
+    //  ca doit etre fait ensuite dans la callbakc Display => checker
     vout_display_sys_t *sys = vd->sys;
 
     if (vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
     {
+        // call gpu newframe callback if exists, else do common rendering in window
+        if (sys->gpunewframe != NULL)
+        {
+            sys->gpunewframe(sys->opaque, 0, 0);
+        }
         vout_display_opengl_Prepare (sys->vgl, pic, subpicture);
         vlc_gl_ReleaseCurrent(sys->gl);
     }
@@ -402,7 +435,7 @@ static void PictureDisplay (vout_display_t *vd, picture_t *pic, subpicture_t *su
     [sys->glView setVoutFlushing:YES];
     if (vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
     {
-        vout_display_opengl_Display (sys->vgl, &vd->source);
+        vout_display_opengl_Display(sys->vgl, &vd->source);
         vlc_gl_ReleaseCurrent(sys->gl);
     }
     [sys->glView setVoutFlushing:NO];

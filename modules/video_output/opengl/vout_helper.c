@@ -153,6 +153,8 @@ struct vout_display_opengl_t {
     float f_z;    /* Position of the camera on the shpere radius vector */
     float f_z_min;
     float f_sar;
+
+    GLuint fboId;
 };
 
 static const GLfloat identity[] = {
@@ -937,7 +939,7 @@ int vout_display_opengl_Prepare(vout_display_opengl_t *vgl,
 {
     opengl_tex_converter_t *tc = &vgl->prgm->tc;
 
-    /* Update the texture */
+    /* Update the texture , interop IOSurfaceRef<=>OpenGL : picture<=>vgl->texture*/
     int ret = tc->pf_update(tc, vgl->texture, vgl->tex_width, vgl->tex_height,
                             picture, NULL);
     if (ret != VLC_SUCCESS)
@@ -1386,7 +1388,15 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
     vgl->api.UniformMatrix4fv(prgm->uloc.ZoomMatrix, 1, GL_FALSE,
                               prgm->var.ZoomMatrix);
 
+    // bind fbo here
+    glBindFramebuffer(GL_FRAMEBUFFER, vgl->fboId);
+
     glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
+}
+
+void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id)
+{
+    vgl->fboId = id;
 }
 
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,

@@ -93,6 +93,9 @@ void vout_display_opengl_SetWindowAspectRatio(vout_display_opengl_t *vgl,
 
 int vout_display_opengl_Prepare(vout_display_opengl_t *vgl,
                                 picture_t *picture, subpicture_t *subpicture);
+
+void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id);
+
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,
                                 const video_format_t *source);
 
