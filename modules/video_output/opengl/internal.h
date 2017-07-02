@@ -55,8 +55,11 @@
 #   define PFNGLENABLEVERTEXATTRIBARRAYPROC  typeof(glEnableVertexAttribArray)*
 #   define PFNGLUNIFORMMATRIX4FVPROC         typeof(glUniformMatrix4fv)*
 #   define PFNGLUNIFORM4FVPROC               typeof(glUniform4fv)*
+#   define PFNGLUNIFORM3FVPROC               typeof(glUniform3fv)*
+#   define PFNGLUNIFORM2FVPROC               typeof(glUniform2fv)*
 #   define PFNGLUNIFORM4FPROC                typeof(glUniform4f)*
 #   define PFNGLUNIFORM2FPROC                typeof(glUniform2f)*
+#   define PFNGLUNIFORM1FPROC                typeof(glUniform1f)*
 #   define PFNGLUNIFORM1IPROC                typeof(glUniform1i)*
 #   define PFNGLCREATESHADERPROC             typeof(glCreateShader)*
 #   define PFNGLSHADERSOURCEPROC             typeof(glShaderSource)*
@@ -83,6 +86,16 @@
 #    define PFNGLCLIENTWAITSYNCPROC          typeof(glClientWaitSync)*
 #   endif
 #   define PFNGLDELETEBUFFERSPROC            typeof(glDeleteBuffers)*
+#   define PFNGLBINDFRAMEBUFFERPROC          typeof(glBindFramebuffer)*
+#   define PFNGLGENTEXTURESEXTPROC           typeof(glGenTextures)*
+#   define PFNGLGENFRAMEBUFFERSPROC          typeof(glGenFramebuffers)*
+#   define PFNGLDELETEFRAMEBUFFERSPROC       typeof(glDeleteFramebuffers)*
+#   define PFNGLCHECKFRAMEBUFFERSTATUSPROC   typeof(glCheckFramebufferStatus)*
+#   define PFNGLFRAMEBUFFERTEXTURE2DPROC     typeof(glFramebufferTexture2D)*
+#   define PFNGLGENRENDERBUFFERSPROC         typeof(glGenRenderbuffers)*
+#   define PFNGLBINDRENDERBUFFERPROC         typeof(glBindRenderbuffer)*
+#   define PFNGLRENDERBUFFERSTORAGEPROC      typeof(glRenderbufferStorage)*
+#   define PFNGLFRAMEBUFFERRENDERBUFFERPROC  typeof(glFramebufferRenderbuffer)*
 #if defined(__APPLE__)
 #   import <CoreFoundation/CoreFoundation.h>
 #endif
@@ -100,8 +113,11 @@ typedef struct {
 
     PFNGLUNIFORMMATRIX4FVPROC   UniformMatrix4fv;
     PFNGLUNIFORM4FVPROC         Uniform4fv;
+    PFNGLUNIFORM3FVPROC         Uniform3fv;
+    PFNGLUNIFORM2FVPROC         Uniform2fv;
     PFNGLUNIFORM4FPROC          Uniform4f;
     PFNGLUNIFORM2FPROC          Uniform2f;
+    PFNGLUNIFORM1FPROC          Uniform1f;
     PFNGLUNIFORM1IPROC          Uniform1i;
 
     /* Shader command */
@@ -139,6 +155,17 @@ typedef struct {
     PFNGLCLIENTWAITSYNCPROC         ClientWaitSync;
 #endif
     PFNGLDELETEBUFFERSPROC DeleteBuffers;
+
+    PFNGLBINDFRAMEBUFFERPROC           BindFramebuffer;
+    PFNGLGENTEXTURESEXTPROC            GenTextures;
+    PFNGLGENFRAMEBUFFERSPROC           GenFramebuffers;
+    PFNGLDELETEFRAMEBUFFERSPROC        DeleteFramebuffers;
+    PFNGLCHECKFRAMEBUFFERSTATUSPROC    CheckFramebufferStatus;
+    PFNGLFRAMEBUFFERTEXTURE2DPROC      FramebufferTexture2D;
+    PFNGLGENRENDERBUFFERSPROC          GenRenderbuffers;
+    PFNGLBINDRENDERBUFFERPROC          BindRenderbuffer;
+    PFNGLRENDERBUFFERSTORAGEPROC       RenderbufferStorage;
+    PFNGLFRAMEBUFFERRENDERBUFFERPROC   FramebufferRenderbuffer;
 
 #if defined(_WIN32)
     PFNGLACTIVETEXTUREPROC  ActiveTexture;

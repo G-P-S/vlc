@@ -31,6 +31,7 @@
 
 #include <vlc_common.h>
 #include <vlc_picture_pool.h>
+#include <vlc_vout_display.h>
 #include <vlc_opengl.h>
 
 /* if USE_OPENGL_ES2 is defined, OpenGL ES version 2 will be used, otherwise

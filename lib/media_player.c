@@ -634,6 +634,9 @@ libvlc_media_player_new( libvlc_instance_t *instance )
     var_Create (mp, "vmem-width", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-height", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-pitch", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+    var_Create (mp, "glx-display", VLC_VAR_ADDRESS);
+    var_Create (mp, "glx-context", VLC_VAR_ADDRESS);
+    var_Create (mp, "glx-texture", VLC_VAR_INTEGER);
     var_Create (mp, "avcodec-hw", VLC_VAR_STRING);
     var_Create (mp, "drawable-xid", VLC_VAR_INTEGER);
 #if defined (_WIN32) || defined (__OS2__)
@@ -1112,6 +1115,16 @@ void libvlc_video_set_format( libvlc_media_player_t *mp, const char *chroma,
     var_SetInteger( mp, "vmem-width", width );
     var_SetInteger( mp, "vmem-height", height );
     var_SetInteger( mp, "vmem-pitch", pitch );
+}
+
+
+void libvlc_video_set_glx_opengl_context( libvlc_media_player_t *mp, void *display,
+                                          void *context, unsigned texture )
+{
+    var_SetAddress( mp, "glx-display", display );
+    var_SetAddress( mp, "glx-context", context );
+    var_SetInteger( mp, "glx-texture", texture );
+    var_SetString( mp, "window", "wdummy");
 }
 
 /**************************************************************************

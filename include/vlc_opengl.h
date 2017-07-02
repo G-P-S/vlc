@@ -69,6 +69,8 @@ struct vlc_gl_t
             bool (*destroyImageKHR)(vlc_gl_t *, void *image);
         } egl;
     };
+
+    int glTextureId;
 };
 
 enum {

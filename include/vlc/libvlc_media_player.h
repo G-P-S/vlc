@@ -422,6 +422,22 @@ void libvlc_video_set_callbacks( libvlc_media_player_t *mp,
                                  void *opaque );
 
 /**
+ * Set the parameters for the shared OpenGL context initialized with GLX.
+ * LibVLC then use the shared texture to render the video in.
+ * This mode enables zero copy playback with hardware decoding.
+ * \param mp the media player
+ * \param display the pointer to the X11 display
+ * \param context the pointer to the shared GLX context
+ * \param texture the OpenGL texture id to share
+ * \version LibVLC 4.0.0 or later
+ */
+LIBVLC_API
+void libvlc_video_set_glx_opengl_context( libvlc_media_player_t *mp,
+                                          void *display,
+                                          void *context,
+                                          unsigned texture);
+
+/**
  * Set decoded video chroma and dimensions.
  * This only works in combination with libvlc_video_set_callbacks(),
  * and is mutually exclusive with libvlc_video_set_format_callbacks().
