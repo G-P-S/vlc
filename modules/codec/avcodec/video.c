@@ -91,6 +91,10 @@ struct decoder_sys_t
     int level;
 
     vlc_sem_t sem_mt;
+    
+    /* Custom callback & private pointer (like vmem) */
+    void (*error_cb)(void *sys, unsigned *code);
+    void *opaque;
 };
 
 static inline void wait_mt(decoder_sys_t *sys)
@@ -435,7 +439,7 @@ static int OpenVideoCodec( decoder_t *p_dec )
  * the ffmpeg codec will be opened, some memory allocated. The vout is not yet
  * opened (done after the first decoded frame).
  *****************************************************************************/
-int InitVideoDec( vlc_object_t *obj )
+int InitVideoDec( vlc_object_t *obj, void (*p_error_cb)(void *sys, unsigned *code) )
 {
     decoder_t *p_dec = (decoder_t *)obj;
     const AVCodec *p_codec;
@@ -457,6 +461,7 @@ int InitVideoDec( vlc_object_t *obj )
     p_sys->p_context = p_context;
     p_sys->p_codec = p_codec;
     p_sys->p_va = NULL;
+    p_sys->error_cb = p_error_cb;
     vlc_sem_init( &p_sys->sem_mt, 0 );
 
     /* ***** Fill p_context with init values ***** */
@@ -1534,7 +1539,20 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     p_sys->level = p_context->level;
 
     if (!can_hwaccel)
-        return swfmt;
+    {
+        msg_Info( p_dec, "######## no acceleration, disable rendering");
+        p_sys->p_va = NULL;       
+        if(p_sys->error_cb)
+        {
+            unsigned codeError = 1;
+            p_sys->error_cb(p_sys->opaque, &codeError);
+        }
+        else
+        {
+            msg_Info( p_dec, "######## Error callback is null" );
+        }   
+        return AV_PIX_FMT_NONE; // return null PixelFormat
+    }
 
 #if (LIBAVCODEC_VERSION_MICRO >= 100) \
   && (LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 83, 101))
@@ -1588,6 +1606,16 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
 
     post_mt(p_sys);
     /* Fallback to default behaviour */
-    p_sys->pix_fmt = swfmt;
-    return swfmt;
+    msg_Info( p_dec, "######## no acceleration, disable rendering");
+    p_sys->p_va = NULL;    
+    if(p_sys->error_cb)
+    {
+        unsigned codeError = 1;
+        p_sys->error_cb(p_sys->opaque, &codeError);
+    }
+    else
+    {
+        msg_Info( p_dec, "######## Error callback is null" );
+    }
+    return AV_PIX_FMT_NONE; // return null PixelFormat
 }

@@ -250,6 +250,10 @@ AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
     const char *psz_namecodec;
     const AVCodec *p_codec = NULL;
 
+    /* Get the error callback & private pointer */
+    void (*error_cb)(unsigned *code) = var_InheritAddress(p_dec, "decoding-error");
+    void *opaque = var_InheritAddress(p_dec, "vmem-data");
+    
     /* *** determine codec type *** */
     if( !GetFfmpegCodec( p_dec->fmt_in.i_cat, p_dec->fmt_in.i_codec,
                          &i_codec_id, &psz_namecodec ) )
@@ -282,6 +286,11 @@ AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
         msg_Dbg( p_dec, "codec not found (%s)", psz_namecodec );
         return NULL;
     }
+
+    msg_Info( p_dec, "######## Decoder found" );
+    msg_Info( p_dec, "######## Decoder = %s", p_codec->long_name );
+    msg_Info( p_dec, "######## Decoder capabilities %i", p_codec->capabilities );
+    msg_Info( p_dec, "######## Decoder = %s", p_codec->name );
 
     *codecp = p_codec;
 

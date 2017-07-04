@@ -630,6 +630,7 @@ libvlc_media_player_new( libvlc_instance_t *instance )
     var_Create (mp, "vmem-data", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-setup", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-cleanup", VLC_VAR_ADDRESS);
+    var_Create (mp, "decoding-error", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-chroma", VLC_VAR_STRING | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-width", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-height", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
@@ -1129,6 +1130,12 @@ void libvlc_video_set_gpu_callbacks( libvlc_media_player_t *mp,
     var_SetAddress( mp, "vmem-gpuclose", gpuclose );
     var_SetAddress( mp, "vmem-gpunewframe", gpunewframe );
     var_SetAddress( mp, "vmem-opaque", opaque );
+}
+
+void libvlc_video_set_decoding_error_callback( libvlc_media_player_t *mp,
+                                        libvlc_video_decoding_error_cb error )
+{
+    var_SetAddress( mp, "decoding-error", error );
 }
 
 /**************************************************************************
