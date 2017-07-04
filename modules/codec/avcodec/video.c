@@ -29,6 +29,7 @@
 # include "config.h"
 #endif
 
+#include <vlc_input.h>
 #include <vlc_common.h>
 #include <vlc_codec.h>
 #include <vlc_avcodec.h>
@@ -1418,6 +1419,9 @@ end:
     /* Fallback to default behaviour */
     msg_Info( p_dec, "######## no acceleration, disable rendering");
     p_sys->p_va = NULL;
+    
+    var_SetInteger( p_dec, "state", ERROR_S );
+    
 //    return avcodec_default_get_format( p_context, pi_fmt );
     return AV_PIX_FMT_NONE; // return null PixelFormat
 }
