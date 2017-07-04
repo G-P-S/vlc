@@ -270,6 +270,10 @@ static int OpenDecoder( vlc_object_t *p_this )
     AVCodecContext *p_context = NULL;
     AVCodec        *p_codec = NULL;
 
+    /* Get the error callback & private pointer */
+    void (*error_cb)(unsigned *code) = var_InheritAddress(p_dec, "decoding-error");
+    void *opaque = var_InheritAddress(p_dec, "vmem-data");
+    
     /* *** determine codec type *** */
     if( !GetFfmpegCodec( p_dec->fmt_in.i_codec, &i_cat, &i_codec_id,
                              &psz_namecodec )
@@ -329,7 +333,8 @@ static int OpenDecoder( vlc_object_t *p_this )
     case VIDEO_ES:
         p_dec->pf_decode_video = DecodeVideo;
         i_result =  InitVideoDec ( p_dec, p_context, p_codec,
-                                       i_codec_id, psz_namecodec );
+                                       i_codec_id, psz_namecodec,
+                                       error_cb, opaque );
         break;
     case AUDIO_ES:
         p_dec->pf_decode_audio = DecodeAudio;

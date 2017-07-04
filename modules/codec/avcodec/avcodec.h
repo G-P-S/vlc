@@ -49,7 +49,8 @@ void CloseDeinterlace( vlc_object_t * );
 
 /* Video Decoder */
 int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
-                  AVCodec *p_codec, int i_codec_id, const char *psz_namecodec );
+                  AVCodec *p_codec, int i_codec_id, const char *psz_namecodec,
+                  void (*p_error_cb)(void *sys, unsigned *code), void *p_opaque);
 void EndVideoDec( decoder_t *p_dec );
 
 /* Audio Decoder */

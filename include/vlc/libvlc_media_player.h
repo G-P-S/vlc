@@ -336,6 +336,13 @@ typedef unsigned (*libvlc_video_format_cb)(void **opaque, char *chroma,
  */
 typedef void (*libvlc_video_cleanup_cb)(void *opaque);
 
+/**
+ * Callback prototype to get error from avcodec module.
+ *
+ * \param opaque private pointer as passed to libvlc_video_set_callbacks() [IN]
+ * \param code pointer to the error code [OUT]
+ */
+typedef void (*libvlc_video_decoding_error_cb)(void *opaque, unsigned *code);
 
 /**
  * Set callbacks and private data to render decoded video to a custom area
@@ -391,6 +398,17 @@ LIBVLC_API
 void libvlc_video_set_format_callbacks( libvlc_media_player_t *mp,
                                         libvlc_video_format_cb setup,
                                         libvlc_video_cleanup_cb cleanup );
+
+/**
+ * Set decoded video chroma and dimensions. This only works in combination with
+ * libvlc_video_set_callbacks().
+ *
+ * \param mp the media player
+ * \param error callback to called on decoding error
+ */
+LIBVLC_API
+void libvlc_video_set_decoding_error_callback( libvlc_media_player_t *mp,
+                                        libvlc_video_decoding_error_cb error );
 
 /**
  * Set the NSView handler where the media player should render its video output.
@@ -672,7 +690,7 @@ LIBVLC_API void libvlc_media_player_set_time( libvlc_media_player_t *p_mi, libvl
 LIBVLC_API float libvlc_media_player_get_position( libvlc_media_player_t *p_mi );
 
 /**
- * Set movie position as percentage between 0.0 and 1.0. 
+ * Set movie position as percentage between 0.0 and 1.0.
  * This has no effect if playback is not enabled.
  * This might not work depending on the underlying input format and protocol.
  *

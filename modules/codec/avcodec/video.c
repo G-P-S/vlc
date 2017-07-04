@@ -29,7 +29,6 @@
 # include "config.h"
 #endif
 
-#include <vlc_input.h>
 #include <vlc_common.h>
 #include <vlc_codec.h>
 #include <vlc_avcodec.h>
@@ -88,6 +87,10 @@ struct decoder_sys_t
     vlc_va_t *p_va;
 
     vlc_sem_t sem_mt;
+    
+    /* Custom callback & private pointer (like vmem) */
+    void (*error_cb)(void *sys, unsigned *code);
+    void *opaque;
 };
 
 #ifdef HAVE_AVCODEC_MT
@@ -219,7 +222,8 @@ static inline picture_t *ffmpeg_NewPictBuf( decoder_t *p_dec,
  * opened (done after the first decoded frame).
  *****************************************************************************/
 int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
-                      AVCodec *p_codec, int i_codec_id, const char *psz_namecodec )
+                      AVCodec *p_codec, int i_codec_id, const char *psz_namecodec,
+                      void (*p_error_cb)(void *sys, unsigned *code), void *p_opaque )
 {
     decoder_sys_t *p_sys;
     int i_val;
@@ -238,6 +242,8 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     p_sys->p_ff_pic = avcodec_alloc_frame();
     p_sys->b_delayed_open = true;
     p_sys->p_va = NULL;
+    p_sys->error_cb = p_error_cb;
+    p_sys->opaque = p_opaque;
     vlc_sem_init( &p_sys->sem_mt, 0 );
 
     /* ***** Fill p_context with init values ***** */
@@ -318,7 +324,6 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     }
 
     p_sys->p_context->get_format = ffmpeg_GetFormat;
-    msg_Info( p_dec, "######## get_format callback set" );
 
     /* Always use our get_buffer wrapper so we can calculate the
      * PTS correctly */
@@ -1420,8 +1425,16 @@ end:
     msg_Info( p_dec, "######## no acceleration, disable rendering");
     p_sys->p_va = NULL;
     
-    var_SetInteger( p_dec, "state", ERROR_S );
-    
+    if(p_sys->error_cb)
+    {
+        unsigned codeError = 1;
+        p_sys->error_cb(p_sys->opaque, &codeError);
+    }
+    else
+    {
+        msg_Info( p_dec, "######## Error callback is null" );
+    }
+ 
 //    return avcodec_default_get_format( p_context, pi_fmt );
     return AV_PIX_FMT_NONE; // return null PixelFormat
 }
