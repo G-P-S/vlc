@@ -650,6 +650,8 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
                          HasExtension(extensions, "GL_APPLE_texture_2D_limited_npot");
 #endif
 
+    msg_Err(gl, "### Support for non power of 2 textures : %s", (vgl->supports_npot ? "true":"false"));
+
     vgl->prgm = &vgl->prgms[0];
     vgl->sub_prgm = &vgl->prgms[1];
 
@@ -1388,15 +1390,31 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
     vgl->api.UniformMatrix4fv(prgm->uloc.ZoomMatrix, 1, GL_FALSE,
                               prgm->var.ZoomMatrix);
 
-    // bind fbo here
-    glBindFramebuffer(GL_FRAMEBUFFER, vgl->fboId);
 
+    // bind FBO with shared texture
+    glBindFramebuffer(GL_FRAMEBUFFER_EXT, vgl->fboId);
+
+    GLenum err;
+    //msg_Err(vgl->gl, "### DrawWithShaders check glerror ...");
+    while((err = glGetError()) != GL_NO_ERROR)
+    {
+        msg_Err(vgl->gl, "### DrawWithShaders glerror = %i", err);
+    }
+    GLenum stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+    msg_Err(vgl->gl, "### glCheckFramebufferStatus = %i", stat);
+
+//    glViewport(0,0,1920,1080);
     glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
+
+//    glSwapAPPLE();
 }
 
 void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id)
 {
     vgl->fboId = id;
+    msg_Err(vgl->gl, "### vout_display_opengl_SetFboId = %i", vgl->fboId);
 }
 
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,
