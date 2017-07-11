@@ -1392,7 +1392,7 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
 
 
     // bind FBO with shared texture
-    glBindFramebuffer(GL_FRAMEBUFFER_EXT, vgl->fboId);
+    //glBindFramebuffer(GL_FRAMEBUFFER_EXT, vgl->fboId);
 
     GLenum err;
     //msg_Err(vgl->gl, "### DrawWithShaders check glerror ...");
@@ -1406,7 +1406,7 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
 //    glViewport(0,0,1920,1080);
     glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
 
-    glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
+    //glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
 
 //    glSwapAPPLE();
 }

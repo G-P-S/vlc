@@ -350,54 +350,6 @@ static int Open (vlc_object_t *this)
             NSOpenGLContext *context = [sys->glView openGLContext];
             sys->gpuopen(sys->opaque, context, &vd->fmt.i_width, &vd->fmt.i_height);
 
-            /*
-            //CANNOT WORK : we cannot share FBO, just the textures
-            int fboId = 0;
-            sys->gpuopen(sys->opaque, &fboId, &vd->fmt.i_width, &vd->fmt.i_height);
-            vout_display_opengl_SetFboId(sys->vgl, 15);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, 15);
-
-            GLenum err;
-            msg_Err(vd, " check glerror ...");
-            while((err = glGetError()) != GL_NO_ERROR)
-            {
-                msg_Err(vd, " glerror = %i", err);
-            }
-            GLenum stat = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-            msg_Err(vd, "glCheckFramebufferStatus = %i", stat);
-
-            glClearColor(0.5,0.5,1.0,1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            */
-
-            /*
-            //TODO:try to share context here with Qt context, do it with native functions NS*
-            NSOpenGLPixelFormatAttribute attribs[] =
-            {
-                NSOpenGLPFADoubleBuffer,
-                NSOpenGLPFAAccelerated,
-                //NSOpenGLPFANoRecovery, // WARNING : this option make context unsharable with Qt context
-                NSOpenGLPFAColorSize, 24,
-        //        NSOpenGLPFAAlphaSize, 8,
-                NSOpenGLPFAStencilSize, 8,
-                NSOpenGLPFADepthSize, 24,
-                NSOpenGLPFAWindow,
-                NSOpenGLPFAAllowOfflineRenderers,
-                NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersionLegacy,
-                0
-            };
-            NSOpenGLPixelFormat *fmt = [[NSOpenGLPixelFormat alloc] initWithAttributes:attribs];
-            NSOpenGLContext *contextOfVLC = [sys->glView openGLContext];
-            contextOfVLC = [[NSOpenGLContext alloc] initWithFormat:fmt shareContext:context];
-            if (vlc_gl_MakeCurrent(sys->gl) != VLC_SUCCESS)
-            {
-                msg_Err(vd, "Can't attach gl context");
-                goto error;
-            }
-            vlc_gl_ReleaseCurrent(sys->gl);
-            */
-
             GLenum err;
             while((err = glGetError()) != GL_NO_ERROR)
             {
@@ -406,54 +358,12 @@ static int Open (vlc_object_t *this)
 
             msg_Err(vd, "### create a FBO with the shared texture from Qt AND in the VLC OpenGL context.");
 
+            // TODO : UNCOMMENT HERE TO USE VLC CONTEXT
             if (vlc_gl_MakeCurrent(sys->gl) != VLC_SUCCESS)
             {
                 msg_Err(vd, "### Can't attach gl context");
                 goto error;
             }
-
-
-            /*
-            // USE PBO
-            GLuint pboId;
-            GLenum target = GL_TEXTURE_2D;
-            int dataSize = vd->fmt.i_width * vd->fmt.i_height * 4;
-            glGenBuffers(1, &pboId);
-            glEnable(target);
-
-            //prepare texture
-            glBindTexture(target, textureId);
-            glTexImage2D(target, 0, GL_RGBA8, vd->fmt.i_width, vd->fmt.i_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-            glBindTexture(target, 0);
-
-            //prepare pbo
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pboId);
-            glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, dataSize, NULL, GL_STREAM_DRAW);
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-
-            //fill buffer
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pboId);
-            glClearColor(1.0,0.0,0.0,1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            //vlc_gl_Swap(sys->gl);
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-
-            //fill texture
-            glBindTexture(target, textureId);
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, pboId);
-            glTexImage2D(target, 0, GL_RGBA8, vd->fmt.i_width, vd->fmt.i_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-            glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-            glBindTexture(target, 0);
-
-            msg_Err(vd, "### FBO should be ready check glerror...");
-            while((err = glGetError()) != GL_NO_ERROR)
-            {
-                msg_Err(vd, "### ==> glerror = %i", err);
-            }
-            msg_Err(vd, "### GL ERROR CODE 36053 : GL_FRAMEBUFFER_COMPLETE");
-            msg_Err(vd, "### GL ERROR CODE 33305 : GL_FRAMEBUFFER_UNDEFINED");
-            msg_Err(vd, "### GL ERROR CODE 1286 : GL_INVALID_FRAMEBUFFER_OPERATION");
-            */
 
 
             const GLubyte * strVersion;
@@ -464,11 +374,9 @@ static int Open (vlc_object_t *this)
             sscanf((char *)strVersion, "%f", &myGLVersion);
             strExt = glGetString (GL_EXTENSIONS); // 2
             isVAO = (bool)gluCheckExtension ((const GLubyte*)"GL_EXT_framebuffer_object",strExt); // 5
-
             msg_Err(vd, "### GL INFO : strVersion = %s",strVersion);
 //            msg_Err(vd, "### GL INFO : strExt = %s",strExt);
             msg_Err(vd, "### GL INFO : GL_EXT_framebuffer_object is available = %s",isVAO?"true":"false");
-
             msg_Err(vd, "### GL INFO : glGenFramebuffersEXT = %p", glGenFramebuffersEXT);
             msg_Err(vd, "### GL INFO : glBindFramebufferEXT = %p", glBindFramebufferEXT);
             msg_Err(vd, "### GL INFO : glGenFramebuffersEXT = %p", glGenFramebuffersEXT);
@@ -498,17 +406,16 @@ static int Open (vlc_object_t *this)
             msg_Err(vd, "### GL ERROR CODE 36053 : GL_FRAMEBUFFER_COMPLETE");
             msg_Err(vd, "### GL ERROR CODE 33305 : GL_FRAMEBUFFER_UNDEFINED");
             msg_Err(vd, "### GL ERROR CODE 1286 : GL_INVALID_FRAMEBUFFER_OPERATION");
-            msg_Err(vd, "### texture id TO SHARE = %i", textureId);
+            msg_Err(vd, "### ==============>>>>>>>>>>>>>> texture id TO SHARE = %i", textureId);
 
-            /*
             // FBO should be ready, try to fill with color...
             msg_Err(vd, "### try to fill FBO with color...");
-            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);        //GL_DRAW_FRAMEBUFFER_EXT
-            //glViewport(0, 0, vd->fmt.i_width, vd->fmt.i_height );
-            glClearColor(1.0,0.0,0.0,1.0);
+            glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, fboId);
+            glClearColor(0.0,1.0,0.0,1.0);
             glClear(GL_COLOR_BUFFER_BIT);
-            vlc_gl_Swap(sys->gl);
-            glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 );
+            glSwapAPPLE();
+            //vlc_gl_Swap(sys->gl);
+            glBindFramebufferEXT( GL_DRAW_FRAMEBUFFER_EXT, 0 );
 
             msg_Err(vd, "### After filling FBO check glerror ...");
             while((err = glGetError()) != GL_NO_ERROR)
@@ -517,8 +424,9 @@ static int Open (vlc_object_t *this)
             }
             stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
             msg_Err(vd, "### After filling FBO glCheckFramebufferStatus = %i", stat);
-            */
 
+
+            // TODO : UNCOMMENT HERE TO USE VLC CONTEXT
             vlc_gl_ReleaseCurrent(sys->gl);
 
             vout_display_opengl_SetFboId(sys->vgl, fboId);
