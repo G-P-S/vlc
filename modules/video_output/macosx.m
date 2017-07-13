@@ -34,6 +34,8 @@
  * Preamble
  *****************************************************************************/
 
+#define VLC_GP_GPU
+
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/OpenGL.h>
 #import <dlfcn.h>
@@ -130,12 +132,19 @@ struct vout_display_sys_t
     void (*gpuclose)(void *opaque);
     void (*gpunewframe)(void *opaque, void *source, void *sourceRect);
     void* opaque;
+
+    // FBO and texture storing the RGB texture of the last decoded frame
+    GLuint fboId;
+    GLuint textureId;
 };
 
 struct gl_sys
 {
     CGLContextObj locked_ctx;
     VLCOpenGLVideoView *glView;
+
+    // opengl context used to perform OpenGL operations
+    NSOpenGLContext *nsopenglcontext;
 };
 
 static void *OurGetProcAddress(vlc_gl_t *gl, const char *name)
@@ -166,7 +175,40 @@ static int Open (vlc_object_t *this)
         sys->gpuclose = NULL;
         sys->gpunewframe = NULL;
         sys->opaque = NULL;
+        sys->glView = NULL;
 
+        // get gpu callbacks
+        sys->gpuopen            = var_InheritAddress(vd, "vmem-gpuopen");
+        sys->gpuclose           = var_InheritAddress(vd, "vmem-gpuclose");
+        sys->gpunewframe        = var_InheritAddress(vd, "vmem-gpunewframe");
+        sys->opaque             = var_InheritAddress(vd, "vmem-opaque");
+        NSOpenGLContext *nscontext = NULL;
+
+#ifdef VLC_GP_GPU
+        // call gpu open callback
+        if (sys->gpuopen != NULL) {
+
+            //TODO : get fboId from player
+            //int *i_width = &vd->fmt.i_width;
+            //msg_Err(vd, "before %i",*i_width);
+            //sys->gpuopen(sys->opaque, &nscontext, &i_width, &vd->fmt.i_height);
+            //msg_Err(vd, "after %i",*i_width);
+            //msg_Err(vd, "sure %i",vd->fmt.i_width);
+
+            // get NSOpenGLContext* instanciated from player
+            sys->gpuopen(sys->opaque, &nscontext, &vd->fmt.i_width, &vd->fmt.i_height);
+
+            // ensure to have a pointer to NSOpenGLContext class
+            if (![nscontext isKindOfClass:[NSOpenGLContext class]]) {
+                msg_Err(vd, "pointer from libvlc gpuopen() is not a NSOpenGLContext*.");
+                goto error;
+            }
+        }
+        else {
+            msg_Err(vd, "you are using VLC_GP_GPU version, callback gpuopen is mandatory.");
+            goto error;
+        }
+#else
         /* Get the drawable object */
         id container = var_CreateGetAddress (vd, "drawable-nsobject");
         if (container)
@@ -185,6 +227,7 @@ static int Open (vlc_object_t *this)
         /* This will be released in Close(), on
          * main thread, after we are done using it. */
         sys->container = [container retain];
+#endif
 
         /* support for BT.709 and BT.2020 color spaces was introduced with OS X 10.11
          * on older OS versions, we can't show correct colors, so we fallback on linear RGB */
@@ -237,20 +280,13 @@ static int Open (vlc_object_t *this)
         }
         sys->nsColorSpace = [[NSColorSpace alloc] initWithCGColorSpace:sys->cgColorSpace];
 
-        msg_Err (vd, "### VLC NSOpenGLView is going to be created => sys->glView=%p (should be NULL)",sys->glView );
-
+#ifndef VLC_GP_GPU
         /* Get our main view*/
         [VLCOpenGLVideoView performSelectorOnMainThread:@selector(getNewView:)
                                              withObject:[NSValue valueWithPointer:&sys->glView]
                                           waitUntilDone:YES];
 
-        msg_Err (vd, "### VLC NSOpenGLView has been created => sys->glView=%p",sys->glView );
-        msg_Err (vd, "### VLC NSOpenGLView has been created => sys->glView openglcontext=%p",[sys->glView openGLContext] );
 
-        if ([container isKindOfClass:[NSView class]]) msg_Err(vd, "### Qt window is a NSView class.");
-        if ([container isKindOfClass:[NSOpenGLView class]]) msg_Err(vd, "### Qt window is a NSOpenGLView class.");
-        if ([sys->glView isKindOfClass:[NSView class]]) msg_Err(vd, "### VLC NSOpenGLView is a NSView class.");
-        if ([sys->glView isKindOfClass:[NSOpenGLView class]]) msg_Err(vd, "### VLC NSOpenGLView is a NSOpenGLView class.");
 
         if (!sys->glView) {
             msg_Err(vd, "Initialization of open gl view failed");
@@ -264,16 +300,12 @@ static int Open (vlc_object_t *this)
          * That's why we'll release on main thread in Close(). */
         if ([(id)container respondsToSelector:@selector(addVoutSubview:)])
         {
-            msg_Err(vd, "### respondsToSelector addVoutSubview is true"); // should not because we don't use an implementation of VLCOpenGLVideoView, but just the default NSOpenGLView
-
             [(id)container performSelectorOnMainThread:@selector(addVoutSubview:)
                                             withObject:sys->glView
                                          waitUntilDone:NO];
 
         }
         else if ([container isKindOfClass:[NSView class]]) {
-            msg_Err(vd, "### set the Qt window as a parent of VLC NSOpenGLView");
-
             NSView *parentView = container;
             [parentView performSelectorOnMainThread:@selector(addSubview:)
                                          withObject:sys->glView
@@ -285,6 +317,7 @@ static int Open (vlc_object_t *this)
             msg_Err(vd, "Invalid drawable-nsobject object. drawable-nsobject must either be an NSView or comply to the @protocol VLCOpenGLVideoViewEmbedding.");
             goto error;
         }
+#endif
 
         /* Initialize common OpenGL video display */
         sys->gl = vlc_object_create(this, sizeof(*sys->gl));
@@ -304,6 +337,9 @@ static int Open (vlc_object_t *this)
         sys->gl->releaseCurrent = OpenglUnlock;
         sys->gl->swap = OpenglSwap;
         sys->gl->getProcAddress = OurGetProcAddress;
+
+        // keep pointer to the context, do not destroy it
+        glsys->nsopenglcontext = nscontext;
 
         const vlc_fourcc_t *subpicture_chromas;
 
@@ -334,104 +370,66 @@ static int Open (vlc_object_t *this)
         vd->display = PictureDisplay;
         vd->control = Control;
         
-        /* */
-        vout_display_SendEventDisplaySize (vd, vd->fmt.i_visible_width, vd->fmt.i_visible_height);
-        
-        // get gpu callbacks
-        sys->gpuopen            = var_InheritAddress(vd, "vmem-gpuopen");
-        sys->gpuclose           = var_InheritAddress(vd, "vmem-gpuclose");
-        sys->gpunewframe        = var_InheritAddress(vd, "vmem-gpunewframe");
-        sys->opaque             = var_InheritAddress(vd, "vmem-opaque");
-
-        // call gpu open callback
-        if (sys->gpuopen != NULL)
-        {
-            // pass the OpenGL context of VLC NSOpenGLView to share it with Qt OpenGL context
-            NSOpenGLContext *context = [sys->glView openGLContext];
-            sys->gpuopen(sys->opaque, context, &vd->fmt.i_width, &vd->fmt.i_height);
-
-            GLenum err;
-            while((err = glGetError()) != GL_NO_ERROR)
-            {
-                msg_Err(vd, "### Have to clean gl errors before creating FBO... glerror = %i", err);
-            }
-
-            msg_Err(vd, "### create a FBO with the shared texture from Qt AND in the VLC OpenGL context.");
-
-            // TODO : UNCOMMENT HERE TO USE VLC CONTEXT
-            if (vlc_gl_MakeCurrent(sys->gl) != VLC_SUCCESS)
-            {
-                msg_Err(vd, "### Can't attach gl context");
-                goto error;
-            }
-
-
-            const GLubyte * strVersion;
-            const GLubyte * strExt;
-            float myGLVersion;
-            bool isVAO;
-            strVersion = glGetString (GL_VERSION); // 1
-            sscanf((char *)strVersion, "%f", &myGLVersion);
-            strExt = glGetString (GL_EXTENSIONS); // 2
-            isVAO = (bool)gluCheckExtension ((const GLubyte*)"GL_EXT_framebuffer_object",strExt); // 5
-            msg_Err(vd, "### GL INFO : strVersion = %s",strVersion);
-//            msg_Err(vd, "### GL INFO : strExt = %s",strExt);
-            msg_Err(vd, "### GL INFO : GL_EXT_framebuffer_object is available = %s",isVAO?"true":"false");
-            msg_Err(vd, "### GL INFO : glGenFramebuffersEXT = %p", glGenFramebuffersEXT);
-            msg_Err(vd, "### GL INFO : glBindFramebufferEXT = %p", glBindFramebufferEXT);
-            msg_Err(vd, "### GL INFO : glGenFramebuffersEXT = %p", glGenFramebuffersEXT);
-
-            // USE A FBO with EXT to access Extendend API
-            GLuint fboId;
-            GLuint textureId;
-            GLenum target = GL_TEXTURE_2D;
-            glGenFramebuffersEXT(1, &fboId);
-            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
-            glGenTextures(1, &textureId);
-            glBindTexture(target, textureId);
-            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexImage2D(target, 0, GL_RGBA8, vd->fmt.i_width, vd->fmt.i_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-            glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, target, textureId, 0);
-            msg_Err(vd, "### FBO should be ready check glerror...");
-            while((err = glGetError()) != GL_NO_ERROR)
-            {
-                msg_Err(vd, "### ==> glerror = %i", err);
-            }
-            GLenum stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-            msg_Err(vd, "### FBO glCheckFramebufferStatus = %i", stat);
-            glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 );
-            glBindTexture(target, 0);
-
-            msg_Err(vd, "### GL ERROR CODE 36053 : GL_FRAMEBUFFER_COMPLETE");
-            msg_Err(vd, "### GL ERROR CODE 33305 : GL_FRAMEBUFFER_UNDEFINED");
-            msg_Err(vd, "### GL ERROR CODE 1286 : GL_INVALID_FRAMEBUFFER_OPERATION");
-            msg_Err(vd, "### ==============>>>>>>>>>>>>>> texture id TO SHARE = %i", textureId);
-
-            // FBO should be ready, try to fill with color...
-            msg_Err(vd, "### try to fill FBO with color...");
-            glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, fboId);
-            glClearColor(0.0,1.0,0.0,1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glSwapAPPLE();
-            //vlc_gl_Swap(sys->gl);
-            glBindFramebufferEXT( GL_DRAW_FRAMEBUFFER_EXT, 0 );
-
-            msg_Err(vd, "### After filling FBO check glerror ...");
-            while((err = glGetError()) != GL_NO_ERROR)
-            {
-                msg_Err(vd, "### ==> glerror = %i", err);
-            }
-            stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-            msg_Err(vd, "### After filling FBO glCheckFramebufferStatus = %i", stat);
-
-
-            // TODO : UNCOMMENT HERE TO USE VLC CONTEXT
-            vlc_gl_ReleaseCurrent(sys->gl);
-
-            vout_display_opengl_SetFboId(sys->vgl, fboId);
+#ifdef VLC_GP_GPU
+        // use a FBO with EXT to use framebuffers in OpenGL 2.1
+        if (vlc_gl_MakeCurrent(sys->gl) != VLC_SUCCESS) {
+            msg_Err(vd, " Can't attach gl context");
+            goto error;
         }
+        GLuint fboId;
+        GLenum target = GL_TEXTURE_2D;
+        glGenFramebuffersEXT(1, &fboId);
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
+        glGenTextures(1, &sys->textureId);
+        glBindTexture(target, sys->textureId);
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexImage2D(target, 0, GL_RGBA8, vd->fmt.i_width, vd->fmt.i_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, target, sys->textureId, 0);
+        glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 );
+        glBindTexture(target, 0);
+        vlc_gl_ReleaseCurrent(sys->gl);
 
+        // store FBO id to draw into it in vout_helper.c::DrawWithShaders
+        sys->fboId = fboId;
+        vout_display_opengl_SetFboId(sys->vgl, fboId);
+
+        /*
+        // Debug infos
+        // check opengl errors
+        GLenum err;
+        while((err = glGetError()) != GL_NO_ERROR) msg_Err(vd, "### Have to clean gl errors before creating FBO... glerror = %i", err);
+        // check opengl version and extension
+        const GLubyte * strVersion;
+        const GLubyte * strExt;
+        float myGLVersion;
+        bool isEXT;
+        strVersion = glGetString (GL_VERSION);
+        sscanf((char *)strVersion, "%f", &myGLVersion);
+        strExt = glGetString (GL_EXTENSIONS);
+        isEXT = (bool)gluCheckExtension ((const GLubyte*)"GL_EXT_framebuffer_object",strExt);
+        GLenum stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+        // FBO should be ready, try to fill with color...
+        msg_Err(vd, "### GL INFO : try to fill FBO with color...");
+        glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, fboId);
+        glClearColor(0.0,1.0,0.0,1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glSwapAPPLE();
+        glBindFramebufferEXT( GL_DRAW_FRAMEBUFFER_EXT, 0 );
+        msg_Err(vd, "### GL INFO : strVersion = %s",strVersion);
+        msg_Err(vd, "### GL INFO : GL_EXT_framebuffer_object is available = %s",isEXT?"true":"false");
+        msg_Err(vd, "### GL INFO : glGenFramebuffersEXT = %p", glGenFramebuffersEXT);
+        msg_Err(vd, "### GL INFO : glBindFramebufferEXT = %p", glBindFramebufferEXT);
+        msg_Err(vd, "### GL INFO : FBO glCheckFramebufferStatus = %i", stat);
+        msg_Err(vd, "### GL INFO : GL ERROR CODE 36053 : GL_FRAMEBUFFER_COMPLETE");
+        msg_Err(vd, "### GL INFO : GL ERROR CODE 33305 : GL_FRAMEBUFFER_UNDEFINED");
+        msg_Err(vd, "### GL INFO : GL ERROR CODE 1286 : GL_INVALID_FRAMEBUFFER_OPERATION");
+        msg_Err(vd, "### GL INFO : texture id TO SHARE = %i", sys->textureId);
+
+        */
+#else
+        vout_display_SendEventDisplaySize (vd, vd->fmt.i_visible_width, vd->fmt.i_visible_height);
+#endif
         return VLC_SUCCESS;
         
     error:
@@ -449,26 +447,33 @@ void Close (vlc_object_t *this)
     if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(sys->opaque);
 
     @autoreleasepool {
+#ifndef VLC_GP_GPU
         [sys->glView setVoutDisplay:nil];
 
         var_Destroy (vd, "drawable-nsobject");
+
         if ([(id)sys->container respondsToSelector:@selector(removeVoutSubview:)])
         /* This will retain sys->glView */
-            [(id)sys->container performSelectorOnMainThread:@selector(removeVoutSubview:)
-                                                 withObject:sys->glView
+        [(id)sys->container performSelectorOnMainThread:@selector(removeVoutSubview:)
+                                              withObject:sys->glView
                                               waitUntilDone:NO];
 
         /* release on main thread as explained in Open() */
         [(id)sys->container performSelectorOnMainThread:@selector(release)
-                                             withObject:nil
+                                          withObject:nil
                                           waitUntilDone:NO];
         [sys->glView performSelectorOnMainThread:@selector(removeFromSuperview)
-                                      withObject:nil
+                                   withObject:nil
                                    waitUntilDone:NO];
-
+#endif
         if (sys->vgl != NULL)
         {
             vlc_gl_MakeCurrent(sys->gl);
+#ifdef VLC_GP_GPU
+            // delete texture and FBO
+            glDeleteTextures(1, &sys->textureId);
+            glDeleteFramebuffersEXT(1, &sys->fboId);
+#endif
             vout_display_opengl_Delete (sys->vgl);
             vlc_gl_ReleaseCurrent(sys->gl);
         }
@@ -480,7 +485,9 @@ void Close (vlc_object_t *this)
             vlc_object_release(sys->gl);
         }
 
+#ifndef VLC_GP_GPU
         [sys->glView release];
+#endif
 
         if (sys->cgColorSpace != nil)
             CGColorSpaceRelease(sys->cgColorSpace);
@@ -526,20 +533,23 @@ static void PictureRender (vout_display_t *vd, picture_t *pic, subpicture_t *sub
 static void PictureDisplay (vout_display_t *vd, picture_t *pic, subpicture_t *subpicture)
 {
     vout_display_sys_t *sys = vd->sys;
+
+#ifdef VLC_GP_GPU
+    if (vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
+    {
+        vout_display_opengl_Display(sys->vgl, &vd->source);
+        sys->gpunewframe(sys->opaque, &sys->textureId, 0);
+        vlc_gl_ReleaseCurrent(sys->gl);
+    }
+#else
     [sys->glView setVoutFlushing:YES];
     if (vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
     {
         vout_display_opengl_Display(sys->vgl, &vd->source);
-
-        // call gpu newframe callback if exists
-        if (sys->gpunewframe != NULL)
-        {
-            sys->gpunewframe(sys->opaque, 0, 0);
-        }
-
         vlc_gl_ReleaseCurrent(sys->gl);
     }
     [sys->glView setVoutFlushing:NO];
+#endif
     picture_Release (pic);
     sys->has_first_frame = true;
 
@@ -549,6 +559,10 @@ static void PictureDisplay (vout_display_t *vd, picture_t *pic, subpicture_t *su
 
 static int Control (vout_display_t *vd, int query, va_list ap)
 {
+#ifdef VLC_GP_GPU
+    // do nothing about window stuff
+    return VLC_SUCCESS;
+#else
     vout_display_sys_t *sys = vd->sys;
 
     if (!vd->sys)
@@ -627,6 +641,7 @@ static int Control (vout_display_t *vd, int query, va_list ap)
                 return VLC_EGENERIC;
         }
     }
+#endif
 }
 
 /*****************************************************************************
@@ -635,12 +650,20 @@ static int Control (vout_display_t *vd, int query, va_list ap)
 static int OpenglLock (vlc_gl_t *gl)
 {
     struct gl_sys *sys = gl->sys;
+
+#ifdef VLC_GP_GPU
+    assert(sys->locked_ctx == NULL);
+
+    NSOpenGLContext *context = sys->nsopenglcontext;
+#else
     if (![sys->glView respondsToSelector:@selector(openGLContext)])
         return 1;
 
     assert(sys->locked_ctx == NULL);
 
     NSOpenGLContext *context = [sys->glView openGLContext];
+#endif
+
     CGLContextObj cglcntx = [context CGLContextObj];
 
     CGLError err = CGLLockContext (cglcntx);
@@ -662,7 +685,11 @@ static void OpenglUnlock (vlc_gl_t *gl)
 static void OpenglSwap (vlc_gl_t *gl)
 {
     struct gl_sys *sys = gl->sys;
+#ifdef VLC_GP_GPU
+    [sys->nsopenglcontext flushBuffer];
+#else
     [[sys->glView openGLContext] flushBuffer];
+#endif
 }
 
 /*****************************************************************************
@@ -676,40 +703,14 @@ static void OpenglSwap (vlc_gl_t *gl)
 + (void)getNewView:(NSValue *)value
 {
     id *ret = [value pointerValue];
-    //*ret = [[self alloc] init]; // CALL init() of NSOpenGLView class
-
-    //try to understand why above line does not call init() of VLCOpenGLVideoView class...
-    //NSString *s = NSStringFromClass([*ret class]);
-    //msg_Err (toto, "### getNewView %s", [s UTF8String]); // should be NSOpenGLView but it is VLCOpenGLVideoView
-
-    // set manually the attributes for OpenGL context because default one does not share with Qt context
-    NSOpenGLPixelFormatAttribute attribs[] =
-    {
-        NSOpenGLPFADoubleBuffer,
-        NSOpenGLPFAAccelerated,
-        //NSOpenGLPFANoRecovery, // WARNING : this option make context unsharable with Qt context
-        NSOpenGLPFAColorSize, 24,
-        NSOpenGLPFAStencilSize, 8,
-        NSOpenGLPFADepthSize, 24,
-        NSOpenGLPFAWindow,
-        NSOpenGLPFAAllowOfflineRenderers,
-        NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersionLegacy,
-        0
-    };
-    NSOpenGLPixelFormat *fmt = [[NSOpenGLPixelFormat alloc] initWithAttributes:attribs];
-    *ret = [[self alloc] initWithFrame:NSMakeRect(0,0,10,10) pixelFormat:fmt];
+    *ret = [[self alloc] init];
 }
 
 /**
  * Gets called by the Open() method.
  */
-//- (id)initWithCoder:(NSCoder*)aDecoder
 - (id)init
 {
-    //[super initWithCoder:aDecoder];
-
-    msg_Err (vd, "### init VLCOpenGLVideoView");
-
     VLCAssertMainThread();
 
     /* Warning - this may be called on non main thread */

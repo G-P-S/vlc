@@ -252,7 +252,7 @@ static void getViewpointMatrixes(vout_display_opengl_t *vgl,
                                  video_projection_mode_t projection_mode,
                                  struct prgm *prgm)
 {
-    if (projection_mode == PROJECTION_MODE_EQUIRECTANGULAR
+    /*if (projection_mode == PROJECTION_MODE_EQUIRECTANGULAR
         || projection_mode == PROJECTION_MODE_CUBEMAP_LAYOUT_STANDARD)
     {
         float sar = (float) vgl->f_sar;
@@ -262,7 +262,7 @@ static void getViewpointMatrixes(vout_display_opengl_t *vgl,
         getZRotMatrix(vgl->f_roll, prgm->var.ZRotMatrix);
         getZoomMatrix(vgl->f_z, prgm->var.ZoomMatrix);
     }
-    else
+    else*/
     {
         memcpy(prgm->var.ProjectionMatrix, identity, sizeof(identity));
         memcpy(prgm->var.ZRotMatrix, identity, sizeof(identity));
@@ -650,8 +650,6 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
                          HasExtension(extensions, "GL_APPLE_texture_2D_limited_npot");
 #endif
 
-    msg_Err(gl, "### Support for non power of 2 textures : %s", (vgl->supports_npot ? "true":"false"));
-
     vgl->prgm = &vgl->prgms[0];
     vgl->sub_prgm = &vgl->prgms[1];
 
@@ -771,13 +769,13 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
     vgl->region = NULL;
     vgl->pool = NULL;
 
-    if (vgl->fmt.projection_mode != PROJECTION_MODE_RECTANGULAR
+/*    if (vgl->fmt.projection_mode != PROJECTION_MODE_RECTANGULAR
      && vout_display_opengl_SetViewpoint(vgl, viewpoint) != VLC_SUCCESS)
     {
         vout_display_opengl_Delete(vgl);
         return NULL;
     }
-
+*/
     *fmt = vgl->fmt;
     if (subpicture_chromas) {
         *subpicture_chromas = gl_subpicture_chromas;
@@ -1301,12 +1299,14 @@ static int SetupCoords(vout_display_opengl_t *vgl,
     int i_ret;
     switch (vgl->fmt.projection_mode)
     {
+    default:
     case PROJECTION_MODE_RECTANGULAR:
         i_ret = BuildRectangle(vgl->prgm->tc.tex_count,
                                &vertexCoord, &textureCoord, &nbVertices,
                                &indices, &nbIndices,
                                left, top, right, bottom);
         break;
+        /*
     case PROJECTION_MODE_EQUIRECTANGULAR:
         i_ret = BuildSphere(vgl->prgm->tc.tex_count,
                             &vertexCoord, &textureCoord, &nbVertices,
@@ -1324,6 +1324,7 @@ static int SetupCoords(vout_display_opengl_t *vgl,
     default:
         i_ret = VLC_EGENERIC;
         break;
+        */
     }
 
     if (i_ret != VLC_SUCCESS)
@@ -1392,7 +1393,7 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
 
 
     // bind FBO with shared texture
-    //glBindFramebuffer(GL_FRAMEBUFFER_EXT, vgl->fboId);
+    glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, vgl->fboId);
 
     GLenum err;
     //msg_Err(vgl->gl, "### DrawWithShaders check glerror ...");
@@ -1401,20 +1402,17 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
         msg_Err(vgl->gl, "### DrawWithShaders glerror = %i", err);
     }
     GLenum stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-    msg_Err(vgl->gl, "### glCheckFramebufferStatus = %i", stat);
 
-//    glViewport(0,0,1920,1080);
+    glViewport(0, 0, vgl->fmt.i_width, vgl->fmt.i_height);
+
     glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
 
-    //glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
-
-//    glSwapAPPLE();
+    glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
 }
 
 void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id)
 {
     vgl->fboId = id;
-    msg_Err(vgl->gl, "### vout_display_opengl_SetFboId = %i", vgl->fboId);
 }
 
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,
