@@ -1391,23 +1391,15 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
     vgl->api.UniformMatrix4fv(prgm->uloc.ZoomMatrix, 1, GL_FALSE,
                               prgm->var.ZoomMatrix);
 
-
+#ifdef __APPLE__
     // bind FBO with shared texture
     glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, vgl->fboId);
-
-    GLenum err;
-    //msg_Err(vgl->gl, "### DrawWithShaders check glerror ...");
-    while((err = glGetError()) != GL_NO_ERROR)
-    {
-        msg_Err(vgl->gl, "### DrawWithShaders glerror = %i", err);
-    }
-    GLenum stat = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-
     glViewport(0, 0, vgl->fmt.i_width, vgl->fmt.i_height);
-
     glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
-
     glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
+#else
+    glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
+#endif
 }
 
 void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id)
