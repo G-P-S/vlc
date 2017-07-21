@@ -157,18 +157,18 @@ tc_cvpx_release(const opengl_tex_converter_t *tc)
     free(tc->priv);
 }
 
-GLuint
-opengl_tex_converter_cvpx_init(video_format_t *fmt, opengl_tex_converter_t *tc)
+int
+opengl_tex_converter_cvpx_init(opengl_tex_converter_t *tc)
 {
-    if (fmt->i_chroma != VLC_CODEC_CVPX_UYVY
-     && fmt->i_chroma != VLC_CODEC_CVPX_NV12
-     && fmt->i_chroma != VLC_CODEC_CVPX_I420
-     && fmt->i_chroma != VLC_CODEC_CVPX_BGRA)
-        return 0;
+    if (tc->fmt.i_chroma != VLC_CODEC_CVPX_UYVY
+     && tc->fmt.i_chroma != VLC_CODEC_CVPX_NV12
+     && tc->fmt.i_chroma != VLC_CODEC_CVPX_I420
+     && tc->fmt.i_chroma != VLC_CODEC_CVPX_BGRA)
+        return VLC_EGENERIC;
 
     struct priv *priv = calloc(1, sizeof(struct priv));
     if (unlikely(priv == NULL))
-        return 0;
+        return VLC_ENOMEM;
 
 #if TARGET_OS_IPHONE
     const GLenum tex_target = GL_TEXTURE_2D;
@@ -182,7 +182,7 @@ opengl_tex_converter_cvpx_init(video_format_t *fmt, opengl_tex_converter_t *tc)
         {
             msg_Err(tc->gl, "CVOpenGLESTextureCacheCreate failed: %d", err);
             free(priv);
-            return 0;
+            return VLC_EGENERIC;
         }
     }
     tc->handle_texs_gen = true;
@@ -191,12 +191,12 @@ opengl_tex_converter_cvpx_init(video_format_t *fmt, opengl_tex_converter_t *tc)
 #endif
 
     GLuint fragment_shader;
-    switch (fmt->i_chroma)
+    switch (tc->fmt.i_chroma)
     {
         case VLC_CODEC_CVPX_UYVY:
             fragment_shader =
                 opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_UYVY,
-                                            fmt->space);
+                                            tc->fmt.space);
             tc->texs[0].internal = GL_RGB;
             tc->texs[0].format = GL_RGB_422_APPLE;
             tc->texs[0].type = GL_UNSIGNED_SHORT_8_8_APPLE;
@@ -205,13 +205,13 @@ opengl_tex_converter_cvpx_init(video_format_t *fmt, opengl_tex_converter_t *tc)
         {
             fragment_shader =
                 opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_NV12,
-                                            fmt->space);
+                                            tc->fmt.space);
             break;
         }
         case VLC_CODEC_CVPX_I420:
             fragment_shader =
                 opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_I420,
-                                            fmt->space);
+                                            tc->fmt.space);
             break;
         case VLC_CODEC_CVPX_BGRA:
             fragment_shader =
@@ -232,12 +232,13 @@ opengl_tex_converter_cvpx_init(video_format_t *fmt, opengl_tex_converter_t *tc)
     if (fragment_shader == 0)
     {
         free(priv);
-        return 0;
+        return VLC_EGENERIC;
     }
 
     tc->priv              = priv;
     tc->pf_update         = tc_cvpx_update;
     tc->pf_release        = tc_cvpx_release;
+    tc->fshader           = fragment_shader;
 
-    return fragment_shader;
+    return VLC_SUCCESS;
 }

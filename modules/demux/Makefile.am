@@ -248,6 +248,7 @@ libts_plugin_la_SOURCES = demux/mpeg/ts.c demux/mpeg/ts.h \
         demux/mpeg/ts_scte.h demux/mpeg/ts_scte.c \
         demux/mpeg/sections.c demux/mpeg/sections.h \
         demux/mpeg/mpeg4_iod.c demux/mpeg/mpeg4_iod.h \
+        demux/mpeg/ts_arib.c demux/mpeg/ts_arib.h \
         demux/mpeg/ts_sl.c demux/mpeg/ts_sl.h \
         demux/mpeg/ts_metadata.c demux/mpeg/ts_metadata.h \
         demux/mpeg/ts_hotfixes.c demux/mpeg/ts_hotfixes.h \
@@ -463,3 +464,5 @@ libadaptive_plugin_la_LIBADD += $(GCRYPT_LIBS)
 endif
 demux_LTLIBRARIES += libadaptive_plugin.la
 
+libnoseek_plugin_la_SOURCES = demux/filter/noseek.c
+demux_LTLIBRARIES += libnoseek_plugin.la

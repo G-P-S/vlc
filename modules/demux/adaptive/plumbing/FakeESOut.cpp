@@ -91,7 +91,6 @@ void FakeESOut::setExtraInfoProvider( ExtraFMTInfoInterface *extra )
 FakeESOutID * FakeESOut::createNewID( const es_format_t *p_fmt )
 {
     es_format_t fmtcopy;
-    es_format_Init( &fmtcopy, 0, 0 );
     es_format_Copy( &fmtcopy, p_fmt );
     fmtcopy.i_group = 0; /* Always ignore group for adaptive */
     fmtcopy.i_id = -1;
@@ -248,7 +247,7 @@ bool FakeESOut::hasSelectedEs() const
     return b_selected;
 }
 
-bool FakeESOut::drain()
+bool FakeESOut::decodersDrained()
 {
     bool b_drained = true;
     std::list<FakeESOutID *>::const_iterator it;
@@ -256,7 +255,7 @@ bool FakeESOut::drain()
     for( it=fakeesidlist.begin(); it!=fakeesidlist.end(); ++it )
     {
         FakeESOutID *esID = *it;
-        if( esID->realESID() )
+        if( esID->realESID() && esID->getFmt()->i_cat != AUDIO_ES ) /* Broken GET_EMPTY */
         {
             bool b_empty;
             es_out_Control( real_es_out, ES_OUT_GET_EMPTY, &b_empty );
@@ -378,6 +377,7 @@ int FakeESOut::esOutControl_Callback(es_out_t *fakees, int i_query, va_list args
             else
                 i_group = 0;
             int64_t  pcr = va_arg( args, int64_t );
+            me->checkTimestampsStart( pcr );
             pcr += me->getTimestampOffset();
             AbstractCommand *command = me->commandsqueue->factory()->createEsOutControlPCRCommand( i_group, pcr );
             if( likely(command) )
@@ -407,13 +407,13 @@ int FakeESOut::esOutControl_Callback(es_out_t *fakees, int i_query, va_list args
             static_cast<void>(va_arg( args, es_out_id_t * ));
             bool *pb = va_arg( args, bool * );
             *pb = true;
-            // ft
+            return VLC_SUCCESS;
         }
+
         case ES_OUT_SET_ES:
         case ES_OUT_SET_ES_DEFAULT:
         case ES_OUT_SET_ES_STATE:
             return VLC_SUCCESS;
-
     }
 
     return VLC_EGENERIC;

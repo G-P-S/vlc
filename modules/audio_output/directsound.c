@@ -788,8 +788,6 @@ static HRESULT Start( vlc_object_t *obj, aout_stream_sys_t *sys,
         }
     }
 
-    fmt.i_original_channels = fmt.i_physical_channels;
-
     int ret = vlc_clone(&sys->eraser_thread, PlayedDataEraser, (void*) obj,
                         VLC_THREAD_PRIORITY_LOW);
     if( unlikely( ret ) )
@@ -811,6 +809,8 @@ static HRESULT Start( vlc_object_t *obj, aout_stream_sys_t *sys,
         sys->p_dsobject = NULL;
         return ret;
     }
+
+    fmt.channel_type = AUDIO_CHANNEL_TYPE_BITMAP;
 
     *pfmt = fmt;
     sys->b_playing = false;

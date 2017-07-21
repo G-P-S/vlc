@@ -62,7 +62,7 @@ static int AllocatePicture( picture_t *p_pic )
         i_bytes += p->i_pitch * p->i_lines;
     }
 
-    uint8_t *p_data = vlc_memalign( 16, i_bytes );
+    uint8_t *p_data = aligned_alloc( 16, i_bytes );
     if( i_bytes > 0 && p_data == NULL )
     {
         p_pic->i_planes = 0;
@@ -110,7 +110,7 @@ static void picture_DestroyFromResource( picture_t *p_picture )
  */
 static void picture_Destroy( picture_t *p_picture )
 {
-    vlc_free( p_picture->p[0].p_pixels );
+    aligned_free( p_picture->p[0].p_pixels );
     free( p_picture );
 }
 
@@ -272,7 +272,7 @@ picture_t *picture_New( vlc_fourcc_t i_chroma, int i_width, int i_height, int i_
 {
     video_format_t fmt;
 
-    memset( &fmt, 0, sizeof(fmt) );
+    video_format_Init( &fmt, 0 );
     video_format_Setup( &fmt, i_chroma, i_width, i_height,
                         i_width, i_height, i_sar_num, i_sar_den );
 

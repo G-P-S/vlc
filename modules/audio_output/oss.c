@@ -213,9 +213,9 @@ static int Start (audio_output_t *aout, audio_sample_format_t *restrict fmt)
     else
     {
         fmt->i_rate = rate;
-        fmt->i_original_channels =
         fmt->i_physical_channels = channels;
     }
+    fmt->channel_type = AUDIO_CHANNEL_TYPE_BITMAP;
     aout_FormatPrepare (fmt);
 
     /* Select timing */

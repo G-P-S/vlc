@@ -34,7 +34,7 @@ static int Open(vlc_object_t *);
 
 vlc_module_begin()
     set_description(N_("XWD image decoder"))
-    set_capability("decoder", 50)
+    set_capability("video decoder", 50)
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_VCODEC)
     set_callbacks(Open, NULL)
@@ -52,7 +52,6 @@ static int Open(vlc_object_t *obj)
     dec->pf_decode = Decode;
     es_format_Copy(&dec->fmt_out, &dec->fmt_in);
     dec->fmt_out.i_codec = VLC_CODEC_RGB32;
-    dec->fmt_out.i_cat = VIDEO_ES;
     return VLC_SUCCESS;
 }
 

@@ -65,8 +65,10 @@ Decoder:
  * Support for experimental AV1 video
  * Important improvements for the MMAL decoder and output for rPI and rPI2
  * Support HEVC hardware decoding on Windows, using DxVA2 and D3D11
- * Support hardware decoding using Direct3D11, including GPU-zerocopy mode
- * DxVA2 GPU-zerocopy for hardware decoding and displaying on Windows
+ * Support hardware decoding using Direct3D11, including GPU-zerocopy mode,
+   and hardware filtering, for deinterlace and adjust
+ * DxVA2 GPU-zerocopy for hardware decoding and displaying on Windows,
+   and support for hardware filtering, for deinterlace and adjust
  * Support HEVC hardware decoding using OMX and MediaCodec (Android)
  * Use MediaCodec via NDK native API after Android Lollipop
  * Support MPEG-2, VC1/WMV3 on Android using MediaCodec
@@ -138,6 +140,7 @@ Stream filter:
 
 Demux filter:
  * Added a demuxer filter chain to filter or intercept control commands and demuxing
+ * Added a demuxer filter to block seeking (--demux-filter noseek)
 
 Audio output:
  * Complete rewrite of the AudioTrack Android module, it is now the default
@@ -146,11 +149,16 @@ Audio output:
  * Added Tizen audio module
  * HDMI/SPDIF pass-through support for WASAPI (AC3/DTS/DTSHD/EAC3/TRUEHD)
  * Support EAC3 and TRUEHD pass-through for PulseAudio
+ * Support Ambisonics audio with viewpoint changes
 
 Audio filters:
  * Add SoX Resampler library audio filter module (converter and resampler)
  * a52tospdif and dtstospdif audio converters are merged into tospdif,
    this new converter can convert AC3, DTS, EAC3 and TRUEHD to a IEC61937 frame
+ * Added the Spatialaudio module with 2 submodules: one Ambisonics audio
+ * renderer and one Binauralizer audio filter
+ * Add Headphones option in Stereo Mode: use the spatialaudio module for
+ * headphones effects
 
 Video ouput:
  * Linux/BSD default video output is now OpenGL, instead of Xvideo
@@ -166,6 +174,7 @@ Video ouput:
  * New OpenGL provider for Windows
  * Drop OpenGL 1.x and OpenGL ES 1 support
  * Direct rendering with OpenGL (starting OpenGL 4.4)
+ * Direct rendering with VA-API via EGL/OpenGL
 
 Text renderer:
  * CTL support through Harfbuzz in the Freetype module
@@ -176,6 +185,8 @@ Video filter:
  * New video filter to convert between fps rates
  * Added 9-bit and 10-bit support to image adjust filter
  * New edge detection filter uses the Sobel operator to detect edges
+ * Hardware accelerated deinterlacing/adjust/sharpen/chroma with VA-API
+ * Hardware accelerated adjust/invert/posterize/sepia/sharpen with CoreImage
 
 Stream Output:
  * Chromecast output module

@@ -55,16 +55,16 @@ typedef struct {
     mtime_t start;
     mtime_t stop;
     size_t  blocknumber;
-    int     count;
+    size_t  count;
 } stl_entry_t;
 
 struct demux_sys_t {
-    int         count;
+    size_t      count;
     stl_entry_t *index;
 
     es_out_id_t *es;
 
-    int         current;
+    size_t      current;
     int64_t     next_date;
     bool        b_slave;
     bool        b_first_time;
@@ -242,6 +242,8 @@ static int Open(vlc_object_t *object)
     const int cct = ParseInteger(&header[12], 2);
     const mtime_t program_start = ParseTextTimeCode(&header[256], fps);
     const size_t tti_count = ParseInteger(&header[238], 5);
+    if (!tti_count)
+        return VLC_EGENERIC;
     msg_Dbg(demux, "Detected EBU STL : CCT=%d TTI=%zu start=%8.8s %"PRId64, cct, tti_count, &header[256], program_start);
 
     demux_sys_t *sys = malloc(sizeof(*sys));

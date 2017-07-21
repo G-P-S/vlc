@@ -59,7 +59,7 @@ ForgedInitSegment::ForgedInitSegment(ICanonicalUrl *parent,
     formatex.wFormatTag = 0;
     width = height = 0;
     fourcc = 0;
-    es_type = 0;
+    es_type = UNKNOWN_ES;
     track_id = 1;
 }
 
@@ -215,9 +215,8 @@ block_t * ForgedInitSegment::buildMoovBox()
     trackinfo.i_trex_default_length = 1;
     trackinfo.i_trex_default_size = 1;
 
-    trackinfo.fmt.i_cat = es_type;
+    es_format_Init(&trackinfo.fmt, es_type, vlc_fourcc_GetCodec(es_type, fourcc));
     trackinfo.fmt.i_original_fourcc = fourcc;
-    trackinfo.fmt.i_codec = vlc_fourcc_GetCodec(es_type, fourcc);
     switch(es_type)
     {
         case VIDEO_ES:

@@ -33,6 +33,7 @@
 #include <vlc_common.h>
 #include <vlc_access.h>
 #include <vlc_charset.h>
+#include <vlc_strings.h>
 
 #include "playlist.h"
 
@@ -41,7 +42,7 @@
  *****************************************************************************/
 static int ReadDir( stream_t *, input_item_node_t * );
 static void parseEXTINF( char *psz_string, char **ppsz_artist, char **ppsz_name, int *pi_duration );
-static bool ContainsURL( stream_t *p_demux );
+static bool ContainsURL(const uint8_t *, size_t);
 
 static char *GuessEncoding (const char *str)
 {
@@ -53,75 +54,105 @@ static char *CheckUnicode (const char *str)
     return IsUTF8 (str) ? strdup (str): NULL;
 }
 
+static bool IsHLS(const unsigned char *buf, size_t length)
+{
+    static const char *const hlsexts[] =
+    {
+        "#EXT-X-MEDIA:",
+        "#EXT-X-VERSION:",
+        "#EXT-X-TARGETDURATION:",
+        "#EXT-X-MEDIA-SEQUENCE:",
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(hlsexts); i++)
+        if (strnstr((const char *)buf, hlsexts[i], length) != NULL)
+            return true;
+
+    return false;
+}
+
 /*****************************************************************************
  * Import_M3U: main import function
  *****************************************************************************/
 int Import_M3U( vlc_object_t *p_this )
 {
-    stream_t *p_demux = (stream_t *)p_this;
+    stream_t *p_stream = (stream_t *)p_this;
     const uint8_t *p_peek;
-    char *(*pf_dup) (const char *) = GuessEncoding;
+    ssize_t i_peek;
     int offset = 0;
 
-    CHECK_FILE(p_demux);
-    if( vlc_stream_Peek( p_demux->p_source, &p_peek, 3 ) == 3
-     && !memcmp( p_peek, "\xef\xbb\xbf", 3) )
+    CHECK_FILE(p_stream);
+    i_peek = vlc_stream_Peek( p_stream->p_source, &p_peek, 1024 );
+    if( i_peek < 8 )
+        return VLC_EGENERIC;
+
+    /* Encoding: UTF-8 or unspecified */
+    char *(*pf_dup) (const char *) = GuessEncoding;
+
+    if (stream_HasExtension(p_stream, ".m3u8")
+     || strncasecmp((const char *)p_peek, "RTSPtext", 8) == 0) /* QuickTime */
+        pf_dup = CheckUnicode;
+    else
+    if (memcmp( p_peek, "\xef\xbb\xbf", 3) == 0) /* UTF-8 Byte Order Mark */
     {
-        pf_dup = CheckUnicode; /* UTF-8 Byte Order Mark */
+        if( i_peek < 12 )
+            return VLC_EGENERIC;
+        pf_dup = CheckUnicode;
         offset = 3;
-    }
-
-    char *type = stream_MimeType(p_demux->p_source);
-
-    if( stream_HasExtension( p_demux, ".m3u8" )
-     || (type != NULL && !strcasecmp(type, "application/vnd.apple.mpegurl")))
-    {
-        pf_dup = CheckUnicode; /* UTF-8 file type */
-        free(type);
-    }
-    else
-    if( stream_HasExtension( p_demux, ".m3u" )
-     || stream_HasExtension( p_demux, ".vlc" )
-     || ContainsURL( p_demux )
-     || (type != NULL && !strcasecmp(type, "audio/x-mpegurl"))
-     || p_demux->obj.force )
-        free(type); /* Guess encoding */
-    else
-    {
-        free(type);
-
-        if( vlc_stream_Peek( p_demux->p_source, &p_peek, 8 + offset ) < (8 + offset) )
-            return VLC_EGENERIC;
-
         p_peek += offset;
-
-        if( !strncasecmp( (const char *)p_peek, "RTSPtext", 8 ) ) /* QuickTime */
-            pf_dup = CheckUnicode; /* UTF-8 */
-        else
-        if( !memcmp( p_peek, "#EXTM3U", 7 ) )
-            ; /* Guess encoding */
-        else
-            return VLC_EGENERIC;
+        i_peek -= offset;
     }
 
-    vlc_stream_Seek( p_demux->p_source, offset );
+    /* File type: playlist, or not (HLS manifest or whatever else) */
+    char *type = stream_MimeType(p_stream->p_source);
+    bool match;
 
-    msg_Dbg( p_demux, "found valid M3U playlist" );
-    p_demux->p_sys = pf_dup;
-    p_demux->pf_readdir = ReadDir;
-    p_demux->pf_control = access_vaDirectoryControlHelper;
+    if (p_stream->obj.force)
+        match = true;
+    else
+    if (type != NULL
+     && !vlc_ascii_strcasecmp(type, "application/vnd.apple.mpegurl")) /* HLS */
+        match = false;
+    else
+    if (memcmp(p_peek, "#EXTM3U", 7 ) == 0
+     || (type != NULL
+      && (vlc_ascii_strcasecmp(type, "application/mpegurl") == 0
+       || vlc_ascii_strcasecmp(type, "application/x-mpegurl") == 0
+       || vlc_ascii_strcasecmp(type, "audio/mpegurl") == 0
+       || vlc_ascii_strcasecmp(type, "vnd.apple.mpegURL") == 0
+       || vlc_ascii_strcasecmp(type, "audio/x-mpegurl") == 0))
+     || stream_HasExtension(p_stream, ".m3u8")
+     || stream_HasExtension(p_stream, ".m3u"))
+        match = !IsHLS(p_peek, i_peek);
+    else
+    if (stream_HasExtension(p_stream, ".vlc")
+     || strncasecmp((const char *)p_peek, "RTSPtext", 8) == 0
+     || ContainsURL(p_peek, i_peek))
+        match = true;
+    else
+        match = false;
+
+    free(type);
+
+    if (!match)
+        return VLC_EGENERIC;
+
+    if (offset != 0 && vlc_stream_Seek(p_stream->p_source, offset))
+        return VLC_EGENERIC;
+
+    msg_Dbg( p_stream, "found valid M3U playlist" );
+    p_stream->p_sys = pf_dup;
+    p_stream->pf_readdir = ReadDir;
+    p_stream->pf_control = access_vaDirectoryControlHelper;
 
     return VLC_SUCCESS;
 }
 
-static bool ContainsURL( stream_t *s )
+static bool ContainsURL(const uint8_t *p_peek, size_t i_peek)
 {
-    const uint8_t *p_peek, *p_peek_end;
-    int i_peek;
-
-    i_peek = vlc_stream_Peek( s->p_source, &p_peek, 1024 );
-    if( i_peek <= 0 ) return false;
-    p_peek_end = p_peek + i_peek;
+    const uint8_t *p_peek_end = p_peek + i_peek;
+    if( i_peek < 7 )
+        return false;
 
     while( p_peek + sizeof( "https://" ) < p_peek_end )
     {

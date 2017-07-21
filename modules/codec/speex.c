@@ -96,7 +96,7 @@ vlc_module_begin ()
     set_subcategory( SUBCAT_INPUT_ACODEC )
 
     set_description( N_("Speex audio decoder") )
-    set_capability( "decoder", 100 )
+    set_capability( "audio decoder", 100 )
     set_shortname( N_("Speex") )
     set_callbacks( OpenDecoder, CloseDecoder )
 
@@ -224,7 +224,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     date_Set( &p_sys->end_date, 0 );
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_S16N;
 
     /*
@@ -549,8 +548,7 @@ static int ProcessInitialHeader( decoder_t *p_dec, ogg_packet *p_oggpacket )
 
     /* Setup the format */
     p_dec->fmt_out.audio.i_physical_channels =
-        p_dec->fmt_out.audio.i_original_channels =
-            pi_channels_maps[p_header->nb_channels];
+        pi_channels_maps[p_header->nb_channels];
     p_dec->fmt_out.audio.i_channels = p_header->nb_channels;
     p_dec->fmt_out.audio.i_rate = p_header->rate;
 
@@ -719,7 +717,6 @@ static int DecodeRtpSpeexPacket( decoder_t *p_dec, block_t *p_speex_bit_block )
 
         p_dec->fmt_out.audio.i_channels = p_sys->p_header->nb_channels;
         p_dec->fmt_out.audio.i_physical_channels =
-        p_dec->fmt_out.audio.i_original_channels =
             pi_channels_maps[p_sys->p_header->nb_channels];
         p_dec->fmt_out.audio.i_rate = p_sys->p_header->rate;
 

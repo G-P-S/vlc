@@ -81,7 +81,7 @@ vlc_module_begin();
     set_category( CAT_INPUT );
     set_subcategory( SUBCAT_INPUT_ACODEC );
     set_description( _("WMA v1/v2 fixed point audio decoder") );
-    set_capability( "decoder", 80 );
+    set_capability( "audio decoder", 80 );
     add_shortcut( "wmafixed" )
     set_callbacks( OpenDecoder, CloseDecoder );
 vlc_module_end();
@@ -139,7 +139,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     date_Init( &p_sys->end_date, p_dec->fmt_in.audio.i_rate, 1 );
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_S32N;
     p_dec->fmt_out.audio.i_bitspersample = p_dec->fmt_in.audio.i_bitspersample;
     p_dec->fmt_out.audio.i_rate = p_dec->fmt_in.audio.i_rate;
@@ -149,9 +148,8 @@ static int OpenDecoder( vlc_object_t *p_this )
     assert( p_dec->fmt_out.audio.i_channels <
         ( sizeof( pi_channels_maps ) / sizeof( pi_channels_maps[0] ) ) );
 
-    p_dec->fmt_out.audio.i_original_channels =
-        p_dec->fmt_out.audio.i_physical_channels =
-            pi_channels_maps[p_dec->fmt_out.audio.i_channels];
+    p_dec->fmt_out.audio.i_physical_channels =
+        pi_channels_maps[p_dec->fmt_out.audio.i_channels];
 
     /* aout core assumes this number is not 0 and uses it in divisions */
     assert( p_dec->fmt_out.audio.i_physical_channels != 0 );

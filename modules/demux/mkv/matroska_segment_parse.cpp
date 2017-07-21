@@ -207,53 +207,34 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
     /* Init the track */
     mkv_track_t track;
 
-    track.b_default              = true;
-    track.b_enabled              = true;
-    track.b_forced               = false;
-    track.i_number               = 0;
+    EbmlUInteger *pTrackType = static_cast<EbmlUInteger*>(m->FindElt(EBML_INFO(KaxTrackType)));
+    uint8 ttype;
+    if (likely(pTrackType != NULL))
+        ttype = (uint8) *pTrackType;
+    else
+        ttype = 0;
 
-    track.i_extra_data           = 0;
-    track.p_extra_data           = NULL;
-
-    track.codec                  = "";
-    track.b_dts_only             = false;
-    track.b_pts_only             = false;
-
-    track.b_no_duration          = false;
-    track.i_default_duration     = 0;
-    track.f_timecodescale        = 1.0;
-    track.i_last_dts             = 0;
-    track.i_skip_until_fpos      = -1;
-
-    std::memset(    &track.fmt, 0, sizeof( track.fmt ) );
-    es_format_Init( &track.fmt, UNKNOWN_ES, 0 );
-
-    track.fmt.psz_language       = strdup("English");
-    track.fmt.psz_description    = NULL;
-
-    track.f_fps = 0;
-    track.p_es = NULL;
-
-    track.i_original_rate        = 0;
-    track.i_chans_to_reorder     = 0;
-    std::memset( &track.pi_chan_table, 0, sizeof( track.pi_chan_table ) );
-
-    track.p_sys                  = NULL;
-
-    track.b_inited               = false;
-    track.b_discontinuity        = false;
-
-    track.i_data_init            = 0;
-    track.p_data_init            = NULL;
-
-    track.str_codec_name         = "";
-
-    track.i_compression_type     = MATROSKA_COMPRESSION_NONE;
-    track.i_encoding_scope       = MATROSKA_ENCODING_SCOPE_ALL_FRAMES;
-    track.p_compression_data     = NULL;
-
-    track.i_seek_preroll          = 0;
-    track.i_codec_delay           = 0;
+    switch( ttype )
+    {
+        case track_audio:
+            es_format_Init( &track.fmt, AUDIO_ES, 0);
+            track.fmt.audio.i_channels = 1;
+            track.fmt.audio.i_rate = 8000;
+            track.fmt.psz_language = strdup("English");
+            break;
+        case track_video:
+            es_format_Init( &track.fmt, VIDEO_ES, 0);
+            track.fmt.psz_language = strdup("English");
+            break;
+        case track_subtitle:
+        case track_buttons:
+            es_format_Init( &track.fmt, SPU_ES, 0);
+            track.fmt.psz_language = strdup("English");
+            break;
+        default:
+            es_format_Init( &track.fmt, UNKNOWN_ES, 0);
+            break;
+    }
 
     MkvTree( sys.demuxer, 2, "Track Entry" );
 
@@ -304,25 +285,18 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
             {
                 case track_audio:
                     psz_type = "audio";
-                    vars.tk->fmt.i_cat = AUDIO_ES;
-                    vars.tk->fmt.audio.i_channels = 1;
-                    vars.tk->fmt.audio.i_rate = 8000;
                     break;
                 case track_video:
                     psz_type = "video";
-                    vars.tk->fmt.i_cat = VIDEO_ES;
                     break;
                 case track_subtitle:
                     psz_type = "subtitle";
-                    vars.tk->fmt.i_cat = SPU_ES;
                     break;
                 case track_buttons:
                     psz_type = "buttons";
-                    vars.tk->fmt.i_cat = SPU_ES;
                     break;
                 default:
                     psz_type = "unknown";
-                    vars.tk->fmt.i_cat = UNKNOWN_ES;
                     break;
             }
 
@@ -496,6 +470,9 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
 
             mkv_track_t *tk = vars.tk;
 
+            if (tk->fmt.i_cat != VIDEO_ES ) {
+                msg_Err( vars.p_demuxer, "Video elements not allowed for this track" );
+            } else {
             tk->f_fps = 0.0;
 
             if( tk->i_default_duration > 1000 ) /* Broken ffmpeg mux info when non set fps */
@@ -535,6 +512,7 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
             }
             /* FIXME: i_display_* allows you to not only set DAR, but also a zoom factor.
                we do not support this atm */
+            }
         }
 #if LIBMATROSKA_VERSION >= 0x010406
         E_CASE( KaxVideoProjection, proj )
@@ -653,14 +631,14 @@ void matroska_segment_c::ParseTrackEntry( const KaxTrackEntry *m )
             }
         }
         E_CASE( KaxTrackAudio, tka ) {
-            vars.tk->fmt.audio.i_channels = 1;
-            vars.tk->fmt.audio.i_rate = 8000;
-
             debug( vars, "Track Audio");
-
+            if (vars.tk->fmt.i_cat != AUDIO_ES ) {
+                msg_Err( vars.p_demuxer, "Audio elements not allowed for this track" );
+            } else {
             vars.level += 1;
             dispatcher.iterate( tka.begin(), tka.end(), Payload( vars ));
             vars.level -= 1;
+            }
         }
         E_CASE( KaxAudioSamplingFreq, afreq )
         {
@@ -1313,7 +1291,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
     if( p_tk->codec.empty() )
     {
         msg_Err( &sys.demuxer, "Empty codec id" );
-        p_tk->fmt.i_codec = VLC_FOURCC( 'u', 'n', 'd', 'f' );
+        p_tk->fmt.i_codec = VLC_CODEC_UNKNOWN;
         return 0;
     }
 
@@ -1334,7 +1312,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
             if( vars.p_tk->i_extra_data < (int)sizeof( VLC_BITMAPINFOHEADER ) )
             {
                 msg_Err(vars.p_demuxer, "missing/invalid VLC_BITMAPINFOHEADER" );
-                vars.p_fmt->i_codec = VLC_FOURCC( 'u', 'n', 'd', 'f' );
+                vars.p_fmt->i_codec = VLC_CODEC_UNKNOWN;
             }
             else
             {
@@ -1489,7 +1467,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
             if( p_tk->i_extra_data < (int)sizeof( WAVEFORMATEX ) )
             {
                 msg_Err( vars.p_demuxer, "missing/invalid WAVEFORMATEX" );
-                p_tk->fmt.i_codec = VLC_FOURCC( 'u', 'n', 'd', 'f' );
+                p_tk->fmt.i_codec = VLC_CODEC_UNKNOWN;
             }
             else
             {
@@ -1519,7 +1497,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
                     /* FIXME should we use Samples */
 
                     if( p_tk->fmt.audio.i_channels > 2 &&
-                        ( p_tk->fmt.i_codec != VLC_FOURCC( 'u', 'n', 'd', 'f' ) ) )
+                        ( p_tk->fmt.i_codec != VLC_CODEC_UNKNOWN ) )
                     {
                         uint32_t wfextcm = GetDWLE( &p_wext->dwChannelMask );
                         int match;
@@ -1535,15 +1513,24 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
                                 i_channel_mask,
                                 p_tk->pi_chan_table );
 
-                            p_tk->fmt.audio.i_physical_channels =
-                            p_tk->fmt.audio.i_original_channels = i_channel_mask;
+                            p_tk->fmt.audio.i_physical_channels = i_channel_mask;
                         }
                     }
                 }
                 else
+                {
                     wf_tag_to_fourcc( GetWLE( &p_wf->wFormatTag ), &p_tk->fmt.i_codec, NULL );
+                    if( p_wf->wFormatTag == WAVE_FORMAT_AAC_LATM )
+                    {
+                        p_tk->fmt.i_original_fourcc = VLC_FOURCC('L','A','T','M');
+                    }
+                    else if( p_wf->wFormatTag == WAVE_FORMAT_AAC_ADTS )
+                    {
+                        p_tk->fmt.i_original_fourcc = VLC_FOURCC('A','D','T','S');
+                    }
+                }
 
-                if( p_tk->fmt.i_codec == VLC_FOURCC( 'u', 'n', 'd', 'f' ) )
+                if( p_tk->fmt.i_codec == VLC_CODEC_UNKNOWN )
                     msg_Err( vars.p_demuxer, "Unrecognized wf tag: 0x%x", GetWLE( &p_wf->wFormatTag ) );
             }
             p_fmt->b_packetized = !p_fmt->audio.i_blockalign;
@@ -1696,7 +1683,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
         }
         S_CASE("A_PCM/INT/BIG")    { A_PCM__helper ( vars, VLC_FOURCC( 't','w','o','s' ) ); }
         S_CASE("A_PCM/INT/LIT")    { A_PCM__helper ( vars, VLC_FOURCC( 'a','r','a','w' ) ); }
-        S_CASE("A_PCM/FLOAT/IEEE") { A_PCM__helper ( vars, VLC_FOURCC( 'a','r','a','w' ) ) ;}
+        S_CASE("A_PCM/FLOAT/IEEE") { A_PCM__helper ( vars, VLC_FOURCC( 'a','f','l','t' ) ) ;}
         S_CASE("A_REAL/14_4") {
             vars.p_fmt->i_codec = VLC_CODEC_RA_144;
             vars.p_fmt->audio.i_channels = 1;
@@ -1711,7 +1698,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
 
             if( memcmp( p, ".ra", 3 ) ) {
                 msg_Err( vars.p_demuxer, "Invalid Real ExtraData 0x%4.4s", (char *)p );
-                vars.p_tk->fmt.i_codec = VLC_FOURCC( 'u', 'n', 'd', 'f' );
+                vars.p_tk->fmt.i_codec = VLC_CODEC_UNKNOWN;
                 return false;
             }
 
@@ -1843,31 +1830,34 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
                     memcpy( psz_buf, p_tk->p_extra_data , p_tk->i_extra_data );
                     psz_buf[p_tk->i_extra_data] = '\0';
 
-                    psz_start = strstr( psz_buf, "size:" );
-                    if( psz_start &&
-                        vobsub_size_parse( psz_start,
-                                           &p_tk->fmt.subs.spu.i_original_frame_width,
-                                           &p_tk->fmt.subs.spu.i_original_frame_height ) == VLC_SUCCESS )
+                    if (p_tk->fmt.i_cat == SPU_ES)
                     {
-                        msg_Dbg( vars.p_demuxer, "original frame size vobsubs: %dx%d",
-                                 p_tk->fmt.subs.spu.i_original_frame_width,
-                                 p_tk->fmt.subs.spu.i_original_frame_height );
-                    }
-                    else
-                    {
-                        msg_Warn( vars.p_demuxer, "reading original frame size for vobsub failed" );
-                    }
+                        psz_start = strstr( psz_buf, "size:" );
+                        if( psz_start &&
+                            vobsub_size_parse( psz_start,
+                                               &p_tk->fmt.subs.spu.i_original_frame_width,
+                                               &p_tk->fmt.subs.spu.i_original_frame_height ) == VLC_SUCCESS )
+                        {
+                            msg_Dbg( vars.p_demuxer, "original frame size vobsubs: %dx%d",
+                                     p_tk->fmt.subs.spu.i_original_frame_width,
+                                     p_tk->fmt.subs.spu.i_original_frame_height );
+                        }
+                        else
+                        {
+                            msg_Warn( vars.p_demuxer, "reading original frame size for vobsub failed" );
+                        }
 
-                    psz_start = strstr( psz_buf, "palette:" );
-                    if( psz_start &&
-                        vobsub_palette_parse( psz_start, &p_tk->fmt.subs.spu.palette[1] ) == VLC_SUCCESS )
-                    {
-                        p_tk->fmt.subs.spu.palette[0] =  0xBeef;
-                        msg_Dbg( vars.p_demuxer, "vobsub palette read" );
-                    }
-                    else
-                    {
-                        msg_Warn( vars.p_demuxer, "reading original palette failed" );
+                        psz_start = strstr( psz_buf, "palette:" );
+                        if( psz_start &&
+                            vobsub_palette_parse( psz_start, &p_tk->fmt.subs.spu.palette[1] ) == VLC_SUCCESS )
+                        {
+                            p_tk->fmt.subs.spu.palette[0] = SPU_PALETTE_DEFINED;
+                            msg_Dbg( vars.p_demuxer, "vobsub palette read" );
+                        }
+                        else
+                        {
+                            msg_Warn( vars.p_demuxer, "reading original palette failed" );
+                        }
                     }
                     free( psz_buf );
                 }
@@ -1888,7 +1878,7 @@ int32_t matroska_segment_c::TrackInit( mkv_track_t * p_tk )
         }
         S_CASE_DEFAULT(str) {
             msg_Err( vars.p_demuxer, "unknown codec id=`%s'", str );
-            vars.p_tk->fmt.i_codec = VLC_FOURCC( 'u', 'n', 'd', 'f' );
+            vars.p_tk->fmt.i_codec = VLC_CODEC_UNKNOWN;
         }
     };
 

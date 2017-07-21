@@ -228,7 +228,7 @@ CommandsQueue::CommandsQueue( CommandsFactory *f )
     bufferinglevel = VLC_TS_INVALID;
     pcr = VLC_TS_INVALID;
     b_drop = false;
-    b_flushing = false;
+    b_draining = false;
     b_eof = false;
     commandsFactory = f;
     vlc_mutex_init(&lock);
@@ -276,32 +276,61 @@ mtime_t CommandsQueue::Process( es_out_t *out, mtime_t barrier )
     mtime_t lastdts = barrier;
     bool b_datasent = false;
 
+    /* We need to filter the current commands list
+       We need to return on discontinuity or reset events if data was sent
+       We must lookup every packet until end or PCR matching barrier,
+       because packets of multiple stream can arrive delayed (with intermidiate pcr)
+       ex: for a target time of 2, you must dequeue <= 2 until >= PCR2
+       A0,A1,A2,B0,PCR0,B1,B2,PCR2,B3,A3,PCR3
+    */
+    std::list<AbstractCommand *> output;
+    std::list<AbstractCommand *> in;
+
     vlc_mutex_lock(&lock);
-    while( !commands.empty() && commands.front()->getTime() <= barrier )
+
+    in.splice( in.end(), commands );
+
+    while( !in.empty() )
     {
-        AbstractCommand *command = commands.front();
-        /* We need to have PCR set for stream before Deleting ES,
-         * or it will get stuck if any waiting decoder buffer */
-        if(command->getType() == ES_OUT_PRIVATE_COMMAND_DEL && b_datasent)
+        AbstractCommand *command = in.front();
+
+        if( command->getType() == ES_OUT_PRIVATE_COMMAND_DEL && b_datasent )
             break;
 
-        if(command->getType() == ES_OUT_PRIVATE_COMMAND_DISCONTINUITY && b_datasent)
+        if( command->getType() == ES_OUT_PRIVATE_COMMAND_DISCONTINUITY && b_datasent )
             break;
 
-        if(command->getType() == ES_OUT_PRIVATE_COMMAND_SEND)
-        {
+        if(command->getType() == ES_OUT_SET_GROUP_PCR && command->getTime() > barrier )
+            break;
+
+        in.pop_front();
+        b_datasent = true;
+
+        if( command->getType() == ES_OUT_PRIVATE_COMMAND_SEND && command->getTime() > barrier )
+            commands.push_back( command );
+        else
+            output.push_back( command );
+    }
+
+    /* push remaining ones if broke above */
+    commands.splice( commands.end(), in );
+
+    if(commands.empty() && b_draining)
+        b_draining = false;
+
+    /* Now execute our selected commands */
+    while( !output.empty() )
+    {
+        AbstractCommand *command = output.front();
+        output.pop_front();
+
+        if( command->getType() == ES_OUT_PRIVATE_COMMAND_SEND )
             lastdts = command->getTime();
-            b_datasent = true;
-        }
 
-        commands.pop_front();
         command->Execute( out );
         delete command;
     }
-    pcr = lastdts;
-
-    if(commands.empty() && b_flushing)
-        b_flushing = false;
+    pcr = lastdts; /* Warn! no PCR update/lock release until execution */
 
     vlc_mutex_unlock(&lock);
 
@@ -336,7 +365,7 @@ void CommandsQueue::Abort( bool b_reset )
     {
         bufferinglevel = VLC_TS_INVALID;
         pcr = VLC_TS_INVALID;
-        b_flushing = false;
+        b_draining = false;
         b_eof = false;
     }
     vlc_mutex_unlock(&lock);
@@ -357,18 +386,17 @@ void CommandsQueue::setDrop( bool b )
     vlc_mutex_unlock(&lock);
 }
 
-void CommandsQueue::setFlush()
+void CommandsQueue::setDraining()
 {
     vlc_mutex_lock(&lock);
-    LockedCommit();
-    b_flushing = !commands.empty();
+    LockedSetDraining();
     vlc_mutex_unlock(&lock);
 }
 
-bool CommandsQueue::isFlushing() const
+bool CommandsQueue::isDraining() const
 {
     vlc_mutex_lock(const_cast<vlc_mutex_t *>(&lock));
-    bool b = b_flushing;
+    bool b = b_draining;
     vlc_mutex_unlock(const_cast<vlc_mutex_t *>(&lock));
     return b;
 }
@@ -377,8 +405,7 @@ void CommandsQueue::setEOF()
 {
     vlc_mutex_lock(&lock);
     b_eof = true;
-    LockedCommit();
-    b_flushing = !commands.empty();
+    LockedSetDraining();
     vlc_mutex_unlock(&lock);
 }
 
@@ -421,6 +448,12 @@ mtime_t CommandsQueue::getFirstDTS() const
     }
     vlc_mutex_unlock(const_cast<vlc_mutex_t *>(&lock));
     return i_firstdts;
+}
+
+void CommandsQueue::LockedSetDraining()
+{
+    LockedCommit();
+    b_draining = !commands.empty();
 }
 
 mtime_t CommandsQueue::getPCR() const

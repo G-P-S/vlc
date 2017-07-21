@@ -166,11 +166,19 @@ static int LoadDecoder( decoder_t *p_dec, bool b_packetizer,
     p_dec->pf_flush = NULL;
 
     es_format_Copy( &p_dec->fmt_in, p_fmt );
-    es_format_Init( &p_dec->fmt_out, UNKNOWN_ES, 0 );
+    es_format_Init( &p_dec->fmt_out, p_fmt->i_cat, 0 );
 
     /* Find a suitable decoder/packetizer module */
     if( !b_packetizer )
-        p_dec->p_module = module_need( p_dec, "decoder", "$codec", false );
+    {
+        const char caps[ES_CATEGORY_COUNT][16] = {
+            [VIDEO_ES] = "video decoder",
+            [AUDIO_ES] = "audio decoder",
+            [SPU_ES] = "spu decoder",
+        };
+        p_dec->p_module = module_need( p_dec, caps[p_dec->fmt_in.i_cat],
+                                       "$codec", false );
+    }
     else
         p_dec->p_module = module_need( p_dec, "packetizer", "$packetizer", false );
 
@@ -209,7 +217,6 @@ static int ReloadDecoder( decoder_t *p_dec, bool b_packetizer,
 {
     /* Copy p_fmt since it can be destroyed by UnloadDecoder */
     es_format_t fmt_in;
-    es_format_Init( &fmt_in, UNKNOWN_ES, 0 );
     if( es_format_Copy( &fmt_in, p_fmt ) != VLC_SUCCESS )
     {
         p_dec->p_owner->error = true;
@@ -271,7 +278,8 @@ static void DecoderUpdateFormatLocked( decoder_t *p_dec )
  * Buffers allocation callbacks for the decoders
  *****************************************************************************/
 static vout_thread_t *aout_request_vout( void *p_private,
-                                         vout_thread_t *p_vout, video_format_t *p_fmt, bool b_recyle )
+                                         vout_thread_t *p_vout,
+                                         const video_format_t *p_fmt, bool b_recyle )
 {
     decoder_t *p_dec = p_private;
     decoder_owner_sys_t *p_owner = p_dec->p_owner;
@@ -339,19 +347,12 @@ static int aout_update_format( decoder_t *p_dec )
 
         const int i_force_dolby = var_InheritInteger( p_dec, "force-dolby-surround" );
         if( i_force_dolby &&
-            (format.i_original_channels&AOUT_CHAN_PHYSMASK) ==
-                (AOUT_CHAN_LEFT|AOUT_CHAN_RIGHT) )
+            format.i_physical_channels == (AOUT_CHAN_LEFT|AOUT_CHAN_RIGHT) )
         {
             if( i_force_dolby == 1 )
-            {
-                format.i_original_channels = format.i_original_channels |
-                                             AOUT_CHAN_DOLBYSTEREO;
-            }
+                format.i_chan_mode |= AOUT_CHANMODE_DOLBYSTEREO;
             else /* i_force_dolby == 2 */
-            {
-                format.i_original_channels = format.i_original_channels &
-                                             ~AOUT_CHAN_DOLBYSTEREO;
-            }
+                format.i_chan_mode &= ~AOUT_CHANMODE_DOLBYSTEREO;
         }
 
         aout_request_vout_t request_vout = {
@@ -416,7 +417,9 @@ static int vout_update_format( decoder_t *p_dec )
         vout_thread_t *p_vout;
 
         if( !p_dec->fmt_out.video.i_width ||
-            !p_dec->fmt_out.video.i_height )
+            !p_dec->fmt_out.video.i_height ||
+            p_dec->fmt_out.video.i_width < p_dec->fmt_out.video.i_visible_width ||
+            p_dec->fmt_out.video.i_height < p_dec->fmt_out.video.i_visible_height )
         {
             /* Can't create a new vout without display size */
             return -1;
@@ -1678,7 +1681,7 @@ static decoder_t * CreateDecoder( vlc_object_t *p_parent,
     atomic_init( &p_owner->reload, RELOAD_NO_REQUEST );
     p_owner->b_idle = false;
 
-    es_format_Init( &p_owner->fmt, UNKNOWN_ES, 0 );
+    es_format_Init( &p_owner->fmt, fmt->i_cat, 0 );
 
     /* decoder fifo */
     p_owner->p_fifo = block_FifoNew();
@@ -1861,9 +1864,9 @@ static void DeleteDecoder( decoder_t * p_dec )
 }
 
 /* */
-static void DecoderUnsupportedCodec( decoder_t *p_dec, const es_format_t *fmt )
+static void DecoderUnsupportedCodec( decoder_t *p_dec, const es_format_t *fmt, bool b_decoding )
 {
-    if (fmt->i_codec != VLC_FOURCC('u','n','d','f')) {
+    if (fmt->i_codec != VLC_CODEC_UNKNOWN && fmt->i_codec) {
         const char *desc = vlc_fourcc_GetDescription(fmt->i_cat, fmt->i_codec);
         if (!desc || !*desc)
             desc = N_("No description for this codec");
@@ -1871,7 +1874,7 @@ static void DecoderUnsupportedCodec( decoder_t *p_dec, const es_format_t *fmt )
         vlc_dialog_display_error( p_dec, _("Codec not supported"),
             _("VLC could not decode the format \"%4.4s\" (%s)"),
             (char*)&fmt->i_codec, desc );
-    } else {
+    } else if( b_decoding ){
         msg_Err( p_dec, "could not identify codec" );
         vlc_dialog_display_error( p_dec, _("Unidentified codec"),
             _("VLC could not identify the audio or video codec" ) );
@@ -1900,7 +1903,7 @@ static decoder_t *decoder_New( vlc_object_t *p_parent, input_thread_t *p_input,
 
     if( !p_dec->p_module )
     {
-        DecoderUnsupportedCodec( p_dec, fmt );
+        DecoderUnsupportedCodec( p_dec, fmt, !p_sout );
 
         DeleteDecoder( p_dec );
         return NULL;
@@ -2162,7 +2165,7 @@ int input_DecoderSetCcState( decoder_t *p_dec, bool b_decode, int i_channel )
         }
         else if( !p_cc->p_module )
         {
-            DecoderUnsupportedCodec( p_dec, &fmt );
+            DecoderUnsupportedCodec( p_dec, &fmt, true );
             input_DecoderDelete(p_cc);
             return VLC_EGENERIC;
         }

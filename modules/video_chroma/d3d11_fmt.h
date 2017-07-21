@@ -32,8 +32,6 @@
 
 DEFINE_GUID(GUID_CONTEXT_MUTEX, 0x472e8835, 0x3f8e, 0x4f93, 0xa0, 0xcb, 0x25, 0x79, 0x77, 0x6c, 0xed, 0x86);
 
-typedef struct vlc_va_surface_t vlc_va_surface_t;
-
 /* owned by the vout for VLC_CODEC_D3D11_OPAQUE */
 struct picture_sys_t
 {
@@ -44,19 +42,20 @@ struct picture_sys_t
     };
     ID3D11DeviceContext           *context;
     unsigned                      slice_index;
-    ID3D11VideoProcessorInputView *processorInput; /* when used as processor input */
+    ID3D11VideoProcessorInputView  *processorInput;  /* when used as processor input */
+    ID3D11VideoProcessorOutputView *processorOutput; /* when used as processor output */
     ID3D11ShaderResourceView      *resourceView[D3D11_MAX_SHADER_VIEW];
     DXGI_FORMAT                   decoderFormat;
     DXGI_FORMAT                   formatTexture;
 };
 
-/* owned by the hardware decoder */
-struct va_pic_context
+#include "../codec/avcodec/va_surface.h"
+
+static inline picture_sys_t *ActivePictureSys(picture_t *p_pic)
 {
-    picture_context_t         s;
-    vlc_va_surface_t          *va_surface;
-    struct picture_sys_t      picsys;
-};
+    struct va_pic_context *pic_ctx = (struct va_pic_context*)p_pic->context;
+    return pic_ctx ? &pic_ctx->picsys : p_pic->p_sys;
+}
 
 /* index to use for texture/resource that use a known DXGI format
  * (ie not DXGI_FORMAT_UNKNWON) */
@@ -76,32 +75,26 @@ static inline void AcquirePictureSys(picture_sys_t *p_sys)
         ID3D11VideoDecoderOutputView_AddRef(p_sys->decoder);
     if (p_sys->processorInput)
         ID3D11VideoProcessorInputView_AddRef(p_sys->processorInput);
+    if (p_sys->processorOutput)
+        ID3D11VideoProcessorOutputView_AddRef(p_sys->processorOutput);
 }
 
 static inline void ReleasePictureSys(picture_sys_t *p_sys)
 {
     for (int i=0; i<D3D11_MAX_SHADER_VIEW; i++) {
-        if (p_sys->resourceView[i]) {
+        if (p_sys->resourceView[i])
             ID3D11ShaderResourceView_Release(p_sys->resourceView[i]);
-            p_sys->resourceView[i] = NULL;
-        }
-        if (p_sys->texture[i]) {
+        if (p_sys->texture[i])
             ID3D11Texture2D_Release(p_sys->texture[i]);
-            p_sys->texture[i] = NULL;
-        }
     }
-    if (p_sys->context) {
+    if (p_sys->context)
         ID3D11DeviceContext_Release(p_sys->context);
-        p_sys->context = NULL;
-    }
-    if (p_sys->decoder) {
+    if (p_sys->decoder)
         ID3D11VideoDecoderOutputView_Release(p_sys->decoder);
-        p_sys->decoder = NULL;
-    }
-    if (p_sys->processorInput) {
+    if (p_sys->processorInput)
         ID3D11VideoProcessorInputView_Release(p_sys->processorInput);
-        p_sys->processorInput = NULL;
-    }
+    if (p_sys->processorOutput)
+        ID3D11VideoProcessorOutputView_Release(p_sys->processorOutput);
 }
 
 /* map texture planes to resource views */

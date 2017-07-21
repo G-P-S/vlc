@@ -695,13 +695,14 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     aout_sys_t *sys = aout->sys;
 
     /* Sample format specification */
-    struct pa_sample_spec ss;
-    pa_encoding_t encoding = PA_ENCODING_INVALID;
+    struct pa_sample_spec ss = { .format = PA_SAMPLE_INVALID };
+    pa_encoding_t encoding = PA_ENCODING_PCM;
 
     switch (fmt->i_format)
     {
         case VLC_CODEC_FL64:
             fmt->i_format = VLC_CODEC_FL32;
+            /* fall through */
         case VLC_CODEC_FL32:
             ss.format = PA_SAMPLE_FLOAT32NE;
             break;
@@ -718,33 +719,29 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
             fmt->i_format = VLC_CODEC_SPDIFL;
             fmt->i_bytes_per_frame = 4;
             fmt->i_frame_length = 1;
-            fmt->i_physical_channels = fmt->i_original_channels = AOUT_CHANS_2_0;
+            fmt->i_physical_channels = AOUT_CHANS_2_0;
             fmt->i_channels = 2;
             encoding = PA_ENCODING_AC3_IEC61937;
-            ss.format = PA_SAMPLE_S16NE;
             break;
         case VLC_CODEC_EAC3:
             fmt->i_format = VLC_CODEC_SPDIFL;
             fmt->i_bytes_per_frame = 4;
             fmt->i_frame_length = 1;
-            fmt->i_physical_channels = fmt->i_original_channels = AOUT_CHANS_2_0;
+            fmt->i_physical_channels = AOUT_CHANS_2_0;
             fmt->i_channels = 2;
             encoding = PA_ENCODING_EAC3_IEC61937;
-            ss.format = PA_SAMPLE_S16NE;
             break;
         /* case VLC_CODEC_MPGA:
             fmt->i_format = VLC_CODEC_SPDIFL FIXME;
             encoding = PA_ENCODING_MPEG_IEC61937;
-            ss.format = PA_SAMPLE_S16NE;
             break;*/
         case VLC_CODEC_DTS:
             fmt->i_format = VLC_CODEC_SPDIFL;
             fmt->i_bytes_per_frame = 4;
             fmt->i_frame_length = 1;
-            fmt->i_physical_channels = fmt->i_original_channels = AOUT_CHANS_2_0;
+            fmt->i_physical_channels = AOUT_CHANS_2_0;
             fmt->i_channels = 2;
             encoding = PA_ENCODING_DTS_IEC61937;
-            ss.format = PA_SAMPLE_S16NE;
             break;
         default:
             if (!AOUT_FMT_LINEAR(fmt) || aout_FormatNbChannels(fmt) == 0)
@@ -799,16 +796,25 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     pa_cvolume_init(&sys->cvolume);
     sys->first_pts = VLC_TS_INVALID;
 
-    pa_format_info *formatv[2];
-    unsigned formatc = 0;
+    pa_format_info *formatv = pa_format_info_new();
+    formatv->encoding = encoding;
+    pa_format_info_set_rate(formatv, ss.rate);
+    if (ss.format != PA_SAMPLE_INVALID)
+        pa_format_info_set_sample_format(formatv, ss.format);
 
-    /* Favor digital pass-through if available*/
-    if (encoding != PA_ENCODING_INVALID) {
-        formatv[formatc] = pa_format_info_new();
-        formatv[formatc]->encoding = encoding;
-        pa_format_info_set_rate(formatv[formatc], ss.rate);
-        pa_format_info_set_channels(formatv[formatc], ss.channels);
-        formatc++;
+    if (fmt->channel_type == AUDIO_CHANNEL_TYPE_AMBISONICS)
+    {
+        fmt->channel_type = AUDIO_CHANNEL_TYPE_BITMAP;
+
+        /* Setup low latency in order to quickly react to ambisonics
+         * filters viewpoint changes. */
+        flags |= PA_STREAM_ADJUST_LATENCY;
+        attr.tlength = pa_usec_to_bytes(2 * AOUT_MIN_PREPARE_TIME, &ss);
+    }
+
+    if (encoding != PA_ENCODING_PCM)
+    {
+        pa_format_info_set_channels(formatv, ss.channels);
 
         /* FIX flags are only permitted for PCM, and there is no way to pass
          * different flags for different formats... */
@@ -845,7 +851,6 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
         }
         if (fmt->i_physical_channels & AOUT_CHAN_LFE)
             map.map[map.channels++] = PA_CHANNEL_POSITION_LFE;
-        fmt->i_original_channels = fmt->i_physical_channels;
 
         static_assert(AOUT_CHAN_MAX == 9, "Missing channels");
 
@@ -862,14 +867,8 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
             msg_Dbg(aout, "using %s channel map", (name != NULL) ? name : "?");
         }
 
-        /* PCM */
-        formatv[formatc] = pa_format_info_new();
-        formatv[formatc]->encoding = PA_ENCODING_PCM;
-        pa_format_info_set_sample_format(formatv[formatc], ss.format);
-        pa_format_info_set_rate(formatv[formatc], ss.rate);
-        pa_format_info_set_channels(formatv[formatc], ss.channels);
-        pa_format_info_set_channel_map(formatv[formatc], &map);
-        formatc++;
+        pa_format_info_set_channels(formatv, ss.channels);
+        pa_format_info_set_channel_map(formatv, &map);
     }
 
     /* Create a playback stream */
@@ -900,12 +899,11 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
 
     pa_threaded_mainloop_lock(sys->mainloop);
     pa_stream *s = pa_stream_new_extended(sys->context, "audio stream",
-                                          formatv, formatc, props);
+                                          &formatv, 1, props);
 
     if (likely(props != NULL))
         pa_proplist_free(props);
-    for (unsigned i = 0; i < formatc; i++)
-        pa_format_info_free(formatv[i]);
+    pa_format_info_free(formatv);
 
     if (s == NULL) {
         pa_threaded_mainloop_unlock(sys->mainloop);
@@ -927,7 +925,7 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     if (pa_stream_connect_playback(s, sys->sink_force, &attr, flags,
                                    cvolume, NULL) < 0
      || stream_wait(s, sys->mainloop)) {
-        if (encoding != PA_ENCODING_INVALID)
+        if (encoding != PA_ENCODING_PCM)
             vlc_pa_error(aout, "digital pass-through stream connection failure",
                          sys->context);
         else
@@ -939,7 +937,7 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     free(sys->sink_force);
     sys->sink_force = NULL;
 
-    if (encoding == PA_ENCODING_INVALID)
+    if (encoding == PA_ENCODING_PCM)
     {
         const struct pa_sample_spec *spec = pa_stream_get_sample_spec(s);
         fmt->i_rate = spec->rate;

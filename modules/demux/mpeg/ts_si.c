@@ -25,6 +25,7 @@
 #include <vlc_meta.h>
 #include <vlc_epg.h>
 #include <vlc_charset.h>   /* FromCharset, for EIT */
+#include <vlc_input.h>
 
 #ifndef _DVBPSI_DVBPSI_H_
  #include <dvbpsi/dvbpsi.h>
@@ -35,8 +36,11 @@
 #include <dvbpsi/eit.h> /* EIT support */
 #include <dvbpsi/tot.h> /* TDT support */
 #include <dvbpsi/dr.h>
+#include <dvbpsi/psi.h>
 
 #include "ts_si.h"
+#include "ts_arib.h"
+#include "ts_decoders.h"
 
 #include "ts_pid.h"
 #include "ts_streams_private.h"
@@ -49,6 +53,7 @@
 
 #include <time.h>
 #include <assert.h>
+#include <limits.h>
 
 #ifndef SI_DEBUG_EIT
  #define SI_DEBUG_TIMESHIFT(t)
@@ -62,16 +67,6 @@
     } while(0);
 #endif
 
-static inline char *grab_notempty( char **ppsz )
-{
-    char *psz_ret = NULL;
-    if( *ppsz && **ppsz )
-    {
-        psz_ret = *ppsz;
-        *ppsz = NULL;
-    }
-    return psz_ret;
-}
 
 static void SINewTableCallBack( dvbpsi_t *h, uint8_t i_table_id,
                                 uint16_t i_extension, void *p_pid_cbdata );
@@ -130,10 +125,29 @@ static char *EITConvertToUTF8( demux_t *p_demux,
     return vlc_from_EIT( psz_instring, i_length );
 }
 
+#define attach_SI_decoders(i_pid, name, member) do {\
+    ts_pid_t *pid = GetPID(p_sys, i_pid);\
+    if ( PIDSetup( p_demux, TYPE_SI, pid, NULL ) )\
+    {\
+        if( !ts_attach_SI_Tables_Decoders( pid ) )\
+        {\
+            msg_Err( p_demux, "Can't attach SI table decoders for pid %d", i_pid );\
+            PIDRelease( p_demux, pid );\
+        }\
+        else\
+        {\
+            sdt->u.p_si->member = pid;\
+            SetPIDFilter( p_demux->p_sys, pid, true );\
+            msg_Dbg( p_demux, "  * pid=%d listening for "name, i_pid );\
+        }\
+    }\
+    } while(0)\
+
 static void SDTCallBack( demux_t *p_demux, dvbpsi_sdt_t *p_sdt )
 {
     demux_sys_t          *p_sys = p_demux->p_sys;
     ts_pid_t             *sdt = GetPID(p_sys, TS_SI_SDT_PID);
+    ts_pat_t             *p_pat = ts_pid_Get(&p_sys->pids, 0)->u.p_pat;
     dvbpsi_sdt_service_t *p_srv;
 
     msg_Dbg( p_demux, "SDTCallBack called" );
@@ -149,38 +163,12 @@ static void SDTCallBack( demux_t *p_demux, dvbpsi_sdt_t *p_sdt )
     /* First callback */
     if( sdt->u.p_si->i_version == -1 )
     {
-        ts_pid_t *eitpid = GetPID(p_sys, TS_SI_EIT_PID);
-        if ( PIDSetup( p_demux, TYPE_SI, eitpid, NULL ) )
-        {
-            if( !ts_attach_SI_Tables_Decoders( eitpid ) )
-            {
-                msg_Err( p_demux, "Can't attach SI table decoders for pid %d", TS_SI_EIT_PID );
-                PIDRelease( p_demux, eitpid );
-            }
-            else
-            {
-                sdt->u.p_si->eitpid = eitpid;
-                SetPIDFilter( p_demux->p_sys, eitpid, true );
-                msg_Dbg( p_demux, "  * pid=%"PRIu16" listening for EIT", eitpid->i_pid );
-            }
-        }
-
-        ts_pid_t *tdtpid = GetPID(p_sys, TS_SI_TDT_PID);
-        if ( PIDSetup( p_demux, TYPE_SI, tdtpid, NULL ) )
-        {
-            if( !ts_attach_SI_Tables_Decoders( tdtpid ) )
-            {
-                msg_Err( p_demux, "Can't attach SI table decoders for pid %d", TS_SI_TDT_PID );
-                PIDRelease( p_demux, tdtpid );
-            }
-            else
-            {
-                sdt->u.p_si->tdtpid = tdtpid;
-                SetPIDFilter( p_demux->p_sys, tdtpid, true );
-                msg_Dbg( p_demux, "  * pid=%"PRIu16" listening for TDT", tdtpid->i_pid );
-            }
-        }
+        attach_SI_decoders( TS_SI_EIT_PID, "EIT", eitpid );
+        attach_SI_decoders( TS_SI_TDT_PID, "TDT", tdtpid );
+        if( p_sys->standard == TS_STANDARD_ARIB )
+            attach_SI_decoders( TS_ARIB_CDT_PID, "CDT", cdtpid );
     }
+
 
     msg_Dbg( p_demux, "new SDT ts_id=%"PRIu16" version=%"PRIu8" current_next=%d "
              "network_id=%"PRIu16,
@@ -192,6 +180,7 @@ static void SDTCallBack( demux_t *p_demux, dvbpsi_sdt_t *p_sdt )
 
     for( p_srv = p_sdt->p_first_service; p_srv; p_srv = p_srv->p_next )
     {
+        ts_pmt_t            *p_pmt = ts_pat_Get_pmt( p_pat, p_srv->i_service_id );
         vlc_meta_t          *p_meta;
         dvbpsi_descriptor_t *p_dr;
 
@@ -280,6 +269,42 @@ static void SDTCallBack( demux_t *p_demux, dvbpsi_sdt_t *p_sdt )
                     psz_type = ppsz_type[pD->i_service_type];
                 free( str1 );
                 free( str2 );
+            }
+            else if( p_sys->standard == TS_STANDARD_ARIB &&
+                     p_dr->i_tag == TS_ARIB_DR_LOGO_TRANSMISSION && p_pmt )
+            {
+                ts_arib_logo_dr_t *p_logodr = ts_arib_logo_dr_Decode( p_dr->p_data, p_dr->i_length );
+                if( p_logodr )
+                {
+                    if( p_logodr->i_transmission_mode == 0 )
+                    {
+                        p_pmt->arib.i_logo_id = p_logodr->i_logo_id;
+                        p_pmt->arib.i_download_id = p_logodr->i_download_data_id;
+                    }
+                    else if( p_logodr->i_transmission_mode == 1 )
+                    {
+                        p_pmt->arib.i_logo_id = p_logodr->i_logo_id;
+                    }
+                    else /* TODO simple logo identifier */
+                    {
+
+                    }
+
+                    if( p_pmt->arib.i_logo_id > -1 )
+                    {
+                        char *psz_name;
+                        if( asprintf( &psz_name, "attachment://onid[%"PRIx16"]_channel_logo_id[%"PRIx16"]q[%d]",
+                                      p_sdt->i_network_id, p_logodr->i_logo_id,
+                                      TS_ARIB_LOGO_TYPE_HD_LARGE ) > -1 )
+                        {
+                            vlc_meta_SetArtURL( p_meta, psz_name );
+                            vlc_meta_AddExtra( p_meta, "ARTURL", psz_name );
+                            free( psz_name );
+                        }
+                    }
+
+                    ts_arib_logo_dr_Delete( p_logodr );
+                }
             }
         }
 
@@ -374,6 +399,86 @@ static void TDTCallBack( demux_t *p_demux, dvbpsi_tot_t *p_tdt )
     es_out_Control( p_demux->out, ES_OUT_SET_EPG_TIME, (int64_t) p_sys->i_network_time );
 }
 
+static void EITExtractDrDescItems( demux_t *p_demux, const dvbpsi_extended_event_dr_t *pE,
+                                   vlc_epg_event_t *p_evt )
+{
+    demux_sys_t *p_sys = p_demux->p_sys;
+
+    if( pE->i_entry_count )
+    {
+        char **ppsz_prev = NULL;
+        /* Continued items from previous descriptor (ARIB) */
+        if( p_evt->i_description_items > 0 )
+            ppsz_prev = &p_evt->description_items[p_evt->i_description_items - 1].psz_value;
+
+        for( int i = 0; i < pE->i_entry_count; i++ )
+        {
+            char *psz_key = NULL;
+            /* Continued items have NULL key */
+            const bool b_appending = ( pE->i_item_description_length[i] == 0 );
+            if( !b_appending )
+            {
+                void *p_realloc = NULL;
+                if( (size_t)p_evt->i_description_items < SIZE_MAX / sizeof(*p_evt->description_items) )
+                {
+                    p_realloc = realloc( p_evt->description_items,
+                                        (p_evt->i_description_items + 1) *
+                                         sizeof(*p_evt->description_items) );
+                }
+                if( !p_realloc )
+                {
+                    free( psz_key );
+                    break;
+                }
+                p_evt->description_items = p_realloc;
+
+                psz_key = EITConvertToUTF8( p_demux,
+                                            pE->i_item_description[i],
+                                            pE->i_item_description_length[i],
+                                            p_sys->b_broken_charset );
+                if( !psz_key )
+                {
+                    ppsz_prev = NULL;
+                    continue;
+                }
+            }
+            else if( ppsz_prev == NULL )
+                continue;
+
+            char *psz_itm = EITConvertToUTF8( p_demux,
+                                              pE->i_item[i], pE->i_item_length[i],
+                                              p_sys->b_broken_charset );
+            if( !psz_itm )
+            {
+                free( psz_key );
+                ppsz_prev = NULL;
+                continue;
+            }
+
+            msg_Dbg( p_demux, "       - desc='%s' item='%s'", psz_key, psz_itm );
+            if( b_appending )
+            {
+                /* Continued items */
+                size_t i_total = strlen(*ppsz_prev) + strlen(psz_itm) + 1;
+                char *psz_realloc = realloc( *ppsz_prev, i_total );
+                if( psz_realloc )
+                {
+                    *ppsz_prev = psz_realloc;
+                    strcat( *ppsz_prev, psz_itm );
+                }
+                free( psz_itm );
+            }
+            else
+            {
+                p_evt->description_items[p_evt->i_description_items].psz_key = psz_key;
+                p_evt->description_items[p_evt->i_description_items].psz_value = psz_itm;
+                ppsz_prev = &p_evt->description_items[p_evt->i_description_items].psz_value;
+                p_evt->i_description_items++;
+            }
+        }
+    }
+}
+
 static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
 {
     demux_sys_t        *p_sys = p_demux->p_sys;
@@ -411,12 +516,8 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
     for( p_evt = p_eit->p_first_event; p_evt; p_evt = p_evt->p_next )
     {
         dvbpsi_descriptor_t *p_dr;
-        char                *psz_name = NULL;
-        char                *psz_text = NULL;
-        char                *psz_extra = NULL;
         int64_t i_start;
         int i_duration;
-        int i_min_age = 0;
 
         i_start = EITConvertStartTime( p_evt->i_start_time );
         SI_DEBUG_TIMESHIFT(i_start);
@@ -434,6 +535,21 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
                  p_evt->i_event_id, i_start, i_duration,
                  p_evt->i_running_status, p_evt->b_free_ca );
 
+        /* */
+        if( i_start <= 0 )
+            continue;
+
+        vlc_epg_event_t *p_epgevt = vlc_epg_event_New( p_evt->i_event_id,
+                                                       i_start, i_duration );
+        if( !p_epgevt )
+            continue;
+
+        if( !vlc_epg_AddEvent( p_epg, p_epgevt ) )
+        {
+            vlc_epg_event_Delete( p_epgevt );
+            continue;
+        }
+
         for( p_dr = p_evt->p_first_descriptor; p_dr; p_dr = p_dr->p_next )
         {
             switch(p_dr->i_tag)
@@ -444,17 +560,20 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
 
                 /* Only take first description, as we don't handle language-info
                    for epg atm*/
-                if( pE && psz_name == NULL )
+                if( pE )
                 {
-                    psz_name = EITConvertToUTF8( p_demux,
-                                                 pE->i_event_name, pE->i_event_name_length,
-                                                 p_sys->b_broken_charset );
-                    free( psz_text );
-                    psz_text = EITConvertToUTF8( p_demux,
-                                                 pE->i_text, pE->i_text_length,
-                                                 p_sys->b_broken_charset );
+                    char **ppsz = &p_epgevt->psz_name;
+                    free( *ppsz );
+                    *ppsz = EITConvertToUTF8( p_demux,
+                                              pE->i_event_name, pE->i_event_name_length,
+                                              p_sys->b_broken_charset );
+                    ppsz = &p_epgevt->psz_short_description;
+                    free( *ppsz );
+                    *ppsz = EITConvertToUTF8( p_demux,
+                                              pE->i_text, pE->i_text_length,
+                                              p_sys->b_broken_charset );
                     msg_Dbg( p_demux, "    - short event lang=%3.3s '%s' : '%s'",
-                             pE->i_iso_639_code, psz_name, psz_text );
+                             pE->i_iso_639_code, p_epgevt->psz_name, *ppsz );
                 }
             }
                 break;
@@ -477,51 +596,25 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
                         {
                             msg_Dbg( p_demux, "       - text='%s'", psz_text );
 
-                            if( psz_extra )
+                            if( p_epgevt->psz_description )
                             {
-                                size_t i_extra = strlen( psz_extra ) + strlen( psz_text ) + 1;
-                                char *psz_realloc = realloc( psz_extra, i_extra );
+                                size_t i_total = strlen( p_epgevt->psz_description ) + strlen( psz_text ) + 1;
+                                char *psz_realloc = realloc( p_epgevt->psz_description, i_total );
                                 if( psz_realloc )
                                 {
-                                    psz_extra = psz_realloc;
-                                    strcat( psz_extra, psz_text );
+                                    p_epgevt->psz_description = psz_realloc;
+                                    strcat( psz_realloc, psz_text );
                                 }
                                 free( psz_text );
                             }
                             else
                             {
-                                psz_extra = psz_text;
+                                p_epgevt->psz_description = psz_text;
                             }
                         }
                     }
 
-                    for( int i = 0; i < pE->i_entry_count; i++ )
-                    {
-                        char *psz_dsc = EITConvertToUTF8( p_demux,
-                                                          pE->i_item_description[i],
-                                                          pE->i_item_description_length[i],
-                                                          p_sys->b_broken_charset );
-                        char *psz_itm = EITConvertToUTF8( p_demux,
-                                                          pE->i_item[i], pE->i_item_length[i],
-                                                          p_sys->b_broken_charset );
-
-                        if( psz_dsc && psz_itm )
-                        {
-                            msg_Dbg( p_demux, "       - desc='%s' item='%s'", psz_dsc, psz_itm );
-#if 0
-                            psz_extra = xrealloc( psz_extra,
-                                         strlen(psz_extra) + strlen(psz_dsc) +
-                                         strlen(psz_itm) + 3 + 1 );
-                            strcat( psz_extra, "(" );
-                            strcat( psz_extra, psz_dsc );
-                            strcat( psz_extra, " " );
-                            strcat( psz_extra, psz_itm );
-                            strcat( psz_extra, ")" );
-#endif
-                        }
-                        free( psz_dsc );
-                        free( psz_itm );
-                    }
+                    EITExtractDrDescItems( p_demux, pE, p_epgevt );
                 }
             }
                 break;
@@ -531,6 +624,7 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
                 dvbpsi_parental_rating_dr_t *pR = dvbpsi_DecodeParentalRatingDr( p_dr );
                 if ( pR )
                 {
+                    int i_min_age = 0;
                     for ( int i = 0; i < pR->i_ratings_number; i++ )
                     {
                         const dvbpsi_parental_rating_t *p_rating = & pR->p_parental_rating[ i ];
@@ -542,6 +636,7 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
                                      i_min_age );
                         }
                     }
+                    p_epgevt->i_rating = i_min_age;
                 }
             }
                 break;
@@ -569,27 +664,6 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
             default:
                 break;
         }
-
-        /* */
-        if( i_start > 0 )
-        {
-            vlc_epg_event_t *p_epgevt = vlc_epg_event_New( p_evt->i_event_id,
-                                                           i_start, i_duration );
-            if( p_epgevt )
-            {
-                p_epgevt->psz_name = grab_notempty( &psz_name );
-                p_epgevt->psz_short_description = grab_notempty( &psz_text );
-                p_epgevt->psz_description = grab_notempty( &psz_extra );
-                p_epgevt->i_rating = i_min_age;
-                if( !vlc_epg_AddEvent( p_epg, p_epgevt ) )
-                    vlc_epg_event_Delete( p_epgevt );
-            }
-        }
-
-        free( psz_name );
-        free( psz_text );
-
-        free( psz_extra );
     }
 
     /* Update "now playing" field */
@@ -614,6 +688,76 @@ static void EITCallBack( demux_t *p_demux, dvbpsi_eit_t *p_eit )
     vlc_epg_Delete( p_epg );
 
     dvbpsi_eit_delete( p_eit );
+}
+
+static void ARIB_CDT_RawCallback( dvbpsi_t *p_handle, const dvbpsi_psi_section_t* p_section,
+                                  void *p_cdtpid )
+{
+    VLC_UNUSED(p_cdtpid);
+    demux_t *p_demux = (demux_t *) p_handle->p_sys;
+    demux_sys_t *p_sys = p_demux->p_sys;
+    const ts_pat_t *p_pat = GetPID(p_demux->p_sys, 0)->u.p_pat;
+
+    while( p_section )
+    {
+        const uint8_t *p_data = p_section->p_payload_start;
+        size_t i_data = p_section->p_payload_end - p_section->p_payload_start;
+
+        if( i_data < (6U + 7 + 1) || p_data[2] != TS_ARIB_CDT_DATA_TYPE_LOGO )
+            continue;
+
+        uint16_t i_onid = (p_data[0] << 8) | p_data[1];
+        uint16_t i_dr_len = ((p_data[3] & 0x0F) << 4) | p_data[4];
+        if( i_data < i_dr_len + (6U + 7 + 1) )
+            continue;
+
+        /* STD-B21 A.5.4 (Japanese spec only) */
+
+        const uint8_t *p_dmb = &p_data[5 + i_dr_len];
+        size_t i_dmb = i_data - 5 - i_dr_len;
+
+        while( i_dmb > 7 )
+        {
+            uint8_t i_logo_type = p_dmb[0];
+            uint16_t i_logo_id = ((p_dmb[1] & 0x01) << 8) | p_dmb[2];
+            uint16_t i_size = (p_dmb[5] << 8) | p_dmb[6];
+
+            if( 7U + i_size > i_dmb )
+                break;
+
+            for( int i=0; i<p_pat->programs.i_size; i++ )
+            {
+                ts_pmt_t *p_pmt = p_pat->programs.p_elems[i]->u.p_pmt;
+                if( p_pmt->arib.i_logo_id == i_logo_id && i_logo_type == TS_ARIB_LOGO_TYPE_HD_LARGE )
+                {
+                    char *psz_name;
+                    if( asprintf( &psz_name, "onid[%"PRIx16"]_channel_logo_id[%"PRIx16"]q[%d]",
+                                  i_onid, i_logo_id, i_logo_type ) > -1 )
+                    {
+                        uint8_t *p_png; size_t i_png;
+                        if( !vlc_dictionary_has_key( &p_sys->attachments, psz_name ) &&
+                            ts_arib_inject_png_palette( &p_dmb[7], i_size, &p_png, &i_png ) )
+                        {
+                            input_attachment_t *p_att = vlc_input_attachment_New(
+                                                        psz_name, "image/png", NULL, p_png, i_png );
+                            if( p_att )
+                            {
+                                vlc_dictionary_insert( &p_sys->attachments, psz_name, p_att );
+                                p_demux->info.i_update |= INPUT_UPDATE_META;
+                            }
+                            free( p_png );
+                        }
+                        free( psz_name );
+                    }
+                }
+            }
+
+            i_dmb -= 7 + i_size;
+            p_dmb += 7 + i_size;
+        }
+
+        p_section = p_section->p_next;
+    }
 }
 
 static void SINewTableCallBack( dvbpsi_t *h, uint8_t i_table_id,
@@ -648,6 +792,12 @@ static void SINewTableCallBack( dvbpsi_t *h, uint8_t i_table_id,
     {
         if( !dvbpsi_tot_attach( h, i_table_id, i_extension, (dvbpsi_tot_callback)TDTCallBack, p_demux ) )
             msg_Err( p_demux, "SINewTableCallback: failed attaching TDTCallback" );
+    }
+    else if( p_pid->i_pid == TS_ARIB_CDT_PID && i_table_id == TS_ARIB_CDT_TABLE_ID )
+    {
+        if( dvbpsi_demuxGetSubDec( (dvbpsi_demux_t *) h->p_decoder, i_table_id, i_extension ) == NULL &&
+            !ts_dvbpsi_AttachRawSubDecoder( h, i_table_id, i_extension, ARIB_CDT_RawCallback, p_pid ) )
+            msg_Err( p_demux, "SINewTableCallback: failed attaching ARIB_CDT_RawCallback" );
     }
 }
 

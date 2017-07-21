@@ -19,7 +19,7 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/VLCAddonsWindowController.h gui/macosx/VLCAddonsWindowController.m \
 	gui/macosx/applescript.h gui/macosx/applescript.m \
 	gui/macosx/AppleRemote.h gui/macosx/AppleRemote.m \
-	gui/macosx/CompatibilityFixes.h \
+	gui/macosx/CompatibilityFixes.h gui/macosx/CompatibilityFixes.m \
 	gui/macosx/VLCControlsBarCommon.m gui/macosx/VLCControlsBarCommon.h \
 	gui/macosx/VLCDocumentController.m gui/macosx/VLCDocumentController.h \
 	gui/macosx/VLCMainWindowControlsBar.m gui/macosx/VLCMainWindowControlsBar.h \
@@ -75,13 +75,19 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/VLCHUDSliderCell.h gui/macosx/VLCHUDSliderCell.m \
 	gui/macosx/VLCHUDButtonCell.h gui/macosx/VLCHUDButtonCell.m \
 	gui/macosx/VLCHUDCheckboxCell.h gui/macosx/VLCHUDCheckboxCell.m \
-	gui/macosx/VLCHUDRadiobuttonCell.h gui/macosx/VLCHUDRadiobuttonCell.m \
 	gui/macosx/VLCHUDTextFieldCell.h gui/macosx/VLCHUDTextFieldCell.m \
+	gui/macosx/VLCHUDScroller.h gui/macosx/VLCHUDScroller.m \
+	gui/macosx/VLCHUDOutlineView.h gui/macosx/VLCHUDOutlineView.m \
+	gui/macosx/VLCHUDTableView.h gui/macosx/VLCHUDTableView.m \
+	gui/macosx/VLCHUDTableCornerView.h gui/macosx/VLCHUDTableCornerView.m \
+	gui/macosx/VLCHUDSegmentedCell.h gui/macosx/VLCHUDSegmentedCell.m \
+	gui/macosx/VLCHUDStepperCell.h gui/macosx/VLCHUDStepperCell.m \
+	gui/macosx/VLCHUDPopUpButtonCell.h gui/macosx/VLCHUDPopUpButtonCell.m \
 	gui/macosx/VLCInputManager.h gui/macosx/VLCInputManager.m \
 	gui/macosx/VLCMainWindow.h gui/macosx/VLCMainWindow.m \
 	gui/macosx/VLCRendererDiscovery.h gui/macosx/VLCRendererDiscovery.m \
 	gui/macosx/VLCRendererItem.h gui/macosx/VLCRendererItem.m \
-	gui/macosx/VLCRendererDialog.h gui/macosx/VLCRendererDialog.m \
+	gui/macosx/VLCRendererMenuController.h gui/macosx/VLCRendererMenuController.m \
 	gui/macosx/VLCResumeDialogController.h gui/macosx/VLCResumeDialogController.m \
 	gui/macosx/VLCTrackSynchronizationWindowController.h gui/macosx/VLCTrackSynchronizationWindowController.m \
 	gui/macosx/VLCVideoEffectsWindowController.h gui/macosx/VLCVideoEffectsWindowController.m \
@@ -90,7 +96,11 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/VLCDefaultValueSlider.h gui/macosx/VLCDefaultValueSlider.m \
 	gui/macosx/VLCDefaultValueSliderCell.h gui/macosx/VLCDefaultValueSliderCell.m \
 	gui/macosx/VLCImageButton.h gui/macosx/VLCImageButton.m \
-	gui/macosx/VLCTimeField.h gui/macosx/VLCTimeField.m
+	gui/macosx/VLCTintedImageButtonCell.h gui/macosx/VLCTintedImageButtonCell.m \
+	gui/macosx/VLCTimeField.h gui/macosx/VLCTimeField.m \
+	gui/macosx/VLCHexNumberFormatter.h gui/macosx/VLCHexNumberFormatter.m \
+	gui/macosx/VLCSlider.h gui/macosx/VLCSlider.m \
+	gui/macosx/VLCSliderCell.h gui/macosx/VLCSliderCell.m
 
 # User interface compilation
 
@@ -103,7 +113,6 @@ nodist_libmacosx_plugin_la_SOURCES = \
 	gui/macosx/UI/CoreDialogs.nib \
 	gui/macosx/UI/DetachedVideoWindow.nib \
 	gui/macosx/UI/ErrorPanel.nib \
-	gui/macosx/UI/FSPanel.nib \
 	gui/macosx/UI/Help.nib \
 	gui/macosx/UI/LogMessageWindow.nib \
 	gui/macosx/UI/MainMenu.nib \
@@ -134,7 +143,6 @@ EXTRA_DIST += \
 	gui/macosx/UI/CoreDialogs.xib \
 	gui/macosx/UI/DetachedVideoWindow.xib \
 	gui/macosx/UI/ErrorPanel.xib \
-	gui/macosx/UI/FSPanel.xib \
 	gui/macosx/UI/Help.xib \
 	gui/macosx/UI/LogMessageWindow.xib \
 	gui/macosx/UI/MainMenu.xib \
@@ -572,20 +580,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-previous-6btns-dark-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-previous-6btns-dark.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-previous-6btns-dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progressbar-fill-left_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progressbar-fill-left_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progressbar-fill-middle_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progressbar-fill-middle_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progressbar-fill-right_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progressbar-fill-right_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-knob_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-knob_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-track-wrapper-left_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-track-wrapper-left_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-track-wrapper-middle_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-track-wrapper-middle_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-track-wrapper-right_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-progression-track-wrapper-right_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-repeat-all-blue-pressed_dark.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-repeat-all-blue-pressed_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-repeat-all-blue_dark.png \
@@ -684,20 +678,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_yosemite/ys-previous-6btns-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-previous-6btns.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-previous-6btns@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-fill-left.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-fill-left@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-fill-middle.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-fill-middle@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-fill-right.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-fill-right@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-knob.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-knob@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-track-wrapper-left.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-track-wrapper-left@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-track-wrapper-middle.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-track-wrapper-middle@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-track-wrapper-right.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-progression-track-wrapper-right@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-repeat-all-pressed.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-repeat-all-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-repeat-all.png \

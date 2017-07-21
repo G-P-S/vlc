@@ -30,7 +30,6 @@
 #include <vlc_strings.h>            /* b64_decode */
 #include <vlc_xml.h>
 #include <vlc_charset.h>            /* FromCharset */
-#include <vlc_es.h>                 /* UNKNOWN_ES */
 
 typedef struct chunk_s
 {
@@ -1297,7 +1296,7 @@ static void initialize_header_and_metadata( stream_sys_t* p_sys, hds_stream_t *s
 
 static int parse_Manifest( stream_t *s, manifest_t *m )
 {
-    int type = UNKNOWN_ES;
+    int type = 0;
 
     msg_Dbg( s, "Manifest parsing\n" );
 
@@ -1642,6 +1641,12 @@ static int Open( vlc_object_t *p_this )
 
     /* remove the last part of the url */
     char *pos = strrchr( uri_without_query, '/');
+    if ( pos == NULL )
+    {
+        free( uri_without_query );
+        free( p_sys );
+        return VLC_EGENERIC;
+    }
     *pos = '\0';
     p_sys->base_url = uri_without_query;
 

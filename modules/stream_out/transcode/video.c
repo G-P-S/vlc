@@ -38,19 +38,11 @@
 #define ENC_FRAMERATE (25 * 1000)
 #define ENC_FRAMERATE_BASE 1000
 
-struct decoder_owner_sys_t
-{
-    sout_stream_sys_t *p_sys;
-    sout_stream_t *p_stream;
-    sout_stream_id_sys_t *id;
-};
-
 static int video_update_format_decoder( decoder_t *p_dec )
 {
-    decoder_owner_sys_t  *owner  = p_dec->p_owner;
-    sout_stream_sys_t    *sys    = owner->p_sys;
-    sout_stream_t        *stream = owner->p_stream;
-    sout_stream_id_sys_t *id     = owner->id;
+    sout_stream_t        *stream = (sout_stream_t*) p_dec->p_owner;
+    sout_stream_sys_t    *sys    = stream->p_sys;
+    sout_stream_id_sys_t *id     = p_dec->p_queue_ctx;
     filter_chain_t       *test_chain;
 
     filter_owner_t filter_owner = {
@@ -170,7 +162,7 @@ static picture_t *transcode_dequeue_all_pics( sout_stream_id_sys_t *id )
     return p_pics;
 }
 
-int transcode_video_new( sout_stream_t *p_stream, sout_stream_id_sys_t *id )
+static int transcode_video_new( sout_stream_t *p_stream, sout_stream_id_sys_t *id )
 {
     sout_stream_sys_t *p_sys = p_stream->p_sys;
 
@@ -187,21 +179,14 @@ int transcode_video_new( sout_stream_t *p_stream, sout_stream_id_sys_t *id )
     id->p_decoder->pf_get_cc = NULL;
     id->p_decoder->pf_vout_format_update = video_update_format_decoder;
     id->p_decoder->pf_vout_buffer_new = video_new_buffer_decoder;
-    id->p_decoder->p_owner = malloc( sizeof(decoder_owner_sys_t) );
-    if( !id->p_decoder->p_owner )
-        return VLC_EGENERIC;
-
-    id->p_decoder->p_owner->p_sys = p_sys;
-    id->p_decoder->p_owner->p_stream = p_stream;
-    id->p_decoder->p_owner->id = id;
+    id->p_decoder->p_owner = (decoder_owner_sys_t*) p_stream;
 
     id->p_decoder->p_module =
-        module_need( id->p_decoder, "decoder", "$codec", false );
+        module_need( id->p_decoder, "video decoder", "$codec", false );
 
     if( !id->p_decoder->p_module )
     {
         msg_Err( p_stream, "cannot find video decoder" );
-        free( id->p_decoder->p_owner );
         return VLC_EGENERIC;
     }
 
@@ -252,7 +237,6 @@ int transcode_video_new( sout_stream_t *p_stream, sout_stream_id_sys_t *id )
                  (char *)&p_sys->i_vcodec );
         module_unneed( id->p_decoder, id->p_decoder->p_module );
         id->p_decoder->p_module = 0;
-        free( id->p_decoder->p_owner );
         return VLC_EGENERIC;
     }
 
@@ -279,7 +263,6 @@ int transcode_video_new( sout_stream_t *p_stream, sout_stream_id_sys_t *id )
         msg_Err( p_stream, "cannot create picture fifo" );
         module_unneed( id->p_decoder, id->p_decoder->p_module );
         id->p_decoder->p_module = NULL;
-        free( id->p_decoder->p_owner );
         return VLC_ENOMEM;
     }
 
@@ -296,7 +279,6 @@ int transcode_video_new( sout_stream_t *p_stream, sout_stream_id_sys_t *id )
         picture_fifo_Delete( p_sys->pp_pics );
         module_unneed( id->p_decoder, id->p_decoder->p_module );
         id->p_decoder->p_module = NULL;
-        free( id->p_decoder->p_owner );
         return VLC_EGENERIC;
     }
     return VLC_SUCCESS;
@@ -311,11 +293,17 @@ static void transcode_video_filter_init( sout_stream_t *p_stream,
             .buffer_new = transcode_video_filter_buffer_new,
         },
     };
-    es_format_t *p_fmt_out = &id->p_decoder->fmt_out;
+    const es_format_t *p_fmt_out = &id->p_decoder->fmt_out;
 
     id->p_encoder->fmt_in.video.i_chroma = id->p_encoder->fmt_in.i_codec;
     id->p_f_chain = filter_chain_NewVideo( p_stream, false, &owner );
     filter_chain_Reset( id->p_f_chain, p_fmt_out, p_fmt_out );
+
+    /* Check that we have visible_width/height*/
+    if( !id->p_decoder->fmt_out.video.i_visible_height )
+        id->p_decoder->fmt_out.video.i_visible_height = id->p_decoder->fmt_out.video.i_height;
+    if( !id->p_decoder->fmt_out.video.i_visible_width )
+        id->p_decoder->fmt_out.video.i_visible_width = id->p_decoder->fmt_out.video.i_width;
 
     /* Deinterlace */
     if( p_stream->p_sys->psz_deinterlace != NULL )
@@ -338,12 +326,6 @@ static void transcode_video_filter_init( sout_stream_t *p_stream,
 
         p_fmt_out = filter_chain_GetFmtOut( id->p_f_chain );
     }
-
-    /* Check that we have visible_width/height*/
-    if( !p_fmt_out->video.i_visible_height )
-        p_fmt_out->video.i_visible_height = p_fmt_out->video.i_height;
-    if( !p_fmt_out->video.i_visible_width )
-        p_fmt_out->video.i_visible_width = p_fmt_out->video.i_width;
 
     if( p_stream->p_sys->psz_vf2 )
     {
@@ -378,12 +360,14 @@ static void transcode_video_filter_init( sout_stream_t *p_stream,
 /* Take care of the scaling and chroma conversions. */
 static void conversion_video_filter_append( sout_stream_id_sys_t *id )
 {
-    const es_format_t *p_fmt_out = &id->p_decoder->fmt_out;
-    if( id->p_f_chain )
-        p_fmt_out = filter_chain_GetFmtOut( id->p_f_chain );
-
+    const es_format_t *p_fmt_out;
     if( id->p_uf_chain )
         p_fmt_out = filter_chain_GetFmtOut( id->p_uf_chain );
+    else if( id->p_f_chain )
+        p_fmt_out = filter_chain_GetFmtOut( id->p_f_chain );
+    else
+        p_fmt_out = &id->p_decoder->fmt_out;
+
 
     if( ( p_fmt_out->video.i_chroma != id->p_encoder->fmt_in.video.i_chroma ) ||
         ( p_fmt_out->video.i_width != id->p_encoder->fmt_in.video.i_width ) ||
@@ -602,13 +586,13 @@ static void transcode_video_sar_init( sout_stream_t *p_stream,
 static void transcode_video_encoder_init( sout_stream_t *p_stream,
                                           sout_stream_id_sys_t *id )
 {
-    const es_format_t *p_fmt_out = &id->p_decoder->fmt_out;
-    if( id->p_f_chain ) {
-        p_fmt_out = filter_chain_GetFmtOut( id->p_f_chain );
-    }
-    if( id->p_uf_chain ) {
+    const es_format_t *p_fmt_out;
+    if( id->p_uf_chain )
         p_fmt_out = filter_chain_GetFmtOut( id->p_uf_chain );
-    }
+    else if( id->p_f_chain )
+        p_fmt_out = filter_chain_GetFmtOut( id->p_f_chain );
+    else
+        p_fmt_out = &id->p_decoder->fmt_out;
 
     id->p_encoder->fmt_in.video.orientation =
         id->p_encoder->fmt_out.video.orientation =
@@ -684,8 +668,6 @@ void transcode_video_close( sout_stream_t *p_stream,
         module_unneed( id->p_decoder, id->p_decoder->p_module );
     if( id->p_decoder->p_description )
         vlc_meta_Delete( id->p_decoder->p_description );
-
-    free( id->p_decoder->p_owner );
 
     /* Close encoder */
     if( id->p_encoder->p_module )
@@ -890,11 +872,14 @@ end:
     {
         if( p_sys->i_threads == 0 )
         {
-            block_t *p_block;
-            do {
-                p_block = id->p_encoder->pf_encode_video(id->p_encoder, NULL );
-                block_ChainAppend( out, p_block );
-            } while( p_block );
+            if( id->p_encoder->p_module )
+            {
+                block_t *p_block;
+                do {
+                    p_block = id->p_encoder->pf_encode_video(id->p_encoder, NULL );
+                    block_ChainAppend( out, p_block );
+                } while( p_block );
+            }
         }
         else
         {

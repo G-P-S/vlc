@@ -88,7 +88,7 @@ vlc_module_begin ()
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_VCODEC )
     set_description( N_("Crystal HD hardware video decoder") )
-    set_capability( "decoder", 0 )
+    set_capability( "video decoder", 0 )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_shortcut( "crystalhd" )
 vlc_module_end ()
@@ -344,7 +344,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     }
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat          = VIDEO_ES;
     p_dec->fmt_out.i_codec        = VLC_CODEC_YUYV;
     p_dec->fmt_out.video.i_width  = p_dec->fmt_in.video.i_width;
     p_dec->fmt_out.video.i_height = p_dec->fmt_in.video.i_height;

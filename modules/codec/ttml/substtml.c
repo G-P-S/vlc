@@ -519,7 +519,7 @@ static ttml_style_t * InheritTTMLStyles( ttml_context_t *p_ctx, tt_node_t *p_nod
             DictMergeWithRegionID( p_ctx, psz_regionid, &merged );
     }
 
-    if( vlc_dictionary_keys_count( &merged ) && (p_ttml_style = ttml_style_New()) )
+    if( !vlc_dictionary_is_empty( &merged ) && (p_ttml_style = ttml_style_New()) )
     {
         DictToTTMLStyle( &merged, p_ttml_style );
     }
@@ -976,7 +976,6 @@ int OpenDecoder( vlc_object_t *p_this )
         return VLC_ENOMEM;
 
     p_dec->pf_decode = DecodeBlock;
-    p_dec->fmt_out.i_cat = SPU_ES;
     p_sys->i_align = var_InheritInteger( p_dec, "ttml-align" );
 
     return VLC_SUCCESS;

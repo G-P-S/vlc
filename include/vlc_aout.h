@@ -23,6 +23,8 @@
 #ifndef VLC_AOUT_H
 #define VLC_AOUT_H 1
 
+#include <assert.h>
+
 /**
  * \defgroup audio_output Audio output
  * \ingroup output
@@ -64,8 +66,9 @@
 /* Check if i_rate == i_rate and i_channels == i_channels */
 #define AOUT_FMTS_SIMILAR( p_first, p_second ) (                            \
     ((p_first)->i_rate == (p_second)->i_rate)                               \
+      && ((p_first)->channel_type == (p_second)->channel_type)            \
       && ((p_first)->i_physical_channels == (p_second)->i_physical_channels)\
-      && ((p_first)->i_original_channels == (p_second)->i_original_channels) )
+      && ((p_first)->i_chan_mode == (p_second)->i_chan_mode) )
 
 #define AOUT_FMT_LINEAR( p_format ) \
     (aout_BitsPerSample((p_format)->i_format) != 0)
@@ -92,6 +95,7 @@
 #define AOUT_VAR_CHAN_LEFT          3
 #define AOUT_VAR_CHAN_RIGHT         4
 #define AOUT_VAR_CHAN_DOLBYS        5
+#define AOUT_VAR_CHAN_HEADPHONES    6
 
 /*****************************************************************************
  * Main audio output structures
@@ -164,6 +168,13 @@ struct audio_output
       * \return 0 on success, non-zero on failure.
       * \warning A stream may or may not have been started when called.
       */
+
+    struct {
+        bool headphones; /**< Default to false, set it to true if the current
+                              sink is using headphones */
+    } current_sink_info;
+    /**< Current sink informations set by the module from the start() function */
+
     struct {
         void (*volume_report)(audio_output_t *, float);
         void (*mute_report)(audio_output_t *, bool);
@@ -174,6 +185,35 @@ struct audio_output
         void (*restart_request)(audio_output_t *, unsigned);
     } event;
 };
+
+typedef enum
+{
+    AOUT_CHANIDX_DISABLE = -1,
+    AOUT_CHANIDX_LEFT,
+    AOUT_CHANIDX_RIGHT,
+    AOUT_CHANIDX_MIDDLELEFT,
+    AOUT_CHANIDX_MIDDLERIGHT,
+    AOUT_CHANIDX_REARLEFT,
+    AOUT_CHANIDX_REARRIGHT,
+    AOUT_CHANIDX_REARCENTER,
+    AOUT_CHANIDX_CENTER,
+    AOUT_CHANIDX_LFE,
+    AOUT_CHANIDX_MAX
+} vlc_chan_order_idx_t;
+
+static_assert(AOUT_CHANIDX_MAX == AOUT_CHAN_MAX, "channel count mismatch");
+
+#define AOUT_CHAN_REMAP_INIT { \
+    AOUT_CHANIDX_LEFT,  \
+    AOUT_CHANIDX_RIGHT, \
+    AOUT_CHANIDX_MIDDLELEFT, \
+    AOUT_CHANIDX_MIDDLERIGHT, \
+    AOUT_CHANIDX_REARLEFT, \
+    AOUT_CHANIDX_REARRIGHT, \
+    AOUT_CHANIDX_REARCENTER, \
+    AOUT_CHANIDX_CENTER, \
+    AOUT_CHANIDX_LFE, \
+}
 
 /**
  * It describes the audio channel order VLC expect.
@@ -186,8 +226,9 @@ static const uint32_t pi_vlc_chan_order_wg4[] =
     AOUT_CHAN_CENTER, AOUT_CHAN_LFE, 0
 };
 
-#define AOUT_RESTART_FILTERS 1
-#define AOUT_RESTART_OUTPUT  2
+#define AOUT_RESTART_FILTERS        0x1
+#define AOUT_RESTART_OUTPUT         (AOUT_RESTART_FILTERS|0x2)
+#define AOUT_RESTART_STEREOMODE     (AOUT_RESTART_OUTPUT|0x4)
 
 /*****************************************************************************
  * Prototypes
@@ -316,26 +357,37 @@ static inline void aout_RestartRequest(audio_output_t *aout, unsigned mode)
     aout->event.restart_request(aout, mode);
 }
 
-static inline int aout_ChannelsRestart (vlc_object_t *obj, const char *varname,
-                            vlc_value_t oldval, vlc_value_t newval, void *data)
-{
-    audio_output_t *aout = (audio_output_t *)obj;
-    (void)varname; (void)oldval; (void)newval; (void)data;
-
-    aout_RestartRequest (aout, AOUT_RESTART_OUTPUT);
-    return 0;
-}
-
 /* Audio output filters */
+
+typedef struct
+{
+    /**
+     * If the remap order differs from the WG4 order, a remap audio filter will
+     * be inserted to remap channels according to this array.
+     */
+    int remap[AOUT_CHANIDX_MAX];
+    /**
+     * If true, a filter will be inserted to add a headphones effect (like a
+     * binauralizer audio filter).
+     */
+    bool headphones;
+} aout_filters_cfg_t;
+
+#define AOUT_FILTERS_CFG_INIT (aout_filters_cfg_t) \
+    { .remap = AOUT_CHAN_REMAP_INIT, \
+      .headphones = false, \
+    };
+
 typedef struct aout_filters aout_filters_t;
 typedef struct aout_request_vout aout_request_vout_t;
 
 VLC_API aout_filters_t *aout_FiltersNew(vlc_object_t *,
                                         const audio_sample_format_t *,
                                         const audio_sample_format_t *,
-                                        const aout_request_vout_t *) VLC_USED;
-#define aout_FiltersNew(o,inf,outf,rv) \
-        aout_FiltersNew(VLC_OBJECT(o),inf,outf,rv)
+                                        const aout_request_vout_t *,
+                                        const aout_filters_cfg_t *cfg) VLC_USED;
+#define aout_FiltersNew(o,inf,outf,rv,remap) \
+        aout_FiltersNew(VLC_OBJECT(o),inf,outf,rv,remap)
 VLC_API void aout_FiltersDelete(vlc_object_t *, aout_filters_t *);
 #define aout_FiltersDelete(o,f) \
         aout_FiltersDelete(VLC_OBJECT(o),f)
@@ -343,8 +395,9 @@ VLC_API bool aout_FiltersAdjustResampling(aout_filters_t *, int);
 VLC_API block_t *aout_FiltersPlay(aout_filters_t *, block_t *, int rate);
 VLC_API block_t *aout_FiltersDrain(aout_filters_t *);
 VLC_API void     aout_FiltersFlush(aout_filters_t *);
+VLC_API void     aout_FiltersChangeViewpoint(aout_filters_t *, const vlc_viewpoint_t *vp);
 
-VLC_API vout_thread_t * aout_filter_RequestVout( filter_t *, vout_thread_t *p_vout, video_format_t *p_fmt );
+VLC_API vout_thread_t * aout_filter_RequestVout( filter_t *, vout_thread_t *p_vout, const video_format_t *p_fmt );
 
 /** @} */
 

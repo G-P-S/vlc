@@ -65,6 +65,16 @@ typedef struct
     float      pf_gain[AUDIO_REPLAY_GAIN_MAX];
 } audio_replay_gain_t;
 
+
+/**
+ * Audio channel type
+ */
+typedef enum audio_channel_type_t
+{
+    AUDIO_CHANNEL_TYPE_BITMAP,
+    AUDIO_CHANNEL_TYPE_AMBISONICS,
+} audio_channel_type_t;
+
 /**
  * audio format description
  */
@@ -77,9 +87,13 @@ struct audio_format_t
      * channels which are available in the buffer, and positions). */
     uint16_t     i_physical_channels;
 
-    /* Describes from which original channels, before downmixing, the
-     * buffer is derived. */
-    uint32_t     i_original_channels;
+    /* Describes the chan mode, either set from the input
+     * (demux/codec/packetizer) or overridden by the user, used by audio
+     * filters. */
+    uint16_t     i_chan_mode;
+
+    /* Channel type */
+    audio_channel_type_t channel_type;
 
     /* Optional - for A/52, SPDIF and DTS types : */
     /* Bytes used by one compressed frame, depends on bitrate. */
@@ -134,13 +148,15 @@ struct audio_format_t
 #define AOUT_CHANS_5_0_MIDDLE (AOUT_CHANS_4_0_MIDDLE | AOUT_CHAN_CENTER)
 #define AOUT_CHANS_6_1_MIDDLE (AOUT_CHANS_5_0_MIDDLE | AOUT_CHAN_REARCENTER | AOUT_CHAN_LFE)
 
-/* Values available for original channels only */
-#define AOUT_CHAN_DOLBYSTEREO       0x10000
-#define AOUT_CHAN_DUALMONO          0x20000
-#define AOUT_CHAN_REVERSESTEREO     0x40000
-
-#define AOUT_CHAN_PHYSMASK          0xFFFF
+/* Maximum number of mapped channels (or the maximum of bits set in
+ * i_physical_channels) */
 #define AOUT_CHAN_MAX               9
+/* Maximum number of unmapped channels */
+#define INPUT_CHAN_MAX              64
+
+/* Values available for i_chan_mode only */
+#define AOUT_CHANMODE_DUALMONO    0x1
+#define AOUT_CHANMODE_DOLBYSTEREO 0x2
 
 /**
  * Picture orientation.
@@ -534,6 +550,8 @@ struct subs_format_t
     text_style_t *p_style; /* Default styles to use */
 };
 
+#define SPU_PALETTE_DEFINED  0xbeefbeef
+
 /**
  * ES language definition
  */
@@ -542,6 +560,17 @@ typedef struct extra_languages_t
         char *psz_language;
         char *psz_description;
 } extra_languages_t;
+
+/** ES Categories */
+enum es_format_category_e
+{
+    UNKNOWN_ES = 0x00,
+    VIDEO_ES,
+    AUDIO_ES,
+    SPU_ES,
+    NAV_ES,
+};
+#define ES_CATEGORY_COUNT (NAV_ES + 1)
 
 /**
  * ES format definition
@@ -552,7 +581,7 @@ typedef struct extra_languages_t
 #define ES_PRIORITY_MIN ES_PRIORITY_NOT_SELECTABLE
 struct es_format_t
 {
-    int             i_cat;              /**< ES category @see es_format_category_e */
+    enum es_format_category_e i_cat;    /**< ES category */
     vlc_fourcc_t    i_codec;            /**< FOURCC value as used in vlc */
     vlc_fourcc_t    i_original_fourcc;  /**< original FOURCC from the container */
 
@@ -593,17 +622,6 @@ struct es_format_t
 
 };
 
-/** ES Categories */
-enum es_format_category_e
-{
-    UNKNOWN_ES = 0x00,
-    VIDEO_ES,
-    AUDIO_ES,
-    SPU_ES,
-    NAV_ES,
-};
-#define ES_CATEGORY_COUNT (NAV_ES + 1)
-
 /**
  * This function will fill all RGB shift from RGB masks.
  */
@@ -638,5 +656,15 @@ VLC_API void es_format_Clean( es_format_t *fmt );
  * All descriptive fields are ignored.
  */
 VLC_API bool es_format_IsSimilar( const es_format_t *, const es_format_t * );
+
+/**
+ * Changes ES format to another category
+ * Format must have been properly initialized
+ */
+static inline void es_format_Change( es_format_t *fmt, int i_cat, vlc_fourcc_t i_codec )
+{
+    es_format_Clean( fmt );
+    es_format_Init( fmt, i_cat, i_codec );
+}
 
 #endif

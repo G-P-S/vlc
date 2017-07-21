@@ -59,7 +59,7 @@ static int32_t ReadVarInt (stream_t *s)
 typedef struct smf_track_t
 {
     uint64_t next;   /*< Time of next message (in term of pulses) */
-    int64_t  start;  /*< Start offset in the file */
+    uint64_t start;  /*< Start offset in the file */
     uint32_t length; /*< Bytes length */
     uint32_t offset; /*< Read offset relative to the start offset */
     uint8_t  running_event; /*< Running (previous) event */
@@ -330,20 +330,21 @@ int HandleMessage (demux_t *p_demux, mtrk_t *tr, es_out_t *out)
     block->p_buffer[0] = event;
     if (first & 0x80)
     {
-        vlc_stream_Read (s, block->p_buffer + 1, datalen);
+        if (vlc_stream_Read(s, block->p_buffer + 1, datalen) < datalen)
+            goto error;
     }
     else
     {
         if (datalen == 0)
-        {
+        {   /* implicit running status requires non-empty payload */
             msg_Err (p_demux, "malformatted MIDI event");
-            block_Release(block);
-            return -1; /* implicit running status requires non-empty payload */
+            goto error;
         }
 
         block->p_buffer[1] = first;
-        if (datalen > 1)
-            vlc_stream_Read (s, block->p_buffer + 2, datalen - 1);
+        if (datalen > 1
+         && vlc_stream_Read(s, block->p_buffer + 2, datalen - 1) < datalen - 1)
+            goto error;
     }
 
 send:
@@ -360,6 +361,10 @@ skip:
 
     tr->offset = vlc_stream_Tell (s) - tr->start;
     return 0;
+
+error:
+    block_Release(block);
+    return -1;
 }
 
 static int SeekSet0 (demux_t *demux)
@@ -665,8 +670,11 @@ static int Open (vlc_object_t *obj)
             if (memcmp (head, "MTrk", 4) == 0)
                 break;
 
-            msg_Dbg (demux, "skipping unknown SMF chunk");
-            vlc_stream_Read (stream, NULL, GetDWBE (head + 4));
+            uint_fast32_t chunk_len = GetDWBE(head + 4);
+            msg_Dbg(demux, "skipping unknown SMF chunk (%"PRIuFAST32" bytes)",
+                    chunk_len);
+            if (vlc_stream_Seek(stream, vlc_stream_Tell(stream) + chunk_len))
+                goto error;
         }
 
         tr->start = vlc_stream_Tell (stream);

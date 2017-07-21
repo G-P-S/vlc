@@ -55,6 +55,8 @@
 #include "packetizer_helper.h"
 #include "startcode_helper.h"
 
+#include <limits.h>
+
 #define SYNC_INTRAFRAME_TEXT N_("Sync on Intra Frame")
 #define SYNC_INTRAFRAME_LONGTEXT N_("Normally the packetizer would " \
     "sync on the next full frame. This flags instructs the packetizer " \
@@ -166,14 +168,13 @@ static int Open( vlc_object_t *p_this )
     if( p_dec->fmt_in.i_codec != VLC_CODEC_MPGV )
         return VLC_EGENERIC;
 
-    es_format_Init( &p_dec->fmt_out, VIDEO_ES, VLC_CODEC_MPGV );
-    p_dec->fmt_out.i_original_fourcc = p_dec->fmt_in.i_original_fourcc;
-
-
     p_dec->p_sys = p_sys = malloc( sizeof( decoder_sys_t ) );
     if( !p_dec->p_sys )
         return VLC_ENOMEM;
     memset( p_dec->p_sys, 0, sizeof( decoder_sys_t ) );
+
+    p_dec->fmt_out.i_codec = VLC_CODEC_MPGV;
+    p_dec->fmt_out.i_original_fourcc = p_dec->fmt_in.i_original_fourcc;
 
     /* Misc init */
     packetizer_Init( &p_sys->packetizer,
@@ -189,9 +190,9 @@ static int Open( vlc_object_t *p_this )
 
     p_sys->i_dts =
     p_sys->i_pts = VLC_TS_INVALID;
-    date_Init( &p_sys->dts, 1, 1 );
+    date_Init( &p_sys->dts, 30000, 1001 );
     date_Set( &p_sys->dts, VLC_TS_INVALID );
-    date_Init( &p_sys->prev_iframe_dts, 1, 1 );
+    date_Init( &p_sys->prev_iframe_dts, 30000, 1001 );
     date_Set( &p_sys->prev_iframe_dts, VLC_TS_INVALID );
 
     p_sys->i_frame_rate = 2 * 30000;
@@ -681,7 +682,7 @@ static block_t *ParseMPEGBlock( decoder_t *p_dec, block_t *p_frag )
 
         if( ( p_sys->i_frame_rate != p_dec->fmt_out.video.i_frame_rate ||
               p_dec->fmt_out.video.i_frame_rate_base != p_sys->i_frame_rate_base ) &&
-            p_sys->i_frame_rate && p_sys->i_frame_rate_base )
+            p_sys->i_frame_rate && p_sys->i_frame_rate_base && p_sys->i_frame_rate <= UINT_MAX/2 )
         {
             date_Change( &p_sys->dts, 2 * p_sys->i_frame_rate, p_sys->i_frame_rate_base );
             date_Change( &p_sys->prev_iframe_dts, 2 * p_sys->i_frame_rate, p_sys->i_frame_rate_base );

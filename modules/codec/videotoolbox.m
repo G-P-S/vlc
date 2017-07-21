@@ -76,7 +76,7 @@ vlc_module_begin()
 set_category(CAT_INPUT)
 set_subcategory(SUBCAT_INPUT_VCODEC)
 set_description(N_("VideoToolbox video decoder"))
-set_capability("decoder",800)
+set_capability("video decoder",800)
 set_callbacks(OpenDecoder, CloseDecoder)
 
 add_bool("videotoolbox-temporal-deinterlacing", true, VT_TEMPO_DEINTERLACE, VT_TEMPO_DEINTERLACE_LONG, false)
@@ -830,9 +830,6 @@ static int OpenDecoder(vlc_object_t *p_this)
     }
 #endif
 
-    if (p_dec->fmt_in.i_cat != VIDEO_ES)
-        return VLC_EGENERIC;
-
     /* Fail if this module already failed to decode this ES */
     if (var_Type(p_dec, "videotoolbox-failed") != 0)
         return VLC_EGENERIC;
@@ -871,7 +868,6 @@ static int OpenDecoder(vlc_object_t *p_this)
     vlc_mutex_init(&p_sys->lock);
 
     /* return our proper VLC internal state */
-    p_dec->fmt_out.i_cat = p_dec->fmt_in.i_cat;
     p_dec->fmt_out.video = p_dec->fmt_in.video;
     if (!p_dec->fmt_out.video.i_sar_num || !p_dec->fmt_out.video.i_sar_den)
     {
@@ -1261,7 +1257,11 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
             return VLCDEC_SUCCESS;
     }
 
-    if (b_config_changed)
+    frame_info_t *p_info = CreateReorderInfo(p_dec, p_block);
+    if(unlikely(!p_info))
+        goto skip;
+
+    if (b_config_changed && p_info->b_flush)
     {
         /* decoding didn't start yet, which is ok for H264, let's see
          * if we can use this block to get going */
@@ -1281,12 +1281,11 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
             StartVideoToolbox(p_dec);
         }
         if (!p_sys->session)
+        {
+            free(p_info);
             goto skip;
+        }
     }
-
-    frame_info_t *p_info = CreateReorderInfo(p_dec, p_block);
-    if(unlikely(!p_info))
-        goto skip;
 
     CMSampleBufferRef sampleBuffer =
         VTSampleBufferCreate(p_dec, p_sys->videoFormatDescription, p_block);

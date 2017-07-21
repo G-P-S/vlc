@@ -47,7 +47,9 @@
 
 #include <windows.h>
 #include <d3d9.h>
+#ifdef HAVE_D3DX9EFFECT_H
 #include <d3dx9effect.h>
+#endif
 #include "../../video_chroma/d3d9_fmt.h"
 
 #include "common.h"
@@ -305,7 +307,7 @@ static int Open(vlc_object_t *object)
 
     /* Fix state in case of desktop mode */
     if (sys->sys.use_desktop && vd->cfg->is_fullscreen)
-        vout_display_SendEventFullscreen(vd, false);
+        vout_display_SendEventFullscreen(vd, false, false);
 
     return VLC_SUCCESS;
 error:
@@ -468,7 +470,7 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     else if (picture->context)
     {
         const struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
-        if (picture->p_sys && pic_ctx->picsys.surface != picture->p_sys->surface)
+        if (pic_ctx->picsys.surface != picture->p_sys->surface)
         {
             HRESULT hr;
             RECT visibleSource;
@@ -615,13 +617,13 @@ static int ControlReopenDevice(vout_display_t *vd)
     if (sys->sys.use_desktop) {
         /* Disable fullscreen/on_top while using desktop */
         if (sys->desktop_save.is_fullscreen)
-            vout_display_SendEventFullscreen(vd, false);
+            vout_display_SendEventFullscreen(vd, false, false);
         if (sys->desktop_save.is_on_top)
             vout_display_SendWindowState(vd, VOUT_WINDOW_STATE_NORMAL);
     } else {
         /* Restore fullscreen/on_top */
         if (sys->desktop_save.is_fullscreen)
-            vout_display_SendEventFullscreen(vd, true);
+            vout_display_SendEventFullscreen(vd, true, false);
         if (sys->desktop_save.is_on_top)
             vout_display_SendWindowState(vd, VOUT_WINDOW_STATE_ABOVE);
     }
@@ -1046,7 +1048,8 @@ static int Direct3D9CreateResources(vout_display_t *vd, video_format_t *fmt)
 static void Direct3D9DestroyResources(vout_display_t *vd)
 {
     Direct3D9DestroyScene(vd);
-    picture_pool_Release(vd->sys->sys.pool);
+    if (vd->sys->sys.pool)
+        picture_pool_Release(vd->sys->sys.pool);
     Direct3D9DestroyShaders(vd);
 }
 
@@ -1293,6 +1296,7 @@ static void Direct3D9DestroyScene(vout_display_t *vd)
 
 static int Direct3D9CompileShader(vout_display_t *vd, const char *shader_source, size_t source_length)
 {
+#ifdef HAVE_D3DX9EFFECT_H
     vout_display_sys_t *sys = vd->sys;
 
     HRESULT (WINAPI * OurD3DXCompileShader)(
@@ -1343,6 +1347,9 @@ static int Direct3D9CompileShader(vout_display_t *vd, const char *shader_source,
         return VLC_EGENERIC;
     }
     return VLC_SUCCESS;
+#else
+    return VLC_EGENERIC;
+#endif
 }
 
 #define MAX_SHADER_FILE_SIZE 1024*1024

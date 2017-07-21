@@ -445,7 +445,6 @@ static picture_t * CreateNoSignalPicture(vlc_object_t *p_this, const video_forma
     if (png)
     {
         video_format_Clean(&dummy);
-        video_format_Init(&dummy, 0);
         video_format_Copy(&dummy, fmt);
         p_pic = image_Convert(img, png, &in, &dummy);
         if(!video_format_IsSimilar(&dummy, fmt))
@@ -1119,6 +1118,7 @@ static int Start(audio_output_t *aout, audio_sample_format_t *restrict fmt)
     fmt->i_format = VLC_CODEC_S16N;
     fmt->i_channels = 2; //decklink_sys->i_channels;
     fmt->i_physical_channels = AOUT_CHANS_STEREO; //pi_channels_maps[fmt->i_channels];
+    fmt->channel_type = AUDIO_CHANNEL_TYPE_BITMAP;
     fmt->i_rate = sys->i_rate;
     fmt->i_bitspersample = 16;
     fmt->i_blockalign = fmt->i_channels * fmt->i_bitspersample /8 ;

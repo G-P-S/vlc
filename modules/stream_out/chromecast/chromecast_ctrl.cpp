@@ -86,7 +86,6 @@ intf_sys_t::intf_sys_t(vlc_object_t * const p_this, int port, std::string device
  , m_time_playback_started( VLC_TS_INVALID )
  , m_ts_local_start( VLC_TS_INVALID )
  , m_length( VLC_TS_INVALID )
- , m_chromecast_start_time( VLC_TS_INVALID )
  , m_pingRetriesLeft( PING_WAIT_RETRIES )
 {
     vlc_mutex_init(&m_lock);
@@ -199,6 +198,13 @@ void intf_sys_t::processMessage(const castchannel::CastMessage &msg)
     }
 }
 
+void intf_sys_t::queueMessage( QueueableMessages msg )
+{
+    // Assume lock is held by the called
+    m_msgQueue.push( msg );
+    vlc_interrupt_raise( m_ctl_thread_interrupt );
+}
+
 
 
 /*****************************************************************************
@@ -219,8 +225,38 @@ void intf_sys_t::mainLoop()
     // State was already initialized as Authenticating
     m_communication.msgAuth();
 
-    while ( !vlc_killed() && handleMessages() )
-        ;
+    while ( !vlc_killed() )
+    {
+        if ( !handleMessages() )
+            break;
+        vlc_mutex_locker lock( &m_lock );
+        while ( m_msgQueue.empty() == false )
+        {
+            QueueableMessages msg = m_msgQueue.front();
+            switch ( msg )
+            {
+                case Stop:
+                    m_communication.msgPlayerStop( m_appTransportId, m_mediaSessionId );
+                    break;
+                case Seek:
+                {
+                    char current_time[32];
+                    mtime_t seek_request_time = mdate() + SEEK_FORWARD_OFFSET;
+                    if( snprintf( current_time, sizeof(current_time), "%.3f",
+                                  double( seek_request_time ) / 1000000.0 ) >= (int)sizeof(current_time) )
+                    {
+                        msg_Err( m_module, "snprintf() truncated string for mediaSessionId" );
+                        current_time[sizeof(current_time) - 1] = '\0';
+                    }
+                    /* send a fake time to seek to, to make sure the device flushes its buffers */
+                    m_communication.msgPlayerSeek( m_appTransportId, m_mediaSessionId, current_time );
+                    setState( Seeking );
+                    break;
+                }
+            }
+            m_msgQueue.pop();
+        }
+    }
 }
 
 void intf_sys_t::processAuthMessage( const castchannel::CastMessage& msg )
@@ -406,15 +442,11 @@ void intf_sys_t::processMediaMessage( const castchannel::CastMessage& msg )
 
             if (newPlayerState == "PLAYING")
             {
-                msg_Dbg( m_module, "Playback started with an offset of %" PRId64 " now:%" PRId64 " i_ts_local_start:%" PRId64,
-                         m_chromecast_start_time, m_time_playback_started, m_ts_local_start);
+                msg_Dbg( m_module, "Playback started now:%" PRId64 " i_ts_local_start:%" PRId64,
+                         m_time_playback_started, m_ts_local_start);
                 if ( m_state != Playing )
                 {
                     /* TODO reset demux PCR ? */
-                    if (unlikely(m_chromecast_start_time == VLC_TS_INVALID)) {
-                        msg_Warn( m_module, "start playing without buffering" );
-                        m_chromecast_start_time = (1 + mtime_t( double( status[0]["currentTime"] ) ) ) * 1000000L;
-                    }
                     m_time_playback_started = mdate();
                     setState( Playing );
                 }
@@ -423,26 +455,16 @@ void intf_sys_t::processMediaMessage( const castchannel::CastMessage& msg )
             {
                 if ( m_state != Buffering )
                 {
-                    if ( double(status[0]["currentTime"]) == 0.0 )
-                    {
-                        msg_Dbg( m_module, "Invalid buffering time, keep current state");
-                    }
-                    else
-                    {
-                        m_chromecast_start_time = (1 + mtime_t( double( status[0]["currentTime"] ) ) ) * 1000000L;
-                        msg_Dbg( m_module, "Playback pending with an offset of %" PRId64, m_chromecast_start_time);
-                        m_time_playback_started = VLC_TS_INVALID;
-                        setState( Buffering );
-                    }
+                    m_time_playback_started = VLC_TS_INVALID;
+                    setState( Buffering );
                 }
             }
             else if (newPlayerState == "PAUSED")
             {
                 if ( m_state != Paused )
                 {
-                    m_chromecast_start_time = (1 + mtime_t( double( status[0]["currentTime"] ) ) ) * 1000000L;
     #ifndef NDEBUG
-                    msg_Dbg( m_module, "Playback paused with an offset of %" PRId64 " date_play_start:%" PRId64, m_chromecast_start_time, m_time_playback_started);
+                    msg_Dbg( m_module, "Playback paused: date_play_start: %" PRId64, m_time_playback_started);
     #endif
 
                     if ( m_time_playback_started != VLC_TS_INVALID && m_state == Playing )
@@ -593,7 +615,7 @@ void intf_sys_t::requestPlayerStop()
     vlc_mutex_locker locker(&m_lock);
     if ( m_mediaSessionId.empty() == true )
         return;
-    m_communication.msgPlayerStop( m_appTransportId, m_mediaSessionId );
+    queueMessage( Stop );
 }
 
 void intf_sys_t::requestPlayerSeek(mtime_t pos)
@@ -603,16 +625,7 @@ void intf_sys_t::requestPlayerSeek(mtime_t pos)
         return;
     if ( pos != VLC_TS_INVALID )
         m_ts_local_start = pos;
-    char current_time[32];
-    mtime_t seek_request_time = mdate() + SEEK_FORWARD_OFFSET;
-    if( snprintf( current_time, sizeof(current_time), "%.3f", double( seek_request_time ) / 1000000.0 ) >= (int)sizeof(current_time) )
-    {
-        msg_Err( m_module, "snprintf() truncated string for mediaSessionId" );
-        current_time[sizeof(current_time) - 1] = '\0';
-    }
-    /* send a fake time to seek to, to make sure the device flushes its buffers */
-    m_communication.msgPlayerSeek( m_appTransportId, m_mediaSessionId, current_time );
-    setState( Seeking );
+    queueMessage( Seek );
 }
 
 void intf_sys_t::setPauseState(bool paused)

@@ -92,7 +92,7 @@ vlc_module_begin( )
     /* decoder main module */
     set_description( N_( "GStreamer Based Decoder" ) )
     set_help( MODULE_DESCRIPTION )
-    set_capability( "decoder", 50 )
+    set_capability( "video decoder", 50 )
     set_section( N_( "Decoding" ) , NULL )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_bool( "use-decodebin", true, USEDECODEBIN_TEXT,
@@ -599,8 +599,6 @@ static int OpenDecoder( vlc_object_t *p_this )
         VLC_GST_CHECK( b_ret, FALSE, "failed to link in <-> out",
                 VLC_EGENERIC );
     }
-
-    p_dec->fmt_out.i_cat = p_dec->fmt_in.i_cat;
 
     /* set the pipeline to playing */
     i_ret = gst_element_set_state( p_sys->p_decoder, GST_STATE_PLAYING );

@@ -180,7 +180,7 @@ vlc_module_begin ()
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_VCODEC)
     set_section(N_("Decoding"), NULL)
-    set_capability("decoder", 0) /* Only enabled via commandline arguments */
+    set_capability("video decoder", 0) /* Only enabled via commandline arguments */
     add_bool(CFG_PREFIX "dr", true,
              DIRECTRENDERING_TEXT, DIRECTRENDERING_LONGTEXT, true)
     add_bool(CFG_PREFIX "audio", false,
@@ -190,8 +190,16 @@ vlc_module_begin ()
     set_callbacks(OpenDecoderNdk, CloseDecoder)
     add_shortcut("mediacodec_ndk")
     add_submodule ()
+        set_capability("audio decoder", 0)
+        set_callbacks(OpenDecoderNdk, CloseDecoder)
+        add_shortcut("mediacodec_ndk")
+    add_submodule ()
         set_description("Video decoder using Android MediaCodec via JNI")
-        set_capability("decoder", 0)
+        set_capability("video decoder", 0)
+        set_callbacks(OpenDecoderJni, CloseDecoder)
+        add_shortcut("mediacodec_jni")
+    add_submodule ()
+        set_capability("audio decoder", 0)
         set_callbacks(OpenDecoderJni, CloseDecoder)
         add_shortcut("mediacodec_jni")
 vlc_module_end ()
@@ -370,7 +378,6 @@ static int ParseVideoExtraWmv3(decoder_t *p_dec, uint8_t *p_extra, int i_extra)
     SetDWLE(&(p_data[12]), p_dec->fmt_in.video.i_height);
     SetDWLE(&(p_data[16]), p_dec->fmt_in.video.i_width);
 
-    p_dec->p_sys->pf_on_new_block = VideoVC1_OnNewBlock;
     return CSDDup(p_dec, p_data, sizeof(p_data));
 }
 
@@ -607,7 +614,6 @@ static int OpenDecoder(vlc_object_t *p_this, pf_MediaCodecApi_init pf_init)
 
     p_dec->p_sys = p_sys;
 
-    p_dec->fmt_out.i_cat = p_dec->fmt_in.i_cat;
     p_dec->fmt_out.video = p_dec->fmt_in.video;
     p_dec->fmt_out.audio = p_dec->fmt_in.audio;
     p_dec->fmt_out.video.i_visible_width = p_dec->fmt_out.video.i_width;
@@ -1071,7 +1077,6 @@ static int Audio_ProcessOutput(decoder_t *p_dec, mc_api_out *p_out,
             msg_Warn(p_dec, "need channel extraction: %d -> %d",
                      p_sys->audio.i_channels, i_channels_dst);
 
-        p_dec->fmt_out.audio.i_original_channels =
         p_dec->fmt_out.audio.i_physical_channels = i_layout_dst;
         aout_FormatPrepare(&p_dec->fmt_out.audio);
 

@@ -39,7 +39,7 @@ static void Close(vlc_object_t *);
 
 vlc_module_begin()
     set_description(N_("Ulead DV audio decoder"))
-    set_capability("decoder", 50)
+    set_capability("audio decoder", 50)
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_ACODEC)
     set_callbacks(Open, Close)
@@ -164,11 +164,10 @@ static int Open(vlc_object_t *object)
                           (2 + sys->is_12bit) * (i / b) + 8;
     }
 
-    es_format_Init(&dec->fmt_out, AUDIO_ES, VLC_CODEC_S16N);
+    dec->fmt_out.i_codec = VLC_CODEC_S16N;
     dec->fmt_out.audio.i_rate = dec->fmt_in.audio.i_rate;
     dec->fmt_out.audio.i_channels = 2;
-    dec->fmt_out.audio.i_physical_channels =
-    dec->fmt_out.audio.i_original_channels = AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT;
+    dec->fmt_out.audio.i_physical_channels = AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT;
 
     dec->pf_decode = DecodeAudio;
     dec->pf_flush  = Flush;

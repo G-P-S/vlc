@@ -32,6 +32,7 @@
 
 #include <QVBoxLayout>
 #include <QSplitter>
+#include <QScrollBar>
 #include <QLabel>
 #include <QGroupBox>
 #include <QPushButton>
@@ -161,6 +162,15 @@ void EpgDialog::displayEvent( EPGItem *epgItem )
                              QString() )
                    );
     description->setText( epgItem->description() );
+    const QList<QPair<QString, QString>> items = epgItem->descriptionItems();
+    QList<QPair<QString, QString>>::const_iterator it;
+    for( it=items.begin(); it != items.end(); ++it )
+    {
+        description->append(QString("\n<b>%1:</b> %2")
+                              .arg((*it).first)
+                              .arg((*it).second));
+    }
+    description->verticalScrollBar()->setValue(0);
 }
 
 void EpgDialog::updateInfos()

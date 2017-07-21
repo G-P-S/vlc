@@ -178,7 +178,7 @@ typedef struct avi_chunk_dmlh_s
     uint32_t dwTotalFrames;
 } avi_chunk_dmlh_t;
 
-#define AVI_STRD_ZERO_CHUNK     0xFF
+#define AVI_ZEROSIZED_CHUNK     0xFF
 #define AVI_ZERO_FOURCC         0xFE
 
 #define AVI_INDEX_OF_INDEXES    0x00
@@ -252,7 +252,7 @@ typedef union avi_chunk_u
 int     AVI_ChunkRead( stream_t *,
                        avi_chunk_t *p_chk,
                        avi_chunk_t *p_father );
-void    AVI_ChunkFree( stream_t *, avi_chunk_t * );
+void    AVI_ChunkClean( stream_t *, avi_chunk_t * );
 
 int     AVI_ChunkCount_( avi_chunk_t *, vlc_fourcc_t );
 void   *AVI_ChunkFind_ ( avi_chunk_t *, vlc_fourcc_t, int );

@@ -52,7 +52,7 @@ static void Close( vlc_object_t * );
 
 vlc_module_begin ()
     set_description( N_("AAC audio decoder (using libfaad2)") )
-    set_capability( "decoder", 100 )
+    set_capability( "audio decoder", 100 )
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_ACODEC )
     set_callbacks( Open, Close )
@@ -129,12 +129,8 @@ static int Open( vlc_object_t *p_this )
 
     /* Misc init */
     date_Set( &p_sys->date, 0 );
-    p_dec->fmt_out.i_cat = AUDIO_ES;
 
-    p_dec->fmt_out.i_codec = HAVE_FPU ? VLC_CODEC_FL32 : VLC_CODEC_S16N;
-
-    p_dec->fmt_out.audio.i_physical_channels =
-        p_dec->fmt_out.audio.i_original_channels = 0;
+    p_dec->fmt_out.audio.channel_type = p_dec->fmt_in.audio.channel_type;
 
     if( p_dec->fmt_in.i_extra > 0 )
     {
@@ -155,16 +151,19 @@ static int Open( vlc_object_t *p_this )
         p_dec->fmt_out.audio.i_rate = i_rate;
         p_dec->fmt_out.audio.i_channels = i_channels;
         p_dec->fmt_out.audio.i_physical_channels
-            = p_dec->fmt_out.audio.i_original_channels
             = mpeg4_asc_channelsbyindex[i_channels];
         date_Init( &p_sys->date, i_rate, 1 );
     }
     else
     {
+        p_dec->fmt_out.audio.i_physical_channels = 0;
         /* Will be initalised from first frame */
         p_dec->fmt_out.audio.i_rate = 0;
         p_dec->fmt_out.audio.i_channels = 0;
     }
+
+    p_dec->fmt_out.i_codec = HAVE_FPU ? VLC_CODEC_FL32 : VLC_CODEC_S16N;
+    p_dec->fmt_out.audio.i_chan_mode = p_dec->fmt_in.audio.i_chan_mode;
 
     /* Set the faad config */
     cfg = NeAACDecGetCurrentConfiguration( p_sys->hfaad );
@@ -290,7 +289,6 @@ static int DecodeBlock( decoder_t *p_dec, block_t *p_block )
             p_dec->fmt_out.audio.i_rate = i_rate;
             p_dec->fmt_out.audio.i_channels = i_channels;
             p_dec->fmt_out.audio.i_physical_channels
-                = p_dec->fmt_out.audio.i_original_channels
                 = mpeg4_asc_channelsbyindex[i_channels];
 
             date_Init( &p_sys->date, i_rate, 1 );
@@ -313,7 +311,6 @@ static int DecodeBlock( decoder_t *p_dec, block_t *p_block )
         p_dec->fmt_out.audio.i_rate = i_rate;
         p_dec->fmt_out.audio.i_channels = i_channels;
         p_dec->fmt_out.audio.i_physical_channels
-            = p_dec->fmt_out.audio.i_original_channels
             = mpeg4_asc_channelsbyindex[i_channels];
         date_Init( &p_sys->date, i_rate, 1 );
     }
@@ -382,7 +379,6 @@ static int DecodeBlock( decoder_t *p_dec, block_t *p_block )
                     p_dec->fmt_out.audio.i_rate = i_rate;
                     p_dec->fmt_out.audio.i_channels = i_channels;
                     p_dec->fmt_out.audio.i_physical_channels
-                        = p_dec->fmt_out.audio.i_original_channels
                         = mpeg4_asc_channelsbyindex[i_channels];
                     date_Init( &p_sys->date, i_rate, 1 );
                 }
@@ -502,7 +498,6 @@ static int DecodeBlock( decoder_t *p_dec, block_t *p_block )
                                   p_dec->fmt_out.audio.i_physical_channels, pi_neworder_table );
 
 
-        p_dec->fmt_out.audio.i_original_channels = p_dec->fmt_out.audio.i_physical_channels;
         p_dec->fmt_out.audio.i_channels = popcount(p_dec->fmt_out.audio.i_physical_channels);
 
         if( !decoder_UpdateAudioFormat( p_dec ) && p_dec->fmt_out.audio.i_channels > 0 )

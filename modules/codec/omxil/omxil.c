@@ -150,13 +150,22 @@ vlc_module_begin ()
     /* For IOMX, don't enable it automatically via priorities,
      * enable it only via the --codec iomx command line parameter when
      * wanted. */
-    set_capability( "decoder", 0 )
+    set_capability( "video decoder", 0 )
     add_bool(CFG_PREFIX "dr", true,
              DIRECTRENDERING_TEXT, DIRECTRENDERING_LONGTEXT, true)
 #else
-    set_capability( "decoder", 80 )
+    set_capability( "video decoder", 80 )
 #endif
     set_callbacks( OpenDecoder, CloseGeneric )
+#ifndef __ANDROID__
+    add_submodule()
+# if defined(USE_IOMX)
+    set_capability("audio decoder", 0)
+# else
+    set_capability("audio decoder", 80)
+# endif
+    set_callbacks(OpenDecoder, CloseGeneric)
+#endif
 
     add_submodule ()
     set_section( N_("Encoding") , NULL )
@@ -708,8 +717,7 @@ static OMX_ERRORTYPE GetPortDefinition(decoder_t *p_dec, OmxPort *p_port,
                 | AOUT_CHAN_LFE
             };
             p_fmt->audio.i_physical_channels =
-                p_fmt->audio.i_original_channels =
-                    pi_channels_maps[p_fmt->audio.i_channels];
+                pi_channels_maps[p_fmt->audio.i_channels];
         }
 
         date_Init( &p_dec->p_sys->end_date, p_fmt->audio.i_rate, 1 );
@@ -1008,11 +1016,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     decoder_t *p_dec = (decoder_t*)p_this;
     int status;
 
-#ifdef __ANDROID__
-    if( p_dec->fmt_in.i_cat == AUDIO_ES )
-        return VLC_EGENERIC;
-#endif
-
     if( 0 || !GetOmxRole(p_dec->fmt_in.i_codec, p_dec->fmt_in.i_cat, false) )
         return VLC_EGENERIC;
 
@@ -1074,7 +1077,6 @@ static int OpenGeneric( vlc_object_t *p_this, bool b_encode )
     /* Initialise the thread properties */
     if(!b_encode)
     {
-        p_dec->fmt_out.i_cat = p_dec->fmt_in.i_cat;
         p_dec->fmt_out.video = p_dec->fmt_in.video;
         p_dec->fmt_out.audio = p_dec->fmt_in.audio;
         p_dec->fmt_out.i_codec = 0;

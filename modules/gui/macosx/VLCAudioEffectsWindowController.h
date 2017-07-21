@@ -1,7 +1,7 @@
 /*****************************************************************************
  * VLCAudioEffectsWindowController.h: MacOS X interface module
  *****************************************************************************
- * Copyright (C) 2004-2015 VLC authors and VideoLAN
+ * Copyright (C) 2004-2017 VLC authors and VideoLAN
  * $Id$
  *
  * Authors: Felix Paul Kühne <fkuehne -at- videolan -dot- org>
@@ -32,6 +32,7 @@
 /* generic */
 @property (readwrite, weak) IBOutlet NSTabView *tabView;
 @property (readwrite, weak) IBOutlet NSPopUpButton *profilePopup;
+@property (readwrite, weak) IBOutlet NSButton *applyProfileCheckbox;
 
 /* Equalizer */
 @property (readwrite, weak) IBOutlet NSView *equalizerView;
@@ -103,16 +104,19 @@
 @property (readwrite, weak) IBOutlet NSSlider *filterNormLevelSlider;
 @property (readwrite, weak) IBOutlet NSTextField *filterNormLevelLabel;
 @property (readwrite, weak) IBOutlet NSButton *filterKaraokeCheckbox;
+@property (readwrite, weak) IBOutlet NSButton *filterScaleTempoCheckbox;
+@property (readwrite, weak) IBOutlet NSButton *filterStereoEnhancerCheckbox;
 
 @property (strong) VLCPopupPanelController *popupPanel;
 @property (strong) VLCTextfieldPanelController *textfieldPanel;
 
 /* generic */
 - (IBAction)profileSelectorAction:(id)sender;
+- (IBAction)applyProfileCheckboxChanged:(id)sender;
 
 - (void)toggleWindow:(id)sender;
 - (void)updateCocoaWindowLevel:(NSInteger)i_level;
-- (void)saveCurrentProfile;
+- (void)saveCurrentProfileAtTerminate;
 
 /* Equalizer */
 - (IBAction)equalizerBandSliderUpdated:(id)sender;
@@ -136,5 +140,7 @@
 - (IBAction)filterEnableVolumeNorm:(id)sender;
 - (IBAction)filterVolumeNormSliderUpdated:(id)sender;
 - (IBAction)filterEnableKaraoke:(id)sender;
+- (IBAction)filterEnableScaleTempo:(id)sender;
+- (IBAction)filterEnableStereoEnhancer:(id)sender;
 
 @end

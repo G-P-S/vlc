@@ -34,7 +34,7 @@ vlc_module_begin()
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_ACODEC)
     set_description(N_("S/PDIF pass-through decoder"))
-    set_capability("decoder", 120)
+    set_capability("audio decoder", 120)
     set_callbacks(OpenDecoder, NULL)
 vlc_module_end()
 
@@ -73,16 +73,12 @@ OpenDecoder(vlc_object_t *p_this)
     }
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.i_codec = p_dec->fmt_in.i_codec;
     p_dec->fmt_out.audio = p_dec->fmt_in.audio;
     p_dec->fmt_out.audio.i_format = p_dec->fmt_out.i_codec;
 
     if (decoder_UpdateAudioFormat(p_dec))
-    {
-        es_format_Init(&p_dec->fmt_out, UNKNOWN_ES, 0);
         return VLC_EGENERIC;
-    }
 
     p_dec->pf_decode = DecodeBlock;
     p_dec->pf_flush  = NULL;

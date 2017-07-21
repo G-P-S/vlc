@@ -118,7 +118,7 @@ vlc_module_begin ()
     set_subcategory( SUBCAT_INPUT_VCODEC )
     set_shortname( "Daala" )
     set_description( N_("Daala video decoder") )
-    set_capability( "decoder", 100 )
+    set_capability( "video decoder", 100 )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_shortcut( "daala" )
     add_submodule ()
@@ -180,7 +180,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     p_sys->dcx = NULL;
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_I420;
 
     /* Set callbacks */

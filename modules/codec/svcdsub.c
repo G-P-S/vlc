@@ -48,7 +48,7 @@ vlc_module_begin ()
     set_shortname( N_("SVCD subtitles") )
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_SCODEC )
-    set_capability( "decoder", 50 )
+    set_capability( "spu decoder", 50 )
     set_callbacks( DecoderOpen, DecoderClose )
 
     add_obsolete_integer ( MODULE_STRING "-debug" )
@@ -130,7 +130,7 @@ static int DecoderOpen( vlc_object_t *p_this )
     p_sys->i_state = SUBTITLE_BLOCK_EMPTY;
     p_sys->p_spu   = NULL;
 
-    es_format_Init( &p_dec->fmt_out, SPU_ES, VLC_CODEC_OGT );
+    p_dec->fmt_out.i_codec = VLC_CODEC_OGT;
 
     p_dec->pf_decode    = Decode;
     p_dec->pf_packetize = Packetize;

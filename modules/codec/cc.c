@@ -58,7 +58,7 @@ static void Close( vlc_object_t * );
 vlc_module_begin ()
     set_shortname( N_("CC 608/708"))
     set_description( N_("Closed Captions decoder") )
-    set_capability( "decoder", 50 )
+    set_capability( "spu decoder", 50 )
     set_category( CAT_INPUT )
         set_subcategory( SUBCAT_INPUT_SCODEC )
     set_callbacks( Open, Close )
@@ -278,7 +278,6 @@ static int Open( vlc_object_t *p_this )
     p_sys->b_opaque = var_InheritBool( p_dec, "cc-opaque" );
     p_sys->i_reorder_depth = p_dec->fmt_in.subs.cc.i_reorder_depth;
 
-    p_dec->fmt_out.i_cat = SPU_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_TEXT;
 
     return VLC_SUCCESS;

@@ -76,7 +76,7 @@ vlc_module_begin ()
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_ACODEC )
     set_description( N_("MPEG audio layer I/II/III decoder") )
-    set_capability( "decoder", 99 )
+    set_capability( "audio decoder", 99 )
     set_callbacks( Open, Close )
 vlc_module_end ()
 
@@ -212,7 +212,10 @@ end:
 reject:
     p_sys->i_reject_count--;
     if( p_out_buf )
+    {
         block_Release( p_out_buf );
+        p_out_buf = NULL;
+    }
     goto end;
 }
 
@@ -246,7 +249,6 @@ static int Open( vlc_object_t *p_this )
      && p_dec->fmt_in.i_codec != VLC_FOURCC('m','p','g','3') )
      || p_dec->fmt_in.audio.i_rate == 0
      || p_dec->fmt_in.audio.i_physical_channels == 0
-     || p_dec->fmt_in.audio.i_original_channels == 0
      || p_dec->fmt_in.audio.i_bytes_per_frame == 0
      || p_dec->fmt_in.audio.i_frame_length == 0 )
         return VLC_EGENERIC;
@@ -264,7 +266,6 @@ static int Open( vlc_object_t *p_this )
     mad_synth_init( &p_sys->mad_synth );
     mad_stream_options( &p_sys->mad_stream, MAD_OPTION_IGNORECRC );
 
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.audio = p_dec->fmt_in.audio;
     p_dec->fmt_out.audio.i_format = VLC_CODEC_FL32;
     p_dec->fmt_out.i_codec = p_dec->fmt_out.audio.i_format;
@@ -273,7 +274,6 @@ static int Open( vlc_object_t *p_this )
 
     if( decoder_UpdateAudioFormat( p_dec ) )
     {
-        es_format_Init( &p_dec->fmt_out, UNKNOWN_ES, 0 );
         Close( p_this );
         return VLC_EGENERIC;
     }

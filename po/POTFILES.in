@@ -444,6 +444,7 @@ modules/demux/caf.c
 modules/demux/cdg.c
 modules/demux/demuxdump.c
 modules/demux/dirac.c
+modules/demux/filter/noseek.c
 modules/demux/flac.c
 modules/demux/gme.c
 modules/demux/image.c
@@ -912,6 +913,7 @@ modules/hw/vdpau/chroma.c
 modules/hw/vdpau/deinterlace.c
 modules/hw/vdpau/display.c
 modules/hw/vdpau/sharpen.c
+modules/hw/vaapi/filters.c
 modules/keystore/keychain.m
 modules/lua/demux.c
 modules/lua/intf.c
@@ -1017,6 +1019,7 @@ modules/stream_filter/hds/hds.c
 modules/stream_filter/inflate.c
 modules/stream_filter/prefetch.c
 modules/stream_filter/record.c
+modules/stream_filter/skiptags.c
 modules/stream_out/autodel.c
 modules/stream_out/bridge.c
 modules/stream_out/cycle.c

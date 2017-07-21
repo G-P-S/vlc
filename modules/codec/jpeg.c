@@ -109,7 +109,7 @@ vlc_module_begin()
     set_subcategory(SUBCAT_INPUT_VCODEC)
     /* decoder main module */
     set_description(N_("JPEG image decoder"))
-    set_capability("decoder", 1000)
+    set_capability("video decoder", 1000)
     set_callbacks(OpenDecoder, CloseDecoder)
     add_shortcut("jpeg")
 
@@ -174,11 +174,10 @@ static int OpenDecoder(vlc_object_t *p_this)
     p_sys->err.error_exit = user_error_exit;
     p_sys->err.output_message = user_error_message;
 
-    /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
-
     /* Set callbacks */
     p_dec->pf_decode = DecodeBlock;
+
+    p_dec->fmt_out.i_codec = VLC_CODEC_RGB24;
 
     return VLC_SUCCESS;
 }
@@ -290,7 +289,8 @@ static void jpeg_GetProjection(j_decompress_ptr cinfo, video_format_t *fmt)
     {
         if (cmarker->marker == EXIF_JPEG_MARKER)
         {
-            if (!memcmp(cmarker->data, EXIF_XMP_STRING, 29))
+            if(cmarker->data_length >= 32 &&
+               !memcmp(cmarker->data, EXIF_XMP_STRING, 29))
             {
                 xmp_marker = cmarker;
                 break;
@@ -299,7 +299,7 @@ static void jpeg_GetProjection(j_decompress_ptr cinfo, video_format_t *fmt)
         cmarker = cmarker->next;
     }
 
-    if (xmp_marker == NULL || xmp_marker->data_length < 32)
+    if (xmp_marker == NULL)
         return;
     char *psz_rdf = malloc(xmp_marker->data_length - 29 + 1);
     if (unlikely(psz_rdf == NULL))
@@ -378,7 +378,8 @@ jpeg_GetOrientation( j_decompress_ptr cinfo )
 
     while ( cmarker )
     {
-        if ( cmarker->marker == EXIF_JPEG_MARKER )
+        if ( cmarker->data_length >= 32 &&
+             cmarker->marker == EXIF_JPEG_MARKER )
         {
             /* The Exif APP1 marker should contain a unique
                identification string ("Exif\0\0"). Check for it. */
@@ -392,10 +393,6 @@ jpeg_GetOrientation( j_decompress_ptr cinfo )
 
     /* Did we find the Exif APP1 marker? */
     if ( exif_marker == NULL )
-        return 0;
-
-    /* Do we have enough data? */
-    if ( exif_marker->data_length < 32 )
         return 0;
 
     /* Check for TIFF header and catch endianess */
@@ -450,7 +447,7 @@ jpeg_GetOrientation( j_decompress_ptr cinfo )
 
     /* Check that we still are within the buffer and can read the tag count */
 
-    if ( ( i + 2 ) > exif_marker->data_length )
+    if ( i > exif_marker->data_length - 2 )
         return 0;
 
     /* Find out how many tags we have in IFD0. As per the TIFF spec, the first
@@ -461,7 +458,7 @@ jpeg_GetOrientation( j_decompress_ptr cinfo )
     /* Check that we still have enough data for all tags to check. The tags
        are listed in consecutive 12-byte blocks. The tag ID, type, size, and
        a pointer to the actual value, are packed into these 12 byte entries. */
-    if ( ( i + tags * 12 ) > exif_marker->data_length )
+    if ( tags * 12U > exif_marker->data_length - i )
         return 0;
 
     /* Check through IFD0 for tags of interest */
@@ -526,7 +523,6 @@ static int DecodeBlock(decoder_t *p_dec, block_t *p_block)
     jpeg_start_decompress(&p_sys->p_jpeg);
 
     /* Set output properties */
-    p_dec->fmt_out.i_codec = VLC_CODEC_RGB24;
     p_dec->fmt_out.video.i_visible_width  = p_dec->fmt_out.video.i_width  = p_sys->p_jpeg.output_width;
     p_dec->fmt_out.video.i_visible_height = p_dec->fmt_out.video.i_height = p_sys->p_jpeg.output_height;
     p_dec->fmt_out.video.i_sar_num = 1;

@@ -40,7 +40,7 @@ static void Close(vlc_object_t *);
 vlc_module_begin ()
     set_description(N_("SCTE-18 decoder"))
     set_shortname(N_("SCTE-18"))
-    set_capability( "decoder", 51)
+    set_capability( "spu decoder", 51)
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_SCODEC)
     set_callbacks(Open, Close)
@@ -236,7 +236,7 @@ static int Open( vlc_object_t *object )
 
     dec->p_sys = p_sys;
     dec->pf_decode = Decode;
-    es_format_Init( &dec->fmt_out, SPU_ES, 0 );
+    dec->fmt_out.i_codec = 0;
 
     return VLC_SUCCESS;
 }

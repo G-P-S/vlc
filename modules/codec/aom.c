@@ -48,7 +48,7 @@ static void CloseDecoder(vlc_object_t *);
 vlc_module_begin ()
     set_shortname("aom")
     set_description(N_("AOM video decoder"))
-    set_capability("decoder", 100)
+    set_capability("video decoder", 100)
     set_callbacks(OpenDecoder, CloseDecoder)
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_VCODEC)
@@ -251,15 +251,11 @@ static int OpenDecoder(vlc_object_t *p_this)
     const aom_codec_iface_t *iface;
     int av_version;
 
-    switch (dec->fmt_in.i_codec)
-    {
-    case VLC_CODEC_AV1:
-        iface = &aom_codec_av1_dx_algo;
-        av_version = 1;
-        break;
-    default:
+    if (dec->fmt_in.i_codec != VLC_CODEC_AV1)
         return VLC_EGENERIC;
-    }
+
+    iface = &aom_codec_av1_dx_algo;
+    av_version = 1;
 
     decoder_sys_t *sys = malloc(sizeof(*sys));
     if (!sys)
@@ -281,7 +277,6 @@ static int OpenDecoder(vlc_object_t *p_this)
 
     dec->pf_decode = Decode;
 
-    dec->fmt_out.i_cat = VIDEO_ES;
     dec->fmt_out.video.i_width = dec->fmt_in.video.i_width;
     dec->fmt_out.video.i_height = dec->fmt_in.video.i_height;
     dec->fmt_out.i_codec = VLC_CODEC_I420;

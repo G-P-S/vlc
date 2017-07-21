@@ -346,7 +346,10 @@ QVariant PLModel::data( const QModelIndex &index, const int role ) const
                 {
                     PLItem *item = getItem( index );
                     /* Used to segfault here because i_type wasn't always initialized */
-                    return QVariant( icons[item->inputItem()->i_type] );
+                    int idx = item->inputItem()->i_type;
+                    if( item->inputItem()->b_net && item->inputItem()->i_type == ITEM_TYPE_FILE )
+                        idx = ITEM_TYPE_STREAM;
+                    return QVariant( icons[idx] );
                 }
                 case COLUMN_COVER:
                     /* !warn: changes tree item line height. Otherwise, override
@@ -644,7 +647,11 @@ void PLModel::processItemAppend( int i_pl_itemid, int i_pl_itemidparent )
     if ( newItem->inputItem() == THEMIM->currentInputItem() )
         emit currentIndexChanged( index( newItem, 0 ) );
 
-    if( latestSearch.isEmpty() ) return;
+    if( latestSearch.isEmpty() )
+    {
+        rebuild();
+        return;
+    }
     filter( latestSearch, index( rootItem, 0), false /*FIXME*/ );
 }
 

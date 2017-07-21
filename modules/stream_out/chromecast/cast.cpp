@@ -44,7 +44,7 @@ struct sout_stream_sys_t
         , default_muxer(psz_default_muxer)
         , default_mime(psz_default_mime)
         , p_intf(intf)
-        , b_has_video(has_video)
+        , b_supports_video(has_video)
         , i_port(port)
         , es_changed( true )
     {
@@ -57,8 +57,9 @@ struct sout_stream_sys_t
         delete p_intf;
     }
 
-    bool canDecodeVideo( int i_codec ) const;
-    bool canDecodeAudio( int i_codec ) const;
+    bool canDecodeVideo( vlc_fourcc_t i_codec ) const;
+    bool canDecodeAudio( vlc_fourcc_t i_codec ) const;
+    bool startSoutChain(sout_stream_t* p_stream);
 
     sout_stream_t     *p_out;
     std::string        sout;
@@ -66,7 +67,7 @@ struct sout_stream_sys_t
     const std::string  default_mime;
 
     intf_sys_t * const p_intf;
-    const bool b_has_video;
+    const bool b_supports_video;
     const int i_port;
 
     sout_stream_id_sys_t *GetSubId( sout_stream_t*, sout_stream_id_sys_t* );
@@ -75,7 +76,7 @@ struct sout_stream_sys_t
     std::vector<sout_stream_id_sys_t*> streams;
 
 private:
-    int UpdateOutput( sout_stream_t * );
+    void UpdateOutput( sout_stream_t * );
 };
 
 #define SOUT_CFG_PREFIX "sout-chromecast-"
@@ -147,7 +148,7 @@ static sout_stream_id_sys_t *Add(sout_stream_t *p_stream, const es_format_t *p_f
 {
     sout_stream_sys_t *p_sys = p_stream->p_sys;
 
-    if (!p_sys->b_has_video)
+    if (!p_sys->b_supports_video)
     {
         if (p_fmt->i_cat != AUDIO_ES)
             return NULL;
@@ -196,148 +197,152 @@ static void Del(sout_stream_t *p_stream, sout_stream_id_sys_t *id)
 }
 
 
-bool sout_stream_sys_t::canDecodeVideo( int i_codec ) const
+bool sout_stream_sys_t::canDecodeVideo( vlc_fourcc_t i_codec ) const
 {
     return i_codec == VLC_CODEC_H264 || i_codec == VLC_CODEC_VP8;
 }
 
-bool sout_stream_sys_t::canDecodeAudio( int i_codec ) const
+bool sout_stream_sys_t::canDecodeAudio( vlc_fourcc_t i_codec ) const
 {
     return i_codec == VLC_CODEC_VORBIS ||
         i_codec == VLC_CODEC_MP4A ||
         i_codec == VLC_FOURCC('h', 'a', 'a', 'c') ||
         i_codec == VLC_FOURCC('l', 'a', 'a', 'c') ||
         i_codec == VLC_FOURCC('s', 'a', 'a', 'c') ||
+        i_codec == VLC_CODEC_OPUS ||
         i_codec == VLC_CODEC_MP3 ||
         i_codec == VLC_CODEC_A52 ||
         i_codec == VLC_CODEC_EAC3;
 }
 
-int sout_stream_sys_t::UpdateOutput( sout_stream_t *p_stream )
+bool sout_stream_sys_t::startSoutChain( sout_stream_t *p_stream )
+{
+    if ( unlikely( p_out != NULL ) )
+    {
+        for ( size_t i = 0; i < streams.size(); i++ )
+        {
+            if ( streams[i]->p_sub_id != NULL )
+                sout_StreamIdDel( p_out, streams[i]->p_sub_id );
+        }
+        sout_StreamChainDelete( p_out, NULL );
+    }
+
+    msg_Dbg( p_stream, "Creating chain %s", sout.c_str() );
+    p_out = sout_StreamChainNew( p_stream->p_sout, sout.c_str(), NULL, NULL);
+    if (p_out == NULL) {
+        msg_Dbg(p_stream, "could not create sout chain:%s", sout.c_str());
+        return false;
+    }
+
+    /* check the streams we can actually add */
+    for (std::vector<sout_stream_id_sys_t*>::iterator it = streams.begin(); it != streams.end(); )
+    {
+        sout_stream_id_sys_t *p_sys_id = *it;
+        p_sys_id->p_sub_id = sout_StreamIdAdd( p_out, &p_sys_id->fmt );
+        if ( p_sys_id->p_sub_id == NULL )
+        {
+            msg_Err( p_stream, "can't handle %4.4s stream", (char *)&p_sys_id->fmt.i_codec );
+            it = streams.erase( it );
+        }
+        else
+            ++it;
+    }
+    return streams.empty() == false;
+}
+
+void sout_stream_sys_t::UpdateOutput( sout_stream_t *p_stream )
 {
     assert( p_stream->p_sys == this );
 
-    if ( es_changed )
+    if ( !es_changed )
+        return;
+
+    es_changed = false;
+
+    bool canRemux = true;
+    vlc_fourcc_t i_codec_video = 0, i_codec_audio = 0;
+
+    for (std::vector<sout_stream_id_sys_t*>::iterator it = streams.begin(); it != streams.end(); ++it)
     {
-        es_changed = false;
-
-        bool canRemux = true;
-        vlc_fourcc_t i_codec_video = 0, i_codec_audio = 0;
-
-        for (std::vector<sout_stream_id_sys_t*>::iterator it = streams.begin(); it != streams.end(); ++it)
+        const es_format_t *p_es = &(*it)->fmt;
+        if (p_es->i_cat == AUDIO_ES)
         {
-            const es_format_t *p_es = &(*it)->fmt;
-            if (p_es->i_cat == AUDIO_ES)
+            if (!canDecodeAudio( p_es->i_codec ))
             {
-                if (!canDecodeAudio( p_es->i_codec ))
-                {
-                    msg_Dbg( p_stream, "can't remux audio track %d codec %4.4s", p_es->i_id, (const char*)&p_es->i_codec );
-                    canRemux = false;
-                }
-                else if (i_codec_audio == 0)
-                    i_codec_audio = p_es->i_codec;
+                msg_Dbg( p_stream, "can't remux audio track %d codec %4.4s", p_es->i_id, (const char*)&p_es->i_codec );
+                canRemux = false;
             }
-            else if (b_has_video && p_es->i_cat == VIDEO_ES)
-            {
-                if (!canDecodeVideo( p_es->i_codec ))
-                {
-                    msg_Dbg( p_stream, "can't remux video track %d codec %4.4s", p_es->i_id, (const char*)&p_es->i_codec );
-                    canRemux = false;
-                }
-                else if (i_codec_video == 0)
-                    i_codec_video = p_es->i_codec;
-            }
+            else if (i_codec_audio == 0)
+                i_codec_audio = p_es->i_codec;
         }
-
-        std::stringstream ssout;
-        if ( !canRemux )
+        else if (b_supports_video && p_es->i_cat == VIDEO_ES)
         {
-            /* TODO: provide audio samplerate and channels */
-            ssout << "transcode{";
-            char s_fourcc[5];
-            if ( i_codec_audio == 0 )
+            if (!canDecodeVideo( p_es->i_codec ))
             {
-                i_codec_audio = DEFAULT_TRANSCODE_AUDIO;
-                msg_Dbg( p_stream, "Converting audio to %.4s", (const char*)&i_codec_audio );
-                ssout << "acodec=";
-                vlc_fourcc_to_char( i_codec_audio, s_fourcc );
-                s_fourcc[4] = '\0';
-                ssout << s_fourcc << ',';
+                msg_Dbg( p_stream, "can't remux video track %d codec %4.4s", p_es->i_id, (const char*)&p_es->i_codec );
+                canRemux = false;
             }
-            if ( b_has_video && i_codec_video == 0 )
-            {
-                i_codec_video = DEFAULT_TRANSCODE_VIDEO;
-                msg_Dbg( p_stream, "Converting video to %.4s", (const char*)&i_codec_video );
-                /* TODO: provide maxwidth,maxheight */
-                ssout << "vcodec=";
-                vlc_fourcc_to_char( i_codec_video, s_fourcc );
-                s_fourcc[4] = '\0';
-                ssout << s_fourcc;
-            }
-            ssout << "}:";
-        }
-        std::string mime;
-        if ( !b_has_video && default_muxer == DEFAULT_MUXER )
-            mime = "audio/x-matroska";
-        else if ( i_codec_audio == VLC_CODEC_VORBIS &&
-                  i_codec_video == VLC_CODEC_VP8 &&
-                  default_muxer == DEFAULT_MUXER )
-            mime = "video/webm";
-        else
-            mime = default_mime;
-
-        ssout << "http{dst=:" << i_port << "/stream"
-              << ",mux=" << default_muxer
-              << ",access=http{mime=" << mime << "}}";
-
-        if ( sout != ssout.str() )
-        {
-            if ( unlikely( p_out != NULL ) )
-            {
-                sout_StreamChainDelete( p_out, NULL );
-                sout = "";
-            }
-
-            const std::string chain = ssout.str();
-            msg_Dbg( p_stream, "Creating chain %s", chain.c_str() );
-            p_out = sout_StreamChainNew( p_stream->p_sout, chain.c_str(), NULL, NULL);
-            if (p_out == NULL) {
-                msg_Dbg(p_stream, "could not create sout chain:%s", chain.c_str());
-                return VLC_EGENERIC;
-            }
-            sout = ssout.str();
-        }
-
-        /* check the streams we can actually add */
-        for (std::vector<sout_stream_id_sys_t*>::iterator it = streams.begin(); it != streams.end(); )
-        {
-            sout_stream_id_sys_t *p_sys_id = *it;
-            p_sys_id->p_sub_id = sout_StreamIdAdd( p_out, &p_sys_id->fmt );
-            if ( p_sys_id->p_sub_id == NULL )
-            {
-                msg_Err( p_stream, "can't handle %4.4s stream", (char *)&p_sys_id->fmt.i_codec );
-                it = streams.erase( it );
-            }
-            else
-                ++it;
-        }
-
-        if ( !streams.empty() )
-        {
-            /* tell the chromecast to load the content */
-            p_intf->setHasInput( mime );
-        }
-        else
-        {
-            p_intf->requestPlayerStop();
-
-            sout_StreamChainDelete( p_out, NULL );
-            p_out = NULL;
-            sout = "";
+            else if (i_codec_video == 0)
+                i_codec_video = p_es->i_codec;
         }
     }
 
-    return VLC_SUCCESS;
+    std::stringstream ssout;
+    if ( !canRemux )
+    {
+        /* TODO: provide audio samplerate and channels */
+        ssout << "transcode{";
+        char s_fourcc[5];
+        if ( i_codec_audio == 0 )
+        {
+            i_codec_audio = DEFAULT_TRANSCODE_AUDIO;
+            msg_Dbg( p_stream, "Converting audio to %.4s", (const char*)&i_codec_audio );
+            ssout << "acodec=";
+            vlc_fourcc_to_char( i_codec_audio, s_fourcc );
+            s_fourcc[4] = '\0';
+            ssout << s_fourcc << ',';
+        }
+        if ( b_supports_video && i_codec_video == 0 )
+        {
+            i_codec_video = DEFAULT_TRANSCODE_VIDEO;
+            msg_Dbg( p_stream, "Converting video to %.4s", (const char*)&i_codec_video );
+            /* TODO: provide maxwidth,maxheight */
+            ssout << "vcodec=";
+            vlc_fourcc_to_char( i_codec_video, s_fourcc );
+            s_fourcc[4] = '\0';
+            ssout << s_fourcc;
+        }
+        ssout << "}:";
+    }
+    std::string mime;
+    if ( !b_supports_video && default_muxer == DEFAULT_MUXER )
+        mime = "audio/x-matroska";
+    else if ( i_codec_audio == VLC_CODEC_VORBIS &&
+              i_codec_video == VLC_CODEC_VP8 &&
+              default_muxer == DEFAULT_MUXER )
+        mime = "video/webm";
+    else
+        mime = default_mime;
+
+    ssout << "http{dst=:" << i_port << "/stream"
+          << ",mux=" << default_muxer
+          << ",access=http{mime=" << mime << "}}";
+
+    sout = ssout.str();
+
+    if ( startSoutChain( p_stream ) )
+    {
+        /* tell the chromecast to load the content */
+        p_intf->setHasInput( mime );
+    }
+    else
+    {
+        p_intf->requestPlayerStop();
+
+        sout_StreamChainDelete( p_out, NULL );
+        p_out = NULL;
+        sout = "";
+    }
 }
 
 sout_stream_id_sys_t *sout_stream_sys_t::GetSubId( sout_stream_t *p_stream,
@@ -347,8 +352,7 @@ sout_stream_id_sys_t *sout_stream_sys_t::GetSubId( sout_stream_t *p_stream,
 
     assert( p_stream->p_sys == this );
 
-    if ( UpdateOutput( p_stream ) != VLC_SUCCESS )
-        return NULL;
+    UpdateOutput( p_stream );
 
     for (i = 0; i < streams.size(); ++i)
     {
@@ -416,7 +420,7 @@ static int Open(vlc_object_t *p_this)
     char *psz_mux = NULL;
     char *psz_var_mime = NULL;
     sout_stream_t *p_sout = NULL;
-    bool b_has_video = true;
+    bool b_supports_video = true;
     int i_local_server_port;
     int i_device_port;
     std::stringstream ss;
@@ -448,6 +452,7 @@ static int Open(vlc_object_t *p_this)
     }
     catch (const std::bad_alloc& )
     {
+        p_intf = NULL;
         goto error;
     }
 
@@ -474,9 +479,9 @@ static int Open(vlc_object_t *p_this)
     }
     sout_StreamChainDelete( p_sout, NULL );
 
-    b_has_video = var_GetBool(p_stream, SOUT_CFG_PREFIX "video");
+    b_supports_video = var_GetBool(p_stream, SOUT_CFG_PREFIX "video");
 
-    p_sys = new(std::nothrow) sout_stream_sys_t( p_intf, b_has_video, i_local_server_port,
+    p_sys = new(std::nothrow) sout_stream_sys_t( p_intf, b_supports_video, i_local_server_port,
                                                  psz_mux, psz_var_mime );
     if (unlikely(p_sys == NULL))
         goto error;

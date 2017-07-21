@@ -23,6 +23,7 @@ aout_DeviceGet
 aout_DeviceSet
 aout_DevicesList
 aout_FiltersNew
+aout_FiltersChangeViewpoint
 aout_FiltersDelete
 aout_FiltersDrain
 aout_FiltersFlush
@@ -98,6 +99,8 @@ es_format_Copy
 es_format_Init
 es_format_InitFromVideo
 es_format_IsSimilar
+filter_AddProxyCallbacks
+filter_DelProxyCallbacks
 filter_Blend
 filter_chain_AppendConverter
 filter_chain_AppendFilter
@@ -271,6 +274,9 @@ vlc_LogSet
 vlc_vaLog
 vlc_strerror
 vlc_strerror_c
+vlc_malloc
+vlc_calloc
+vlc_free
 msleep
 mwait
 net_Accept

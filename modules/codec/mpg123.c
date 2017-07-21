@@ -65,7 +65,7 @@ vlc_module_begin ()
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_ACODEC )
     set_description( N_("MPEG audio decoder using mpg123") )
-    set_capability( "decoder", 100 )
+    set_capability( "audio decoder", 100 )
     set_shortname( "mpg123" )
     set_callbacks( OpenDecoder, CloseDecoder )
 vlc_module_end ()
@@ -168,24 +168,21 @@ static int UpdateAudioFormat( decoder_t *p_dec )
 
     switch( frame_info.mode )
     {
+        case MPG123_M_DUAL:
+            p_dec->fmt_out.audio.i_chan_mode = AOUT_CHANMODE_DUALMONO;
+            /* fall through */
         case MPG123_M_STEREO:
         case MPG123_M_JOINT:
-            p_dec->fmt_out.audio.i_original_channels =
+            p_dec->fmt_out.audio.i_physical_channels =
                 AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT;
             break;
-        case MPG123_M_DUAL:
-            p_dec->fmt_out.audio.i_original_channels =
-                AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT | AOUT_CHAN_DUALMONO;
-            break;
         case MPG123_M_MONO:
-            p_dec->fmt_out.audio.i_original_channels = AOUT_CHAN_CENTER;
+            p_dec->fmt_out.audio.i_physical_channels = AOUT_CHAN_CENTER;
             break;
         default:
             return VLC_EGENERIC;
     }
 
-    p_dec->fmt_out.audio.i_physical_channels =
-        p_dec->fmt_out.audio.i_original_channels & AOUT_CHAN_PHYSMASK;
     aout_FormatPrepare( &p_dec->fmt_out.audio );
 
     /* Date management */
@@ -372,9 +369,6 @@ static int OpenDecoder( vlc_object_t *p_this )
         p_dec->fmt_in.i_codec != VLC_CODEC_MP3 )
         return VLC_EGENERIC;
 
-    p_dec->fmt_out.i_cat = AUDIO_ES;
-    p_dec->fmt_out.i_codec = VLC_CODEC_FL32;
-
     /* Initialize libmpg123 */
     if( InitMPG123() != MPG123_OK )
         return VLC_EGENERIC;
@@ -390,6 +384,7 @@ static int OpenDecoder( vlc_object_t *p_this )
     if( MPG123Open( p_dec ) )
         goto error;
 
+    p_dec->fmt_out.i_codec = VLC_CODEC_FL32;
     p_dec->fmt_out.audio.i_rate = 0; /* So end_date gets initialized */
     p_dec->fmt_out.audio.i_format = p_dec->fmt_out.i_codec;
     p_dec->pf_decode = DecodeBlock;

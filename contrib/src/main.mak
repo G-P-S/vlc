@@ -111,12 +111,6 @@ endif
 
 ifdef HAVE_MACOSX
 MIN_OSX_VERSION=10.7
-CC=xcrun cc
-CXX=xcrun c++
-AR=xcrun ar
-LD=xcrun ld
-STRIP=xcrun strip
-RANLIB=xcrun ranlib
 EXTRA_CFLAGS += -isysroot $(MACOSX_SDK) -mmacosx-version-min=$(MIN_OSX_VERSION) -DMACOSX_DEPLOYMENT_TARGET=$(MIN_OSX_VERSION)
 EXTRA_CXXFLAGS += -stdlib=libc++
 EXTRA_LDFLAGS += -Wl,-syslibroot,$(MACOSX_SDK) -mmacosx-version-min=$(MIN_OSX_VERSION) -isysroot $(MACOSX_SDK) -DMACOSX_DEPLOYMENT_TARGET=$(MIN_OSX_VERSION)
@@ -463,7 +457,14 @@ else
 	echo "set(CMAKE_SYSTEM_NAME Windows)" >> $@
 endif
 endif
+ifndef WITH_OPTIMIZATION
+	echo "set(CMAKE_BUILD_TYPE Debug)" >> $@
+else
+	echo "set(CMAKE_BUILD_TYPE Release)" >> $@
+endif
+ifdef HAVE_CROSS_COMPILE
 	echo "set(CMAKE_RC_COMPILER $(HOST)-windres)" >> $@
+endif
 endif
 ifdef HAVE_DARWIN_OS
 	echo "set(CMAKE_SYSTEM_NAME Darwin)" >> $@

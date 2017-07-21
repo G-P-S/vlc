@@ -268,7 +268,7 @@ vlc_module_begin ()
     set_shortname( N_("Kate"))
     set_description( N_("Kate overlay decoder") )
     set_help( HELP_TEXT )
-    set_capability( "decoder", 50 )
+    set_capability( "spu decoder", 50 )
     set_callbacks( OpenDecoder, CloseDecoder )
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_SCODEC )
@@ -417,7 +417,7 @@ static int OpenDecoder( vlc_object_t *p_this )
 
 #endif
 
-    es_format_Init( &p_dec->fmt_out, SPU_ES, 0 );
+    p_dec->fmt_out.i_codec = 0; // may vary during the stream
 
     /* add the decoder to the global list */
     decoder_t **list = realloc( kate_decoder_list, (kate_decoder_list_size+1) * sizeof( *list ));

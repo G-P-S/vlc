@@ -61,7 +61,7 @@ vlc_module_begin ()
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_VCODEC )
     set_description( N_("SVG video decoder") )
-    set_capability( "decoder", 100 )
+    set_capability( "video decoder", 100 )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_shortcut( "svg" )
 
@@ -108,7 +108,6 @@ static int OpenDecoder( vlc_object_t *p_this )
 #endif
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_BGRA;
 
     /* Set callbacks */

@@ -1,10 +1,11 @@
 /*****************************************************************************
  * CompatibilityFixes.h: MacOS X interface module
  *****************************************************************************
- * Copyright (C) 2011-2012 VLC authors and VideoLAN
+ * Copyright (C) 2011-2017 VLC authors and VideoLAN
  * $Id$
  *
  * Authors: Felix Paul Kühne <fkuehne -at- videolan -dot- org>
+ *          Marvin Scholz <epirat07 -at- gmail -dot- com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,3 +53,6 @@ typedef NS_OPTIONS(NSUInteger, NSStatusItemBehavior) {
 typedef NSUInteger NSWindowStyleMask;
 
 #endif
+
+void swapoutOverride(Class _Nonnull cls, SEL _Nonnull selector);
+

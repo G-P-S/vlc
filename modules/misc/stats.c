@@ -86,7 +86,7 @@ static int OpenDecoder ( vlc_object_t *p_this )
     p_dec->pf_decode = DecodeBlock;
 
     /* */
-    es_format_Init( &p_dec->fmt_out, VIDEO_ES, VLC_CODEC_I420 );
+    p_dec->fmt_out.i_codec = VLC_CODEC_I420;
     p_dec->fmt_out.video.i_width = 100;
     p_dec->fmt_out.video.i_height = 100;
     p_dec->fmt_out.video.i_sar_num = 1;
@@ -220,7 +220,19 @@ vlc_module_begin ()
 #endif
         set_section( N_( "Stats decoder" ), NULL )
         set_description( N_("Stats decoder function") )
-        set_capability( "decoder", 0 )
+        set_capability( "video decoder", 0 )
+        add_shortcut( "stats" )
+        set_callbacks( OpenDecoder, NULL )
+    add_submodule()
+        set_section( N_( "Stats decoder" ), NULL )
+        set_description( N_("Stats decoder function") )
+        set_capability( "audio decoder", 0 )
+        add_shortcut( "stats" )
+        set_callbacks( OpenDecoder, NULL )
+    add_submodule()
+        set_section( N_( "Stats decoder" ), NULL )
+        set_description( N_("Stats decoder function") )
+        set_capability( "spu decoder", 0 )
         add_shortcut( "stats" )
         set_callbacks( OpenDecoder, NULL )
     add_submodule ()

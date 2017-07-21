@@ -394,7 +394,6 @@ static int Open( vlc_object_t *p_this )
 {
     sout_stream_t       *p_stream = (sout_stream_t*)p_this;
     sout_stream_sys_t   *p_sys = NULL;
-    config_chain_t      *p_cfg = NULL;
     char                *psz;
     bool          b_rtsp = false;
 
@@ -420,7 +419,7 @@ static int Open( vlc_object_t *p_this )
         return VLC_EGENERIC;
     }
 
-    for( p_cfg = p_stream->p_cfg; p_cfg != NULL; p_cfg = p_cfg->p_next )
+    for( config_chain_t *p_cfg = p_stream->p_cfg; p_cfg != NULL; p_cfg = p_cfg->p_next )
     {
         if( !strcmp( p_cfg->psz_name, "sdp" )
          && ( p_cfg->psz_value != NULL )
@@ -527,7 +526,7 @@ static int Open( vlc_object_t *p_this )
      * then actual PTS will catch up using offsets. */
     p_sys->i_npt_zero = VLC_TS_INVALID;
     p_sys->i_pts_zero = rtp_init_ts(p_sys->p_vod_media,
-                                    p_sys->psz_vod_session); 
+                                    p_sys->psz_vod_session);
     p_sys->i_es = 0;
     p_sys->es   = NULL;
     p_sys->rtsp = NULL;
@@ -1104,8 +1103,9 @@ static sout_stream_id_sys_t *Add( sout_stream_t *p_stream,
                 }
                 var_SetString (p_stream, "dccp-service", code);
                 type = SOCK_DCCP;
-            }   /* fall through */
+            }
 #endif
+            /* fall through */
             case IPPROTO_TCP:
                 id->listen.fd = net_Listen( VLC_OBJECT(p_stream),
                                             p_sys->psz_destination, i_port,
@@ -1608,11 +1608,11 @@ int64_t rtp_get_ts( const sout_stream_t *p_stream, const sout_stream_id_sys_t *i
     if (p_npt != NULL)
         *p_npt = npt;
 
-    return p_sys->i_pts_zero + npt; 
+    return p_sys->i_pts_zero + npt;
 }
 
 void rtp_packetize_common( sout_stream_id_sys_t *id, block_t *out,
-                           int b_marker, int64_t i_pts )
+                           bool b_m_bit, int64_t i_pts )
 {
     if( !id->b_ts_init )
     {
@@ -1639,7 +1639,7 @@ void rtp_packetize_common( sout_stream_id_sys_t *id, block_t *out,
                            + id->i_ts_offset;
 
     out->p_buffer[0] = 0x80;
-    out->p_buffer[1] = (b_marker?0x80:0x00)|id->rtp_fmt.payload_type;
+    out->p_buffer[1] = (b_m_bit?0x80:0x00)|id->rtp_fmt.payload_type;
     out->p_buffer[2] = ( id->i_sequence >> 8)&0xff;
     out->p_buffer[3] = ( id->i_sequence     )&0xff;
     out->p_buffer[4] = ( i_timestamp >> 24 )&0xff;
@@ -1725,6 +1725,7 @@ static ssize_t AccessOutGrabberWriteBuffer( sout_stream_t *p_stream,
     uint8_t         *p_data = p_buffer->p_buffer;
     size_t          i_data  = p_buffer->i_buffer;
     size_t          i_max   = id->i_mtu - 12;
+    bool            b_dis   = (p_buffer->i_flags & BLOCK_FLAG_DISCONTINUITY);
 
     size_t i_packet = ( p_buffer->i_buffer + i_max - 1 ) / i_max;
 
@@ -1744,11 +1745,13 @@ static ssize_t AccessOutGrabberWriteBuffer( sout_stream_t *p_stream,
         {
             /* allocate a new packet */
             p_sys->packet = block_Alloc( id->i_mtu );
-            rtp_packetize_common( id, p_sys->packet, 1, i_dts );
+            /* m-bit is discontinuity for MPEG1/2 PS and TS, RFC2250 2.1 */
+            rtp_packetize_common( id, p_sys->packet, b_dis, i_dts );
             p_sys->packet->i_buffer = 12;
             p_sys->packet->i_dts = i_dts;
             p_sys->packet->i_length = p_buffer->i_length / i_packet;
             i_dts += p_sys->packet->i_length;
+            b_dis = false;
         }
 
         i_size = __MIN( i_data,

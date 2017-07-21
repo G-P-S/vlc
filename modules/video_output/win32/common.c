@@ -117,7 +117,7 @@ int CommonInit(vout_display_t *vd)
 
     if (vd->cfg->is_fullscreen) {
         if (CommonControlSetFullscreen(vd, true))
-            vout_display_SendEventFullscreen(vd, false);
+            vout_display_SendEventFullscreen(vd, false, false);
     }
 
     DisableScreensaver (vd);
@@ -513,7 +513,7 @@ static void CommonChangeThumbnailClip(vout_display_t *vd, bool show)
         hr = taskbl->lpVtbl->SetThumbnailClip(taskbl, hroot,
                                                  show ? &video : NULL);
         if ( hr != S_OK )
-            msg_Err(vd, "SetThumbNailClip failed: %u", hr);
+            msg_Err(vd, "SetThumbNailClip failed: 0x%0lx", hr);
 
         taskbl->lpVtbl->Release(taskbl);
     }
@@ -607,28 +607,49 @@ static int CommonControlSetFullscreen(vout_display_t *vd, bool is_fullscreen)
     return VLC_SUCCESS;
 }
 
+static void DisableScreensaver(vout_display_t *vd)
+{
+    vout_display_sys_t *sys = vd->sys;
+
+    /* disable screensaver by temporarily changing system settings */
+    sys->i_spi_screensaveactive = 0;
+    if (var_GetBool(vd, "disable-screensaver")) {
+        msg_Dbg(vd, "disabling screen saver");
+        SystemParametersInfo(SPI_GETSCREENSAVEACTIVE, 0,
+                             &sys->i_spi_screensaveactive, 0);
+
+        if (FALSE != sys->i_spi_screensaveactive) {
+            SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 0, NULL, 0);
+        }
+    }
+}
+
+static void RestoreScreensaver(vout_display_t *vd)
+{
+    vout_display_sys_t *sys = vd->sys;
+
+    /* restore screensaver system settings */
+    if (0 != sys->i_spi_screensaveactive) {
+        SystemParametersInfo(SPI_SETSCREENSAVEACTIVE,
+                             sys->i_spi_screensaveactive, NULL, 0);
+    }
+}
+
+#else
+
+void CommonManage(vout_display_t *vd) {
+    UpdateRects(vd, NULL, NULL, false);
+}
+void CommonClean(vout_display_t *vd) {}
+void CommonDisplay(vout_display_t *vd) {}
+void CommonChangeThumbnailClip(vout_display_t *vd, bool show) {}
+#endif
+
 int CommonControl(vout_display_t *vd, int query, va_list args)
 {
     vout_display_sys_t *sys = vd->sys;
 
     switch (query) {
-    case VOUT_DISPLAY_CHANGE_DISPLAY_SIZE:   /* const vout_display_cfg_t *p_cfg */
-    {   /* Update dimensions */
-        const vout_display_cfg_t *cfg = va_arg(args, const vout_display_cfg_t *);
-        RECT rect_window = {
-            .top    = 0,
-            .left   = 0,
-            .right  = cfg->display.width,
-            .bottom = cfg->display.height,
-        };
-
-        AdjustWindowRect(&rect_window, EventThreadGetWindowStyle(sys->event), 0);
-        SetWindowPos(sys->hwnd, 0, 0, 0,
-                     rect_window.right - rect_window.left,
-                     rect_window.bottom - rect_window.top, SWP_NOMOVE);
-        UpdateRects(vd, cfg, NULL, false);
-        return VLC_SUCCESS;
-    }
     case VOUT_DISPLAY_CHANGE_DISPLAY_FILLED: /* const vout_display_cfg_t *p_cfg */
     case VOUT_DISPLAY_CHANGE_ZOOM:           /* const vout_display_cfg_t *p_cfg */
     case VOUT_DISPLAY_CHANGE_SOURCE_ASPECT:  /* const video_format_t *p_source */
@@ -644,6 +665,26 @@ int CommonControl(vout_display_t *vd, int query, va_list args)
             cfg    = va_arg(args, const vout_display_cfg_t *);
             UpdateRects(vd, cfg, NULL, true);
         }
+        return VLC_SUCCESS;
+    }
+#if !VLC_WINSTORE_APP
+    case VOUT_DISPLAY_CHANGE_DISPLAY_SIZE:   /* const vout_display_cfg_t *p_cfg */
+    {   /* Update dimensions */
+        const vout_display_cfg_t *cfg = va_arg(args, const vout_display_cfg_t *);
+        RECT rect_window = {
+            .top    = 0,
+            .left   = 0,
+            .right  = cfg->display.width,
+            .bottom = cfg->display.height,
+        };
+
+        if (!cfg->is_fullscreen) {
+            AdjustWindowRect(&rect_window, EventThreadGetWindowStyle(sys->event), 0);
+            SetWindowPos(sys->hwnd, 0, 0, 0,
+                         rect_window.right - rect_window.left,
+                         rect_window.bottom - rect_window.top, SWP_NOMOVE);
+        }
+        UpdateRects(vd, cfg, NULL, false);
         return VLC_SUCCESS;
     }
     case VOUT_DISPLAY_CHANGE_WINDOW_STATE: {       /* unsigned state */
@@ -678,53 +719,8 @@ int CommonControl(vout_display_t *vd, int query, va_list args)
         return VLC_SUCCESS;
     case VOUT_DISPLAY_RESET_PICTURES:
         vlc_assert_unreachable();
-    default:
-        return VLC_EGENERIC;
-    }
-}
-
-static void DisableScreensaver(vout_display_t *vd)
-{
-    vout_display_sys_t *sys = vd->sys;
-
-    /* disable screensaver by temporarily changing system settings */
-    sys->i_spi_screensaveactive = 0;
-    if (var_GetBool(vd, "disable-screensaver")) {
-        msg_Dbg(vd, "disabling screen saver");
-        SystemParametersInfo(SPI_GETSCREENSAVEACTIVE, 0,
-                             &sys->i_spi_screensaveactive, 0);
-
-        if (FALSE != sys->i_spi_screensaveactive) {
-            SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 0, NULL, 0);
-        }
-    }
-}
-
-static void RestoreScreensaver(vout_display_t *vd)
-{
-    vout_display_sys_t *sys = vd->sys;
-
-    /* restore screensaver system settings */
-    if (0 != sys->i_spi_screensaveactive) {
-        SystemParametersInfo(SPI_SETSCREENSAVEACTIVE,
-                             sys->i_spi_screensaveactive, NULL, 0);
-    }
-}
-
-#else
-
-int CommonControl(vout_display_t *vd, int query, va_list args)
-{
-    switch (query) {
-    default:
-        return VLC_EGENERIC;
-    }
-}
-
-void CommonManage(vout_display_t *vd) {
-    UpdateRects(vd, NULL, NULL, false);
-}
-void CommonClean(vout_display_t *vd) {}
-void CommonDisplay(vout_display_t *vd) {}
-void CommonChangeThumbnailClip(vout_display_t *vd, bool show) {}
 #endif
+    default:
+        return VLC_EGENERIC;
+    }
+}

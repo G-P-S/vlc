@@ -46,7 +46,7 @@
 
 static int Open(vlc_va_t *, AVCodecContext *, enum PixelFormat,
                 const es_format_t *, picture_sys_t *p_sys);
-static void Close(vlc_va_t *, AVCodecContext *);
+static void Close(vlc_va_t *, void **);
 
 vlc_module_begin()
     set_description(N_("DirectX Video Acceleration (DXVA) 2.0"))
@@ -111,7 +111,6 @@ static const d3d_format_t *D3dFindFormat(D3DFORMAT format)
 struct vlc_va_sys_t
 {
     directx_sys_t         dx_sys;
-    vlc_fourcc_t          i_chroma;
 
     /* DLL */
     HINSTANCE             hd3d9_dll;
@@ -148,17 +147,11 @@ static void DxDestroyVideoService(vlc_va_t *);
 static int DxGetInputList(vlc_va_t *, input_list_t *);
 static int DxSetupOutput(vlc_va_t *, const GUID *, const video_format_t *);
 
-static int DxCreateVideoDecoder(vlc_va_t *,
-                                int codec_id, const video_format_t *);
+static int DxCreateVideoDecoder(vlc_va_t *, int codec_id,
+                                const video_format_t *, unsigned surface_count);
 static void DxDestroyVideoDecoder(vlc_va_t *);
 static int DxResetVideoDecoder(vlc_va_t *);
 static void SetupAVCodecContext(vlc_va_t *);
-
-/* */
-static void Setup(vlc_va_t *va, vlc_fourcc_t *chroma)
-{
-    *chroma = va->sys->i_chroma;
-}
 
 void SetupAVCodecContext(vlc_va_t *va)
 {
@@ -167,22 +160,63 @@ void SetupAVCodecContext(vlc_va_t *va)
 
     sys->hw.decoder = dx_sys->decoder;
     sys->hw.cfg = &sys->cfg;
-    sys->hw.surface_count = dx_sys->surface_count;
+    sys->hw.surface_count = dx_sys->va_pool.surface_count;
     sys->hw.surface = dx_sys->hw_surface;
 
     if (IsEqualGUID(&dx_sys->input, &DXVA_Intel_H264_NoFGT_ClearVideo))
         sys->hw.workaround |= FF_DXVA2_WORKAROUND_INTEL_CLEARVIDEO;
 }
 
-static int Extract(vlc_va_t *va, picture_t *picture, uint8_t *data)
+static void d3d9_pic_context_destroy(struct picture_context_t *opaque)
 {
-    VLC_UNUSED(va); VLC_UNUSED(data);
-    struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
-    directx_va_AddRef(pic_ctx->va_surface);
-    return VLC_SUCCESS;
+    struct va_pic_context *pic_ctx = (struct va_pic_context*)opaque;
+    if (pic_ctx->va_surface)
+    {
+        ReleasePictureSys(&pic_ctx->picsys);
+        va_surface_Release(pic_ctx->va_surface);
+        free(pic_ctx);
+    }
 }
 
-static int CheckDevice(vlc_va_t *va)
+static struct va_pic_context *CreatePicContext(IDirect3DSurface9 *);
+
+static struct picture_context_t *d3d9_pic_context_copy(struct picture_context_t *ctx)
+{
+    struct va_pic_context *src_ctx = (struct va_pic_context*)ctx;
+    struct va_pic_context *pic_ctx = CreatePicContext(src_ctx->picsys.surface);
+    if (unlikely(pic_ctx==NULL))
+        return NULL;
+    pic_ctx->va_surface = src_ctx->va_surface;
+    va_surface_AddRef(pic_ctx->va_surface);
+    return &pic_ctx->s;
+}
+
+static struct va_pic_context *CreatePicContext(IDirect3DSurface9 *surface)
+{
+    struct va_pic_context *pic_ctx = calloc(1, sizeof(*pic_ctx));
+    if (unlikely(pic_ctx==NULL))
+        return NULL;
+    pic_ctx->s.destroy = d3d9_pic_context_destroy;
+    pic_ctx->s.copy    = d3d9_pic_context_copy;
+    pic_ctx->picsys.surface = surface;
+    AcquirePictureSys(&pic_ctx->picsys);
+    return pic_ctx;
+}
+
+static struct va_pic_context* NewSurfacePicContext(vlc_va_t *va, int surface_index)
+{
+    directx_sys_t *dx_sys = &va->sys->dx_sys;
+    struct va_pic_context *pic_ctx = CreatePicContext(dx_sys->hw_surface[surface_index]);
+    if (unlikely(pic_ctx==NULL))
+        return NULL;
+    /* all the resources are acquired during surfaces init, and a second time in
+     * CreatePicContext(), undo one of them otherwise we need an extra release
+     * when the pool is emptied */
+    ReleasePictureSys(&pic_ctx->picsys);
+    return pic_ctx;
+}
+
+static int Get(vlc_va_t *va, picture_t *pic, uint8_t **data)
 {
     vlc_va_sys_t *sys = va->sys;
 
@@ -195,56 +229,14 @@ static int CheckDevice(vlc_va_t *va)
         msg_Err(va, "IDirect3DDeviceManager9_TestDevice %u", (unsigned)hr);
         return VLC_EGENERIC;
     }
-    return VLC_SUCCESS;
+
+    int res = va_pool_Get(&sys->dx_sys.va_pool, pic);
+    if (likely(res==VLC_SUCCESS))
+        *data = (uint8_t*)((struct va_pic_context*)pic->context)->picsys.surface;
+    return res;
 }
 
-static void d3d9_pic_context_destroy(struct picture_context_t *opaque)
-{
-    struct va_pic_context *pic_ctx = (struct va_pic_context*)opaque;
-    if (pic_ctx->va_surface)
-    {
-        ReleasePictureSys(&pic_ctx->picsys);
-        directx_va_Release(pic_ctx->va_surface);
-        free(pic_ctx);
-    }
-}
-
-static struct picture_context_t *CreatePicContext(vlc_va_surface_t *);
-
-static struct picture_context_t *d3d9_pic_context_copy(struct picture_context_t *ctx)
-{
-    struct va_pic_context *src_ctx = (struct va_pic_context*)ctx;
-    return CreatePicContext(src_ctx->va_surface);
-}
-
-static struct picture_context_t *CreatePicContext(vlc_va_surface_t *va_surface)
-{
-    struct va_pic_context *pic_ctx = calloc(1, sizeof(*pic_ctx));
-    if (unlikely(pic_ctx==NULL))
-        return NULL;
-    pic_ctx->va_surface = va_surface;
-    directx_va_AddRef(pic_ctx->va_surface);
-    pic_ctx->s.destroy = d3d9_pic_context_destroy;
-    pic_ctx->s.copy    = d3d9_pic_context_copy;
-    pic_ctx->picsys.surface = va_surface->decoderSurface;
-    AcquirePictureSys(&pic_ctx->picsys);
-    return &pic_ctx->s;
-}
-
-static int Get(vlc_va_t *va, picture_t *pic, uint8_t **data)
-{
-    vlc_va_surface_t *va_surface = directx_va_Get(va, &va->sys->dx_sys);
-    if (unlikely(va_surface==NULL))
-        return VLC_EGENERIC;
-    pic->context = CreatePicContext(va_surface);
-    directx_va_Release(va_surface);
-    if (unlikely(pic->context==NULL))
-        return VLC_EGENERIC;
-    *data = (uint8_t*)va_surface->decoderSurface;
-    return VLC_SUCCESS;
-}
-
-static void Close(vlc_va_t *va, AVCodecContext *ctx)
+static void Close(vlc_va_t *va, void **ctx)
 {
     vlc_va_sys_t *sys = va->sys;
 
@@ -259,29 +251,6 @@ static void Close(vlc_va_t *va, AVCodecContext *ctx)
     free(sys);
 }
 
-static vlc_fourcc_t d3d9va_fourcc(enum PixelFormat swfmt)
-{
-    switch (swfmt)
-    {
-        case AV_PIX_FMT_YUV420P10LE:
-            return VLC_CODEC_D3D9_OPAQUE_10B;
-        case AV_PIX_FMT_YUVJ420P:
-        case AV_PIX_FMT_YUV420P:
-            return VLC_CODEC_D3D9_OPAQUE;
-        default:
-            return VLC_CODEC_D3D9_OPAQUE;
-    }
-}
-
-static void ReleasePic(void *opaque, uint8_t *data)
-{
-    (void)data;
-    picture_t *pic = opaque;
-    struct va_pic_context *pic_ctx = (struct va_pic_context*)pic->context;
-    directx_va_Release(pic_ctx->va_surface);
-    picture_Release(pic);
-}
-
 static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
                 const es_format_t *fmt, picture_sys_t *p_sys)
 {
@@ -290,6 +259,8 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
 
     if (pix_fmt != AV_PIX_FMT_DXVA2_VLD)
         return VLC_EGENERIC;
+
+    ctx->hwaccel_context = NULL;
 
     vlc_va_sys_t *sys = calloc(1, sizeof (*sys));
     if (unlikely(sys == NULL))
@@ -304,16 +275,16 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
 
     dx_sys = &sys->dx_sys;
 
-    dx_sys->pf_check_device            = CheckDevice;
-    dx_sys->pf_create_device           = D3dCreateDevice;
-    dx_sys->pf_destroy_device          = D3dDestroyDevice;
-    dx_sys->pf_create_device_manager   = D3dCreateDeviceManager;
-    dx_sys->pf_destroy_device_manager  = D3dDestroyDeviceManager;
-    dx_sys->pf_create_video_service    = DxCreateVideoService;
-    dx_sys->pf_destroy_video_service   = DxDestroyVideoService;
-    dx_sys->pf_create_decoder_surfaces = DxCreateVideoDecoder;
-    dx_sys->pf_destroy_surfaces        = DxDestroyVideoDecoder;
-    dx_sys->pf_setup_avcodec_ctx       = SetupAVCodecContext;
+    dx_sys->va_pool.pf_create_device           = D3dCreateDevice;
+    dx_sys->va_pool.pf_destroy_device          = D3dDestroyDevice;
+    dx_sys->va_pool.pf_create_device_manager   = D3dCreateDeviceManager;
+    dx_sys->va_pool.pf_destroy_device_manager  = D3dDestroyDeviceManager;
+    dx_sys->va_pool.pf_create_video_service    = DxCreateVideoService;
+    dx_sys->va_pool.pf_destroy_video_service   = DxDestroyVideoService;
+    dx_sys->va_pool.pf_create_decoder_surfaces = DxCreateVideoDecoder;
+    dx_sys->va_pool.pf_destroy_surfaces        = DxDestroyVideoDecoder;
+    dx_sys->va_pool.pf_setup_avcodec_ctx       = SetupAVCodecContext;
+    dx_sys->va_pool.pf_new_surface_context     = NewSurfacePicContext;
     dx_sys->pf_get_input_list          = DxGetInputList;
     dx_sys->pf_setup_output            = DxSetupOutput;
     dx_sys->psz_decoder_dll            = TEXT("DXVA2.DLL");
@@ -329,13 +300,11 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
         IDirect3DSurface9_GetDevice(p_sys->surface, &dx_sys->d3ddev );
     }
 
-    sys->i_chroma = d3d9va_fourcc(ctx->sw_pix_fmt);
-
-    err = directx_va_Open(va, &sys->dx_sys, ctx, fmt, true);
+    err = directx_va_Open(va, &sys->dx_sys, true);
     if (err!=VLC_SUCCESS)
         goto error;
 
-    err = directx_va_Setup(va, &sys->dx_sys, ctx);
+    err = directx_va_Setup(va, &sys->dx_sys, ctx, fmt);
     if (err != VLC_SUCCESS)
         goto error;
 
@@ -343,14 +312,11 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
 
     /* TODO print the hardware name/vendor for debugging purposes */
     va->description = DxDescribe(sys);
-    va->setup   = Setup;
     va->get     = Get;
-    va->release = ReleasePic;
-    va->extract = Extract;
     return VLC_SUCCESS;
 
 error:
-    Close(va, ctx);
+    Close(va, NULL);
     return VLC_EGENERIC;
 }
 /* */
@@ -430,8 +396,11 @@ static int D3dCreateDevice(vlc_va_t *va)
  */
 static void D3dDestroyDevice(vlc_va_t *va)
 {
+    directx_sys_t *dx_sys = &va->sys->dx_sys;
     if (va->sys->d3dobj)
         IDirect3D9_Release(va->sys->d3dobj);
+    if (dx_sys->d3ddev)
+        IDirect3DDevice9_Release(dx_sys->d3ddev);
 }
 /**
  * It describes our Direct3D object
@@ -559,8 +528,11 @@ static int DxCreateVideoService(vlc_va_t *va)
  */
 static void DxDestroyVideoService(vlc_va_t *va)
 {
+    directx_sys_t *dx_sys = &va->sys->dx_sys;
     if (va->sys->device)
         IDirect3DDeviceManager9_CloseDeviceHandle(va->sys->devmng, va->sys->device);
+    if (dx_sys->d3ddec)
+        IDirectXVideoDecoderService_Release(dx_sys->d3ddec);
 }
 
 static void ReleaseInputList(input_list_t *p_list)
@@ -640,16 +612,17 @@ static int DxSetupOutput(vlc_va_t *va, const GUID *input, const video_format_t *
 /**
  * It creates a DXVA2 decoder using the given video format
  */
-static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id, const video_format_t *fmt)
+static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id,
+                                const video_format_t *fmt, unsigned surface_count)
 {
     vlc_va_sys_t *p_sys = va->sys;
     directx_sys_t *sys = &va->sys->dx_sys;
     HRESULT hr;
 
     hr = IDirectXVideoDecoderService_CreateSurface(sys->d3ddec,
-                                                         sys->surface_width,
-                                                         sys->surface_height,
-                                                         sys->surface_count - 1,
+                                                         fmt->i_width,
+                                                         fmt->i_height,
+                                                         surface_count - 1,
                                                          p_sys->render,
                                                          D3DPOOL_DEFAULT,
                                                          0,
@@ -657,17 +630,16 @@ static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id, const video_format_t
                                                          sys->hw_surface,
                                                          NULL);
     if (FAILED(hr)) {
-        msg_Err(va, "IDirectXVideoAccelerationService_CreateSurface %d failed (hr=0x%0lx)", sys->surface_count - 1, hr);
-        sys->surface_count = 0;
+        msg_Err(va, "IDirectXVideoAccelerationService_CreateSurface %d failed (hr=0x%0lx)", surface_count - 1, hr);
         return VLC_EGENERIC;
     }
     msg_Dbg(va, "IDirectXVideoAccelerationService_CreateSurface succeed with %d surfaces (%dx%d)",
-            sys->surface_count, sys->surface_width, sys->surface_height);
+            surface_count, fmt->i_width, fmt->i_height);
 
     IDirect3DSurface9 *tstCrash;
     hr = IDirectXVideoDecoderService_CreateSurface(sys->d3ddec,
-                                                         sys->surface_width,
-                                                         sys->surface_height,
+                                                         fmt->i_width,
+                                                         fmt->i_height,
                                                          0,
                                                          p_sys->render,
                                                          D3DPOOL_DEFAULT,
@@ -677,9 +649,8 @@ static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id, const video_format_t
                                                          NULL);
     if (FAILED(hr)) {
         msg_Err(va, "extra buffer impossible, avoid a crash (hr=0x%0lx)", hr);
-        for (int i = 0; i < sys->surface_count; i++)
+        for (unsigned i = 0; i < surface_count; i++)
             IDirect3DSurface9_Release( sys->hw_surface[i] );
-        sys->surface_count = 0;
         return VLC_EGENERIC;
     }
     IDirect3DSurface9_Release(tstCrash);
@@ -721,9 +692,8 @@ static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id, const video_format_t
                                                                     &cfg_count,
                                                                     &cfg_list))) {
         msg_Err(va, "IDirectXVideoDecoderService_GetDecoderConfigurations failed");
-        for (int i = 0; i < sys->surface_count; i++)
+        for (unsigned i = 0; i < surface_count; i++)
             IDirect3DSurface9_Release( sys->hw_surface[i] );
-        sys->surface_count = 0;
         return VLC_EGENERIC;
     }
     msg_Dbg(va, "we got %d decoder configurations", cfg_count);
@@ -766,12 +736,11 @@ static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id, const video_format_t
                                                               &dsc,
                                                               &p_sys->cfg,
                                                               sys->hw_surface,
-                                                              sys->surface_count,
+                                                              surface_count,
                                                               &decoder))) {
         msg_Err(va, "IDirectXVideoDecoderService_CreateVideoDecoder failed");
-        for (int i = 0; i < sys->surface_count; i++)
+        for (unsigned i = 0; i < surface_count; i++)
             IDirect3DSurface9_Release( sys->hw_surface[i] );
-        sys->surface_count = 0;
         return VLC_EGENERIC;
     }
     sys->decoder = decoder;
@@ -787,6 +756,8 @@ static void DxDestroyVideoDecoder(vlc_va_t *va)
     {
         IDirectXVideoDecoder_Release(dx_sys->decoder);
         dx_sys->decoder = NULL;
+        for (unsigned i = 0; i < dx_sys->va_pool.surface_count; i++)
+            IDirect3DSurface9_Release(dx_sys->hw_surface[i]);
     }
 }
 

@@ -49,7 +49,7 @@ static void Close         ( vlc_object_t * );
 vlc_module_begin ()
     set_description( N_("DVD subtitles decoder") )
     set_shortname( N_("DVD subtitles") )
-    set_capability( "decoder", 75 )
+    set_capability( "spu decoder", 75 )
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_SCODEC )
     set_callbacks( DecoderOpen, Close )
@@ -91,7 +91,7 @@ static int DecoderOpen( vlc_object_t *p_this )
     p_sys->i_spu      = 0;
     p_sys->p_block    = NULL;
 
-    es_format_Init( &p_dec->fmt_out, SPU_ES, VLC_CODEC_SPU );
+    p_dec->fmt_out.i_codec = VLC_CODEC_SPU;
 
     p_dec->pf_decode    = Decode;
     p_dec->pf_packetize = NULL;

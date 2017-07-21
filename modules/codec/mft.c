@@ -61,10 +61,15 @@ static void Close(vlc_object_t *);
 vlc_module_begin()
     set_description(N_("Media Foundation Transform decoder"))
     add_shortcut("mft")
-    set_capability("decoder", 1)
+    set_capability("video decoder", 1)
     set_callbacks(Open, Close)
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_VCODEC)
+
+    add_submodule()
+    add_shortcut("mft")
+    set_capability("audio decoder", 1)
+    set_callbacks(Open, Close)
 vlc_module_end()
 
 typedef struct
@@ -413,7 +418,7 @@ static int SetOutputType(decoder_t *p_dec, DWORD stream_id, IMFMediaType **resul
 
     if (p_dec->fmt_in.i_cat == VIDEO_ES)
     {
-        p_dec->fmt_out.video = p_dec->fmt_in.video;
+        video_format_Copy( &p_dec->fmt_out.video, &p_dec->fmt_in.video );
         p_dec->fmt_out.i_codec = vlc_fourcc_GetCodec(p_dec->fmt_in.i_cat, subtype.Data1);
     }
     else
@@ -440,7 +445,6 @@ static int SetOutputType(decoder_t *p_dec, DWORD stream_id, IMFMediaType **resul
         p_dec->fmt_out.i_codec = vlc_fourcc_GetCodecAudio(fourcc, p_dec->fmt_out.audio.i_bitspersample);
 
         p_dec->fmt_out.audio.i_physical_channels = pi_channels_maps[p_dec->fmt_out.audio.i_channels];
-        p_dec->fmt_out.audio.i_original_channels = p_dec->fmt_out.audio.i_physical_channels;
     }
 
     *result = output_media_type;
@@ -1112,9 +1116,6 @@ static int Open(vlc_object_t *p_this)
     decoder_t *p_dec = (decoder_t *)p_this;
     decoder_sys_t *p_sys;
 
-    if (p_dec->fmt_in.i_cat != VIDEO_ES && p_dec->fmt_in.i_cat != AUDIO_ES)
-        return VLC_EGENERIC;
-
     p_sys = p_dec->p_sys = calloc(1, sizeof(*p_sys));
     if (!p_sys)
         return VLC_ENOMEM;
@@ -1139,7 +1140,6 @@ static int Open(vlc_object_t *p_this)
         goto error;
 
     p_dec->pf_decode = p_sys->is_async ? DecodeAsync : DecodeSync;
-    p_dec->fmt_out.i_cat = p_dec->fmt_in.i_cat;
 
     return VLC_SUCCESS;
 

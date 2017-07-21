@@ -53,7 +53,8 @@
  *****************************************************************************/
 struct decoder_sys_t
 {
-    AVCODEC_COMMON_MEMBERS
+    AVCodecContext *p_context;
+    const AVCodec  *p_codec;
 
     /* Video decoder specific part */
     date_t  pts;
@@ -153,9 +154,11 @@ static int lavc_GetVideoFormat(decoder_t *dec, video_format_t *restrict fmt,
     else /* hardware decoding */
         fmt->i_chroma = vlc_va_GetChroma(pix_fmt, sw_pix_fmt);
 
-    if( width == 0 || height == 0 || width > 8192 || height > 8192 )
+    if( width == 0 || height == 0 || width > 8192 || height > 8192 ||
+        width < ctx->width || height < ctx->height )
     {
-        msg_Err(dec, "Invalid frame size %dx%d.", width, height);
+        msg_Err(dec, "Invalid frame size %dx%d vsz %dx%d",
+                     width, height, ctx->width, ctx->height );
         return -1; /* invalid display size */
     }
 
@@ -315,12 +318,10 @@ static int lavc_UpdateVideoFormat(decoder_t *dec, AVCodecContext *ctx,
                                     __MAX(ctx->ticks_per_frame, 1),
                                     fmt_out.i_frame_rate_base);
 
-    const int i_cc_reorder = dec->fmt_out.subs.cc.i_reorder_depth;
     fmt_out.p_palette = dec->fmt_out.video.p_palette;
     dec->fmt_out.video.p_palette = NULL;
 
-    es_format_Clean(&dec->fmt_out);
-    es_format_Init(&dec->fmt_out, VIDEO_ES, fmt_out.i_chroma);
+    es_format_Change(&dec->fmt_out, VIDEO_ES, fmt_out.i_chroma);
     dec->fmt_out.video = fmt_out;
     dec->fmt_out.video.orientation = dec->fmt_in.video.orientation;
     dec->fmt_out.video.projection_mode = dec->fmt_in.video.projection_mode;
@@ -328,8 +329,6 @@ static int lavc_UpdateVideoFormat(decoder_t *dec, AVCodecContext *ctx,
     if ( dec->fmt_in.video.mastering.max_luminance )
         dec->fmt_out.video.mastering = dec->fmt_in.video.mastering;
     dec->fmt_out.video.lighting = dec->fmt_in.video.lighting;
-
-    dec->fmt_out.subs.cc.i_reorder_depth = i_cc_reorder;
 
     return decoder_UpdateVideoFormat(dec);
 }
@@ -372,54 +371,56 @@ static int lavc_CopyPicture(decoder_t *dec, picture_t *pic, AVFrame *frame)
 static int OpenVideoCodec( decoder_t *p_dec )
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
+    AVCodecContext *ctx = p_sys->p_context;
+    const AVCodec *codec = p_sys->p_codec;
     int ret;
 
-    if( p_sys->p_context->extradata_size <= 0 )
+    if( ctx->extradata_size <= 0 )
     {
-        if( p_sys->p_codec->id == AV_CODEC_ID_VC1 ||
-            p_sys->p_codec->id == AV_CODEC_ID_THEORA )
+        if( codec->id == AV_CODEC_ID_VC1 ||
+            codec->id == AV_CODEC_ID_THEORA )
         {
             msg_Warn( p_dec, "waiting for extra data for codec %s",
-                      p_sys->p_codec->name );
+                      codec->name );
             return 1;
         }
     }
 
-    p_sys->p_context->width  = p_dec->fmt_in.video.i_visible_width;
-    p_sys->p_context->height = p_dec->fmt_in.video.i_visible_height;
+    ctx->width  = p_dec->fmt_in.video.i_visible_width;
+    ctx->height = p_dec->fmt_in.video.i_visible_height;
 
-    p_sys->p_context->coded_width = p_dec->fmt_in.video.i_width;
-    p_sys->p_context->coded_height = p_dec->fmt_in.video.i_height;
+    ctx->coded_width = p_dec->fmt_in.video.i_width;
+    ctx->coded_height = p_dec->fmt_in.video.i_height;
 
-    p_sys->p_context->bits_per_coded_sample = p_dec->fmt_in.video.i_bits_per_pixel;
+    ctx->bits_per_coded_sample = p_dec->fmt_in.video.i_bits_per_pixel;
     p_sys->pix_fmt = AV_PIX_FMT_NONE;
     p_sys->profile = -1;
     p_sys->level = -1;
     cc_Init( &p_sys->cc );
 
     post_mt( p_sys );
-    ret = ffmpeg_OpenCodec( p_dec );
+    ret = ffmpeg_OpenCodec( p_dec, ctx, codec );
     wait_mt( p_sys );
     if( ret < 0 )
         return ret;
 
-    switch( p_sys->p_context->active_thread_type )
+    switch( ctx->active_thread_type )
     {
         case FF_THREAD_FRAME:
             msg_Dbg( p_dec, "using frame thread mode with %d threads",
-                     p_sys->p_context->thread_count );
+                     ctx->thread_count );
             break;
         case FF_THREAD_SLICE:
             msg_Dbg( p_dec, "using slice thread mode with %d threads",
-                     p_sys->p_context->thread_count );
+                     ctx->thread_count );
             break;
         case 0:
-            if( p_sys->p_context->thread_count > 1 )
+            if( ctx->thread_count > 1 )
                 msg_Warn( p_dec, "failed to enable threaded decoding" );
             break;
         default:
             msg_Warn( p_dec, "using unknown thread mode with %d threads",
-                      p_sys->p_context->thread_count );
+                      ctx->thread_count );
             break;
     }
     return 0;
@@ -431,19 +432,27 @@ static int OpenVideoCodec( decoder_t *p_dec )
  * the ffmpeg codec will be opened, some memory allocated. The vout is not yet
  * opened (done after the first decoded frame).
  *****************************************************************************/
-int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
-                  const AVCodec *p_codec )
+int InitVideoDec( vlc_object_t *obj )
 {
-    decoder_sys_t *p_sys;
+    decoder_t *p_dec = (decoder_t *)obj;
+    const AVCodec *p_codec;
+    AVCodecContext *p_context = ffmpeg_AllocContext( p_dec, &p_codec );
+    if( p_context == NULL )
+        return VLC_EGENERIC;
+
     int i_val;
 
     /* Allocate the memory needed to store the decoder's structure */
-    if( ( p_dec->p_sys = p_sys = calloc( 1, sizeof(decoder_sys_t) ) ) == NULL )
+    decoder_sys_t *p_sys = calloc( 1, sizeof(*p_sys) );
+    if( unlikely(p_sys == NULL) )
+    {
+        avcodec_free_context( &p_context );
         return VLC_ENOMEM;
+    }
 
+    p_dec->p_sys = p_sys;
     p_sys->p_context = p_context;
     p_sys->p_codec = p_codec;
-    p_sys->b_delayed_open = true;
     p_sys->p_va = NULL;
     vlc_sem_init( &p_sys->sem_mt, 0 );
 
@@ -562,7 +571,6 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     p_sys->b_from_preroll = false;
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
     if( GetVlcChroma( &p_dec->fmt_out.video, p_context->pix_fmt ) != VLC_SUCCESS )
     {
         /* we are doomed. but not really, because most codecs set their pix_fmt later on */
@@ -588,12 +596,18 @@ int InitVideoDec( decoder_t *p_dec, AVCodecContext *p_context,
     {
         vlc_sem_destroy( &p_sys->sem_mt );
         free( p_sys );
+        avcodec_free_context( &p_context );
         return VLC_EGENERIC;
     }
 
     p_dec->pf_decode = DecodeVideo;
     p_dec->pf_flush  = Flush;
 
+    /* XXX: Writing input format makes little sense. */
+    if( p_context->profile != FF_PROFILE_UNKNOWN )
+        p_dec->fmt_in.i_profile = p_context->profile;
+    if( p_context->level != FF_LEVEL_UNKNOWN )
+        p_dec->fmt_in.i_level = p_context->level;
     return VLC_SUCCESS;
 }
 
@@ -868,7 +882,7 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
     if( !p_context->extradata_size && p_dec->fmt_in.i_extra )
     {
         ffmpeg_InitCodec( p_dec );
-        if( p_sys->b_delayed_open )
+        if( !avcodec_is_open( p_context ) )
             OpenVideoCodec( p_dec );
     }
 
@@ -876,7 +890,7 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
     if(!p_block && !(p_sys->p_codec->capabilities & AV_CODEC_CAP_DELAY) )
         return NULL;
 
-    if( p_sys->b_delayed_open )
+    if( !avcodec_is_open( p_context ) )
     {
         if( p_block )
             block_Release( p_block );
@@ -1141,8 +1155,6 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
         }
         else
         {
-            if( p_sys->p_va != NULL )
-                vlc_va_Extract( p_sys->p_va, p_pic, frame->data[3] );
             picture_Hold( p_pic );
         }
 
@@ -1203,26 +1215,31 @@ static int DecodeVideo( decoder_t *p_dec, block_t *p_block )
  * This function is called when the thread ends after a successful
  * initialization.
  *****************************************************************************/
-void EndVideoDec( decoder_t *p_dec )
+void EndVideoDec( vlc_object_t *obj )
 {
+    decoder_t *p_dec = (decoder_t *)obj;
     decoder_sys_t *p_sys = p_dec->p_sys;
+    AVCodecContext *ctx = p_sys->p_context;
+    void *hwaccel_context;
 
     post_mt( p_sys );
 
     /* do not flush buffers if codec hasn't been opened (theora/vorbis/VC1) */
-    if( avcodec_is_open( p_sys->p_context ) )
-        avcodec_flush_buffers( p_sys->p_context );
+    if( avcodec_is_open( ctx ) )
+        avcodec_flush_buffers( ctx );
 
     wait_mt( p_sys );
 
     cc_Flush( &p_sys->cc );
 
-    ffmpeg_CloseCodec( p_dec );
+    hwaccel_context = ctx->hwaccel_context;
+    avcodec_free_context( &ctx );
 
     if( p_sys->p_va )
-        vlc_va_Delete( p_sys->p_va, p_sys->p_context );
+        vlc_va_Delete( p_sys->p_va, &hwaccel_context );
 
     vlc_sem_destroy( &p_sys->sem_mt );
+    free( p_sys );
 }
 
 /*****************************************************************************
@@ -1315,14 +1332,10 @@ static int lavc_va_GetFrame(struct AVCodecContext *ctx, AVFrame *frame,
      * data[3] actually contains the format-specific surface handle. */
     frame->data[3] = frame->data[0];
 
-    void (*release)(void *, uint8_t *) = va->release;
-    if (va->release == NULL)
-        release = lavc_ReleaseFrame;
-
-    frame->buf[0] = av_buffer_create(frame->data[0], 0, release, pic, 0);
+    frame->buf[0] = av_buffer_create(frame->data[0], 0, lavc_ReleaseFrame, pic, 0);
     if (unlikely(frame->buf[0] == NULL))
     {
-        release(pic, frame->data[0]);
+        lavc_ReleaseFrame(pic, frame->data[0]);
         return -1;
     }
 
@@ -1498,7 +1511,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     if (p_sys->p_va != NULL)
     {
         msg_Err(p_dec, "existing hardware acceleration cannot be reused");
-        vlc_va_Delete(p_sys->p_va, p_context);
+        vlc_va_Delete(p_sys->p_va, &p_context->hwaccel_context);
         p_sys->p_va = NULL;
     }
 

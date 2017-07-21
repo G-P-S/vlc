@@ -167,7 +167,7 @@ static void SetupESDS( demux_t *p_demux, mp4_track_t *p_track, const MP4_descrip
             p_track->fmt.subs.spu.palette[1 + i] =
                     GetDWBE((char*)p_track->fmt.p_extra + i * 4);
         }
-        p_track->fmt.subs.spu.palette[0] = 0xBeef;
+        p_track->fmt.subs.spu.palette[0] = SPU_PALETTE_DEFINED;
     }
 }
 
@@ -1105,8 +1105,7 @@ int SetupAudioES( demux_t *p_demux, mp4_track_t *p_track, MP4_Box_t *p_sample )
             {
                 p_track->b_chans_reorder = true;
                 p_track->fmt.audio.i_channels = i_channels;
-                p_track->fmt.audio.i_physical_channels =
-                p_track->fmt.audio.i_original_channels = i_vlc_mapping;
+                p_track->fmt.audio.i_physical_channels = i_vlc_mapping;
             }
 
         }
@@ -1184,6 +1183,11 @@ int SetupAudioES( demux_t *p_demux, mp4_track_t *p_track, MP4_Box_t *p_sample )
             break;
     }
 
+    /* Ambisonics */
+    const MP4_Box_t *p_SA3D = MP4_BoxGet(p_sample, "SA3D");
+    if (p_SA3D && BOXDATA(p_SA3D))
+        p_track->fmt.audio.channel_type = AUDIO_CHANNEL_TYPE_AMBISONICS;
+
     /* Late fixes */
     if ( p_soun->i_qt_version == 0 && p_track->fmt.i_codec == VLC_CODEC_QCELP )
     {
@@ -1249,6 +1253,7 @@ int SetupSpuES( demux_t *p_demux, mp4_track_t *p_track, MP4_Box_t *p_sample )
                     p_style->i_features |= (STYLE_HAS_BACKGROUND_ALPHA | STYLE_HAS_BACKGROUND_COLOR);
                 }
             }
+            assert(p_track->fmt.i_cat == SPU_ES);
             p_track->fmt.subs.p_style = p_style;
 
             /* FIXME UTF-8 doesn't work here ? */

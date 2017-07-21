@@ -25,6 +25,7 @@
 # define LIBVLC_AOUT_INTERNAL_H 1
 
 # include <vlc_atomic.h>
+# include <vlc_vout.h> /* for vlc_viewpoint_t */
 
 /* Max input rate factor (1/4 -> 4) */
 # define AOUT_MAX_INPUT_RATE (4)
@@ -38,7 +39,7 @@ enum {
 struct aout_request_vout
 {
     struct vout_thread_t  *(*pf_request_vout)( void *, struct vout_thread_t *,
-                                               video_format_t *, bool );
+                                               const video_format_t *, bool );
     void *p_private;
 };
 
@@ -69,6 +70,13 @@ typedef struct
 
     struct
     {
+        atomic_bool update;
+        vlc_mutex_t lock;
+        vlc_viewpoint_t value;
+    } vp;
+
+    struct
+    {
         mtime_t end; /**< Last seen PTS */
         unsigned resamp_start_drift; /**< Resampler drift absolute value */
         int resamp_type; /**< Resampler mode (FIXME: redundant / resampling) */
@@ -79,6 +87,7 @@ typedef struct
     audio_sample_format_t mixer_format;
 
     aout_request_vout_t request_vout;
+    aout_filters_cfg_t filters_cfg;
 
     atomic_uint buffers_lost;
     atomic_uint buffers_played;
@@ -114,7 +123,8 @@ audio_output_t *aout_New (vlc_object_t *);
 #define aout_New(a) aout_New(VLC_OBJECT(a))
 void aout_Destroy (audio_output_t *);
 
-int aout_OutputNew(audio_output_t *, audio_sample_format_t *);
+int aout_OutputNew(audio_output_t *, audio_sample_format_t *,
+                   aout_filters_cfg_t *filters_cfg);
 int aout_OutputTimeGet(audio_output_t *, mtime_t *);
 void aout_OutputPlay(audio_output_t *, block_t *);
 void aout_OutputPause( audio_output_t * p_aout, bool, mtime_t );
@@ -152,7 +162,23 @@ static inline void aout_InputRequestRestart(audio_output_t *aout)
     aout_RequestRestart(aout, AOUT_RESTART_FILTERS);
 }
 
+static inline void aout_SetWavePhysicalChannels(audio_sample_format_t *fmt)
+{
+    static const uint32_t wave_channels[] = {
+        AOUT_CHAN_LEFT, AOUT_CHAN_RIGHT, AOUT_CHAN_CENTER,
+        AOUT_CHAN_LFE, AOUT_CHAN_REARLEFT, AOUT_CHAN_REARRIGHT,
+        AOUT_CHAN_MIDDLELEFT, AOUT_CHAN_MIDDLERIGHT, AOUT_CHAN_REARCENTER };
+
+    fmt->i_physical_channels = 0;
+    for (int i = 0; i < fmt->i_channels && i < AOUT_CHAN_MAX; ++i)
+        fmt->i_physical_channels |= wave_channels[i];
+    aout_FormatPrepare(fmt);
+}
+
 /* From filters.c */
 bool aout_FiltersCanResample (aout_filters_t *filters);
+
+void aout_ChangeViewpoint(audio_output_t *aout,
+                          const vlc_viewpoint_t *p_viewpoint);
 
 #endif /* !LIBVLC_AOUT_INTERNAL_H */

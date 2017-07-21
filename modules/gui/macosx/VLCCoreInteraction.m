@@ -413,7 +413,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
     var_Set(p_playlist, "random", val);
     if (val.b_bool) {
         if (p_vout) {
-            vout_OSDMessage(p_vout, SPU_DEFAULT_CHANNEL, "%s", _("Random On"));
+            vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s", _("Random On"));
             vlc_object_release(p_vout);
         }
         config_PutInt(p_playlist, "random", 1);
@@ -421,7 +421,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
     else
     {
         if (p_vout) {
-            vout_OSDMessage(p_vout, SPU_DEFAULT_CHANNEL, "%s", _("Random Off"));
+            vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s", _("Random Off"));
             vlc_object_release(p_vout);
         }
         config_PutInt(p_playlist, "random", 0);
@@ -443,7 +443,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
 
     vout_thread_t *p_vout = getVout();
     if (p_vout) {
-        vout_OSDMessage(p_vout, SPU_DEFAULT_CHANNEL, "%s", _("Repeat All"));
+        vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s", _("Repeat All"));
         vlc_object_release(p_vout);
     }
 }
@@ -463,7 +463,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
 
     vout_thread_t *p_vout = getVout();
     if (p_vout) {
-        vout_OSDMessage(p_vout, SPU_DEFAULT_CHANNEL, "%s", _("Repeat One"));
+        vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s", _("Repeat One"));
         vlc_object_release(p_vout);
     }
 }
@@ -483,7 +483,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
 
     vout_thread_t *p_vout = getVout();
     if (p_vout) {
-        vout_OSDMessage(p_vout, SPU_DEFAULT_CHANNEL, "%s", _("Repeat Off"));
+        vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s", _("Repeat Off"));
         vlc_object_release(p_vout);
     }
 }
@@ -735,6 +735,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
     intf_thread_t *p_intf = getIntf();
     if (!p_intf)
         return;
+    playlist_t *p_playlist = pl_Get(p_intf);
     char *psz_string, *psz_parser;
 
     const char *psz_filter_type = [self getFilterType:psz_name];
@@ -743,10 +744,9 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
         return;
     }
 
-    msg_Dbg(p_intf, "will set filter '%s'", psz_name);
+    msg_Dbg(p_intf, "will turn filter '%s' %s", psz_name, b_on ? "on" : "off");
 
-
-    psz_string = config_GetPsz(p_intf, psz_filter_type);
+    psz_string = var_InheritString(p_playlist, psz_filter_type);
 
     if (b_on) {
         if (psz_string == NULL) {
@@ -777,180 +777,80 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
             return;
         }
     }
-    config_PutPsz(p_intf, psz_filter_type, psz_string);
+    var_SetString(p_playlist, psz_filter_type, psz_string);
 
-    /* Try to set on the fly */
-    if (!strcmp(psz_filter_type, "video-splitter")) {
-        playlist_t *p_playlist = pl_Get(p_intf);
-        var_SetString(p_playlist, psz_filter_type, psz_string);
-    } else {
-        vout_thread_t *p_vout = getVout();
-        if (p_vout) {
-            var_SetString(p_vout, psz_filter_type, psz_string);
-            vlc_object_release(p_vout);
-        }
+    /* Try to set non splitter filters on the fly */
+    if (strcmp(psz_filter_type, "video-splitter")) {
+        NSArray<NSValue *> *vouts = getVouts();
+        if (vouts)
+            for (NSValue * val in vouts) {
+                vout_thread_t *p_vout = [val pointerValue];
+                var_SetString(p_vout, psz_filter_type, psz_string);
+                vlc_object_release(p_vout);
+            }
     }
 
     free(psz_string);
 }
 
-- (void)restartFilterIfNeeded: (const char *)psz_filter option: (const char *)psz_name
+- (void)setVideoFilterProperty: (char const *)psz_property
+                     forFilter: (char const *)psz_filter
+                     withValue: (vlc_value_t)value
 {
-    vout_thread_t *p_vout = getVout();
+    NSArray<NSValue *> *vouts = getVouts();
     intf_thread_t *p_intf = getIntf();
+    playlist_t *p_playlist = pl_Get(p_intf);
     if (!p_intf)
         return;
-
-    if (p_vout == NULL)
+    int i_type;
+    bool b_is_command = false;
+    char const *psz_filter_type = [self getFilterType: psz_filter];
+    if (!psz_filter_type) {
+        msg_Err(p_intf, "Unable to find filter module \"%s\".", psz_filter);
         return;
+    }
+
+    if (vouts && [vouts count])
+    {
+        i_type = var_Type((vout_thread_t *)[[vouts firstObject] pointerValue], psz_property);
+        b_is_command = i_type & VLC_VAR_ISCOMMAND;
+    }
+    if (!i_type)
+        i_type = config_GetType(p_intf, psz_property);
+
+    i_type &= VLC_VAR_CLASS;
+    if (i_type == VLC_VAR_BOOL)
+        var_SetBool(p_playlist, psz_property, value.b_bool);
+    else if (i_type == VLC_VAR_INTEGER)
+        var_SetInteger(p_playlist, psz_property, value.i_int);
+    else if (i_type == VLC_VAR_FLOAT)
+        var_SetFloat(p_playlist, psz_property, value.f_float);
+    else if (i_type == VLC_VAR_STRING)
+        var_SetString(p_playlist, psz_property, EnsureUTF8(value.psz_string));
     else
-        vlc_object_release(p_vout);
-
-    vlc_object_t *p_filter = vlc_object_find_name(pl_Get(p_intf), psz_filter);
-    if (p_filter) {
-
-        /* we cannot rely on the p_filter existence.
-         This filter might be just
-         disabled, but the object still exists. Therefore, the string
-         is checked, additionally.
-         */
-        const char *psz_filter_type = [self getFilterType:psz_filter];
-        if (!psz_filter_type) {
-            msg_Err(p_intf, "Unable to find filter module \"%s\".", psz_name);
-            goto out;
-        }
-
-        char *psz_string = config_GetPsz(p_intf, psz_filter_type);
-        if (!psz_string) {
-            goto out;
-        }
-        if (strstr(psz_string, psz_filter) == NULL) {
-            free(psz_string);
-            goto out;
-        }
-        free(psz_string);
-
-        int i_type;
-        i_type = var_Type(p_filter, psz_name);
-        if (i_type == 0)
-            i_type = config_GetType(p_intf, psz_name);
-
-        if (!(i_type & VLC_VAR_ISCOMMAND)) {
-            msg_Warn(p_intf, "Brute-restarting filter '%s', because the last changed option isn't a command", psz_name);
-
-            [self setVideoFilter: psz_filter on: NO];
-            [self setVideoFilter: psz_filter on: YES];
-        } else
-            msg_Dbg(p_intf, "restart not needed");
-
-        out:
-        vlc_object_release(p_filter);
-    }
-}
-
-- (void)setVideoFilterProperty: (const char *)psz_name forFilter: (const char *)psz_filter integer: (int)i_value
-{
-    vout_thread_t *p_vout = getVout();
-    vlc_object_t *p_filter;
-    intf_thread_t *p_intf = getIntf();
-    if (!p_intf)
-        return;
-
-    config_PutInt(p_intf, psz_name, i_value);
-
-    if (p_vout) {
-        p_filter = vlc_object_find_name(pl_Get(p_intf), psz_filter);
-
-        if (!p_filter) {
-            msg_Warn(p_intf, "filter '%s' isn't enabled", psz_filter);
-            vlc_object_release(p_vout);
-            return;
-        }
-        var_SetInteger(p_filter, psz_name, i_value);
-        vlc_object_release(p_vout);
-        vlc_object_release(p_filter);
-
-        [self restartFilterIfNeeded: psz_filter option: psz_name];
-    }
-}
-
-- (void)setVideoFilterProperty: (const char *)psz_name forFilter: (const char *)psz_filter float: (float)f_value
-{
-    vout_thread_t *p_vout = getVout();
-    vlc_object_t *p_filter;
-    intf_thread_t *p_intf = getIntf();
-    if (!p_intf)
-        return;
-
-    config_PutFloat(p_intf, psz_name, f_value);
-
-    if (p_vout) {
-        p_filter = vlc_object_find_name(pl_Get(p_intf), psz_filter);
-
-        if (!p_filter) {
-            msg_Warn(p_intf, "filter '%s' isn't enabled", psz_filter);
-            vlc_object_release(p_vout);
-            return;
-        }
-        var_SetFloat(p_filter, psz_name, f_value);
-        vlc_object_release(p_vout);
-        vlc_object_release(p_filter);
-
-        [self restartFilterIfNeeded: psz_filter option: psz_name];
-    }
-}
-
-- (void)setVideoFilterProperty: (const char *)psz_name forFilter: (const char *)psz_filter string: (const char *)psz_value
-{
-    char *psz_new_value = strdup(psz_value);
-    vout_thread_t *p_vout = getVout();
-    vlc_object_t *p_filter;
-    intf_thread_t *p_intf = getIntf();
-    if (!p_intf)
-        return;
-
-    config_PutPsz(p_intf, psz_name, EnsureUTF8(psz_new_value));
-
-    if (p_vout) {
-        p_filter = vlc_object_find_name(pl_Get(p_intf), psz_filter);
-
-        if (!p_filter) {
-            msg_Warn(p_intf, "filter '%s' isn't enabled", psz_filter);
-            vlc_object_release(p_vout);
-            return;
-        }
-        var_SetString(p_filter, psz_name, EnsureUTF8(psz_new_value));
-        vlc_object_release(p_vout);
-        vlc_object_release(p_filter);
-
-        [self restartFilterIfNeeded: psz_filter option: psz_name];
+    {
+        msg_Err(p_intf,
+                "Module %s's %s variable is of an unsupported type ( %d )",
+                psz_filter, psz_property, i_type);
+        b_is_command = false;
     }
 
-    free(psz_new_value);
-}
+    if (b_is_command)
+        if (vouts)
+            for (NSValue *ptr in vouts)
+            {
+                vout_thread_t *p_vout = [ptr pointerValue];
+                var_SetChecked(p_vout, psz_property, i_type, value);
+#ifndef NDEBUG
+                int i_cur_type = var_Type(p_vout, psz_property);
+                assert((i_cur_type & VLC_VAR_CLASS) == i_type);
+                assert(i_cur_type & VLC_VAR_ISCOMMAND);
+#endif
+            }
 
-- (void)setVideoFilterProperty: (const char *)psz_name forFilter: (const char *)psz_filter boolean: (BOOL)b_value
-{
-    vout_thread_t *p_vout = getVout();
-    vlc_object_t *p_filter;
-    intf_thread_t *p_intf = getIntf();
-    if (!p_intf)
-        return;
-
-    config_PutInt(p_intf, psz_name, b_value);
-
-    if (p_vout) {
-        p_filter = vlc_object_find_name(pl_Get(p_intf), psz_filter);
-
-        if (!p_filter) {
-            msg_Warn(p_intf, "filter '%s' isn't enabled", psz_filter);
-            vlc_object_release(p_vout);
-            return;
-        }
-        var_SetBool(p_filter, psz_name, b_value);
-        vlc_object_release(p_vout);
-        vlc_object_release(p_filter);
-    }
+    if (vouts)
+        for (NSValue *ptr in vouts)
+            vlc_object_release((vout_thread_t *)[ptr pointerValue]);
 }
 
 #pragma mark -

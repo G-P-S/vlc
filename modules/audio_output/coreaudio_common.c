@@ -107,8 +107,7 @@ ca_Flush(audio_output_t *p_aout, bool wait)
             const mtime_t i_frame_us =
                 FramesToUs(p_sys, BytesToFrames(p_sys, i_bytes)) + 10000;
 
-            /* Don't sleep less than 10ms */
-            msleep(__MAX(i_frame_us, 10000));
+            msleep(i_frame_us / 2);
         }
     }
     else
@@ -166,8 +165,7 @@ ca_Play(audio_output_t * p_aout, block_t * p_block)
         /* Wait for the render buffer to play the remaining data */
         const mtime_t i_frame_us =
             FramesToUs(p_sys, BytesToFrames(p_sys, p_block->i_buffer));
-        /* Don't sleep less than 10ms */
-        msleep(__MAX(i_frame_us, 10000));
+        msleep(i_frame_us / 2);
     }
 
     unsigned i_underrun_size = atomic_exchange(&p_sys->i_underrun_size, 0);
@@ -204,8 +202,20 @@ ca_Initialize(audio_output_t *p_aout, const audio_sample_format_t *fmt,
     p_sys->i_dev_latency_us = i_dev_latency_us;
 
     /* setup circular buffer */
-    const size_t i_audiobuffer_size = AOUT_MAX_ADVANCE_TIME * fmt->i_rate *
-        fmt->i_bytes_per_frame / p_sys->i_frame_length / CLOCK_FREQ;
+    size_t i_audiobuffer_size = fmt->i_rate * fmt->i_bytes_per_frame
+                              / p_sys->i_frame_length;
+    if (fmt->channel_type == AUDIO_CHANNEL_TYPE_AMBISONICS)
+    {
+        /* low latency: 40 ms of buffering */
+        i_audiobuffer_size = i_audiobuffer_size / 25;
+    }
+    else
+    {
+        /* 2 seconds of buffering */
+        i_audiobuffer_size = i_audiobuffer_size * AOUT_MAX_ADVANCE_TIME
+                           / CLOCK_FREQ;
+    }
+    fprintf(stderr, "i_audiobuffer_size: %zu\n", i_audiobuffer_size);
     if (!TPCircularBufferInit(&p_sys->circular_buffer, i_audiobuffer_size))
         return VLC_EGENERIC;
 
@@ -324,7 +334,7 @@ MapOutputLayout(audio_output_t *p_aout, audio_sample_format_t *fmt,
 {
     /* Fill VLC physical_channels from output layout */
     fmt->i_physical_channels = 0;
-    uint32_t i_original = fmt->i_original_channels & AOUT_CHAN_PHYSMASK;
+    uint32_t i_original = fmt->i_physical_channels;
     AudioChannelLayout *reslayout = NULL;
 
     if (outlayout == NULL)
@@ -434,7 +444,6 @@ MapOutputLayout(audio_output_t *p_aout, audio_sample_format_t *fmt,
 
 end:
     free(reslayout);
-    fmt->i_original_channels = fmt->i_physical_channels;
     aout_FormatPrepare(fmt);
 
     msg_Dbg(p_aout, "selected %d physical channels for device output",

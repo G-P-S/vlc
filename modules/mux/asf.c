@@ -111,7 +111,7 @@ static int Mux      ( sout_mux_t * );
 typedef struct
 {
     int          i_id;
-    int          i_cat;
+    enum es_format_category_e i_cat;
 
     /* codec information */
     uint16_t     i_tag;     /* for audio */
@@ -346,6 +346,8 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
     }
 
     tk = p_input->p_sys = malloc( sizeof( asf_track_t ) );
+    if( unlikely(p_input->p_sys == NULL) )
+        return VLC_ENOMEM;
     memset( tk, 0, sizeof( *tk ) );
     tk->i_cat = p_input->p_fmt->i_cat;
     tk->i_sequence = 0;
@@ -498,43 +500,43 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
             uint8_t *p_codec_extra = NULL;
             int     i_codec_extra = 0;
 
-            if( p_input->p_fmt->i_codec == VLC_CODEC_MP4V )
+            if( p_fmt->i_codec == VLC_CODEC_MP4V )
             {
                 tk->psz_name = "MPEG-4 Video";
                 tk->i_fourcc = VLC_FOURCC( 'M', 'P', '4', 'S' );
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_DIV3 )
+            else if( p_fmt->i_codec == VLC_CODEC_DIV3 )
             {
                 tk->psz_name = "MSMPEG-4 V3 Video";
                 tk->i_fourcc = VLC_FOURCC( 'M', 'P', '4', '3' );
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_DIV2 )
+            else if( p_fmt->i_codec == VLC_CODEC_DIV2 )
             {
                 tk->psz_name = "MSMPEG-4 V2 Video";
                 tk->i_fourcc = VLC_FOURCC( 'M', 'P', '4', '2' );
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_DIV1 )
+            else if( p_fmt->i_codec == VLC_CODEC_DIV1 )
             {
                 tk->psz_name = "MSMPEG-4 V1 Video";
                 tk->i_fourcc = VLC_FOURCC( 'M', 'P', 'G', '4' );
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_WMV1 )
+            else if( p_fmt->i_codec == VLC_CODEC_WMV1 )
             {
                 tk->psz_name = "Windows Media Video 7";
                 tk->i_fourcc = VLC_FOURCC( 'W', 'M', 'V', '1' );
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_WMV2 )
+            else if( p_fmt->i_codec == VLC_CODEC_WMV2 )
             {
                 tk->psz_name = "Windows Media Video 8";
                 tk->i_fourcc = VLC_FOURCC( 'W', 'M', 'V', '2' );
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_WMV3 )
+            else if( p_fmt->i_codec == VLC_CODEC_WMV3 )
             {
                 tk->psz_name = "Windows Media Video 9";
                 tk->i_fourcc = VLC_FOURCC( 'W', 'M', 'V', '3' );
                 tk->b_extended = true;
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_VC1 )
+            else if( p_fmt->i_codec == VLC_CODEC_VC1 )
             {
                 tk->psz_name = "Windows Media Video 9 Advanced Profile";
                 tk->i_fourcc = VLC_FOURCC( 'W', 'V', 'C', '1' );
@@ -551,7 +553,7 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
                     }
                 }
             }
-            else if( p_input->p_fmt->i_codec == VLC_CODEC_H264 )
+            else if( p_fmt->i_codec == VLC_CODEC_H264 )
             {
                 tk->psz_name = "H.264/MPEG-4 AVC";
                 tk->i_fourcc = VLC_FOURCC('h','2','6','4');
@@ -559,7 +561,7 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
             else
             {
                 tk->psz_name = _("Unknown Video");
-                tk->i_fourcc = p_input->p_fmt->i_original_fourcc ?: p_input->p_fmt->i_codec;
+                tk->i_fourcc = p_fmt->i_original_fourcc ?: p_fmt->i_codec;
             }
             if( !i_codec_extra && p_fmt->i_extra > 0 )
             {
@@ -579,13 +581,13 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
                 return VLC_ENOMEM;
             }
             bo_init( &bo, tk->p_extra, tk->i_extra );
-            bo_addle_u32( &bo, p_input->p_fmt->video.i_width );
-            bo_addle_u32( &bo, p_input->p_fmt->video.i_height );
+            bo_addle_u32( &bo, p_fmt->video.i_width );
+            bo_addle_u32( &bo, p_fmt->video.i_height );
             bo_add_u8   ( &bo, 0x02 );  /* flags */
             bo_addle_u16( &bo, sizeof( VLC_BITMAPINFOHEADER ) + i_codec_extra );
             bo_addle_u32( &bo, sizeof( VLC_BITMAPINFOHEADER ) + i_codec_extra );
-            bo_addle_u32( &bo, p_input->p_fmt->video.i_width );
-            bo_addle_u32( &bo, p_input->p_fmt->video.i_height );
+            bo_addle_u32( &bo, p_fmt->video.i_width );
+            bo_addle_u32( &bo, p_fmt->video.i_height );
             bo_addle_u16( &bo, 1 );
             bo_addle_u16( &bo, 24 );
             bo_add_mem( &bo, (uint8_t*)&tk->i_fourcc, 4 );
@@ -600,9 +602,9 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
                 free( p_codec_extra );
             }
 
-            if( p_input->p_fmt->i_bitrate > 50000 )
+            if( p_fmt->i_bitrate > 50000 )
             {
-                p_sys->i_bitrate += p_input->p_fmt->i_bitrate;
+                p_sys->i_bitrate += p_fmt->i_bitrate;
             }
             else
             {
@@ -996,13 +998,14 @@ static block_t *asf_header_create( sout_mux_t *p_mux, bool b_broadcast )
             if( tk->i_cat == VIDEO_ES &&
                 tk->fmt.video.i_sar_num != 0 &&
                 tk->fmt.video.i_sar_den != 0 )
+            {
+                vlc_ureduce( &i_dst_num, &i_dst_den,
+                             tk->fmt.video.i_sar_num,
+                             tk->fmt.video.i_sar_den, 0 );
                 break;
+            }
         }
         assert( tk != NULL );
-
-        vlc_ureduce( &i_dst_num, &i_dst_den,
-                     tk->fmt.video.i_sar_num,
-                     tk->fmt.video.i_sar_den, 0 );
 
         msg_Dbg( p_mux, "pixel aspect-ratio: %i/%i", i_dst_num, i_dst_den );
 

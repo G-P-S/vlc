@@ -47,7 +47,7 @@ vlc_module_begin()
     set_subcategory( SUBCAT_INPUT_VCODEC )
     /* decoder main module */
     set_description( N_("BPG image decoder") )
-    set_capability( "decoder", 60 )
+    set_capability( "video decoder", 60 )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_shortcut( "bpg" )
 vlc_module_end()
@@ -75,9 +75,6 @@ static int OpenDecoder(vlc_object_t *p_this)
     {
         return VLC_EGENERIC;
     }
-
-    /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
 
     /* Set callbacks */
     p_dec->pf_decode = DecodeBlock;

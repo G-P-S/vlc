@@ -24,6 +24,8 @@
 #ifndef VLC_FOURCC_H
 #define VLC_FOURCC_H 1
 
+#define VLC_CODEC_UNKNOWN         VLC_FOURCC('u','n','d','f')
+
 /* Video codec */
 #define VLC_CODEC_MPGV            VLC_FOURCC('m','p','g','v')
 #define VLC_CODEC_MP4V            VLC_FOURCC('m','p','4','v')
@@ -348,6 +350,9 @@
 /* VDPAU output surface RGBA */
 #define VLC_CODEC_VDPAU_OUTPUT    VLC_FOURCC('V','D','O','R')
 
+/* VAAPI opaque surface */
+#define VLC_CODEC_VAAPI_420 VLC_FOURCC('V','A','O','P') /* 4:2:0  8 bpc */
+
 /* MediaCodec/IOMX opaque buffer type */
 #define VLC_CODEC_ANDROID_OPAQUE  VLC_FOURCC('A','N','O','P')
 
@@ -437,6 +442,7 @@
 #define VLC_CODEC_ADPCM_SBPRO_3              VLC_FOURCC('m','s',0x00,0xC3)
 #define VLC_CODEC_ADPCM_SBPRO_4              VLC_FOURCC('m','s',0x00,0xC4)
 #define VLC_CODEC_ADPCM_THP                  VLC_FOURCC('T','H','P','A')
+#define VLC_CODEC_ADPCM_XA_EA                VLC_FOURCC('X','A','J', 0)
 #define VLC_CODEC_G723_1                     VLC_FOURCC('g','7','2', 0x31)
 #define VLC_CODEC_G729                       VLC_FOURCC('g','7','2','9')
 #define VLC_CODEC_VMDAUDIO                   VLC_FOURCC('v','m','d','a')

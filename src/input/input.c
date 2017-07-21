@@ -45,6 +45,7 @@
 #include "resource.h"
 #include "stream.h"
 
+#include <vlc_aout.h>
 #include <vlc_sout.h>
 #include <vlc_dialog.h>
 #include <vlc_url.h>
@@ -1976,6 +1977,14 @@ static bool Control( input_thread_t *p_input,
                 vlc_object_release( pp_vout[i] );
             }
             free( pp_vout );
+
+            audio_output_t *p_aout = input_resource_HoldAout( priv->p_resource );
+            if( p_aout )
+            {
+
+                var_SetAddress( p_aout, "viewpoint", &priv->viewpoint );
+                vlc_object_release( p_aout );
+            }
             break;
         }
 
@@ -2466,13 +2475,18 @@ static input_source_t *InputSourceNew( input_thread_t *p_input,
     }
 
     char *psz_demux_chain = var_GetNonEmptyString(p_input, "demux-filter");
-    /* add the chain of demux filters */
-    demux_t *p_filtered_demux = demux_FilterChainNew( in->p_demux, psz_demux_chain );
-    if ( p_filtered_demux != NULL )
-        in->p_demux = p_filtered_demux;
-    else if ( psz_demux_chain != NULL )
-        msg_Dbg(p_input, "Failed to create demux filter %s", psz_demux_chain);
-    free( psz_demux_chain );
+    if( psz_demux_chain != NULL ) /* add the chain of demux filters */
+    {
+        in->p_demux = demux_FilterChainNew( in->p_demux, psz_demux_chain );
+        free( psz_demux_chain );
+
+        if( in->p_demux == NULL )
+        {
+            msg_Err(p_input, "Failed to create demux filter");
+            vlc_object_release( in );
+            return NULL;
+        }
+    }
 
     /* Get infos from (access_)demux */
     bool b_can_seek;
@@ -2862,24 +2876,24 @@ static void InputGetExtraFilesPattern( input_thread_t *p_input,
         if( asprintf( &psz_probe, psz_format, psz_base, i ) < 0 )
             break;
 
-        char *psz_path = get_path( psz_probe );
+        char *filepath = get_path( psz_probe );
 
         struct stat st;
-        if( psz_path == NULL ||
-            vlc_stat( psz_path, &st ) || !S_ISREG( st.st_mode ) || !st.st_size )
+        if( filepath == NULL ||
+            vlc_stat( filepath, &st ) || !S_ISREG( st.st_mode ) || !st.st_size )
         {
-            free( psz_path );
+            free( filepath );
             free( psz_probe );
             break;
         }
 
-        msg_Dbg( p_input, "Detected extra file `%s'", psz_path );
+        msg_Dbg( p_input, "Detected extra file `%s'", filepath );
 
-        char* psz_uri = vlc_path2uri( psz_path, NULL );
+        char* psz_uri = vlc_path2uri( filepath, NULL );
         if( psz_uri )
             TAB_APPEND( i_list, ppsz_list, psz_uri );
 
-        free( psz_path );
+        free( filepath );
         free( psz_probe );
     }
     free( psz_base );

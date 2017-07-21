@@ -29,6 +29,8 @@
 
 #include <math.h>
 
+#include <algorithm>
+
 #include <QLabel>
 #include <QVariant>
 #include <QString>
@@ -293,8 +295,10 @@ static QString ChangeFiltersString( struct intf_thread_t *p_intf, const char *ps
     QString const chain = QString( psz_chain ? psz_chain : "" );
     QStringList list = chain.split( ':', QString::SplitBehavior::SkipEmptyParts );
 
-    if( b_add ) list << psz_name;
-    else        list.removeAll( psz_name );
+    if( b_add && std::find(list.begin(), list.end(), psz_name) == list.end() )
+        list << psz_name;
+    else if (!b_add)
+        list.removeAll( psz_name );
 
     free( psz_chain );
 
@@ -550,14 +554,6 @@ void ExtVideo::setFilterOption( const char *psz_module, const char *psz_option,
             assert( !!( i_cur_type & VLC_VAR_ISCOMMAND ) == b_is_command );
 #endif
         }
-    }
-    else if( !p_vouts.isEmpty() )
-    {
-        msg_Warn( p_intf, "Module %s's %s variable isn't a command. Brute-restarting the filter.",
-                 psz_module,
-                 psz_option );
-        changeVFiltersString( psz_module, false );
-        changeVFiltersString( psz_module, true );
     }
 
     foreach( vout_thread_t *p_vout, p_vouts )
@@ -1539,12 +1535,11 @@ void SyncControls::subsdelayClean()
 
 void SyncControls::subsdelaySetFactor( double f_factor )
 {
-    /* Try to find an instance of subsdelay, and set its factor */
-    vlc_object_t *p_obj = ( vlc_object_t * ) vlc_object_find_name( p_intf->obj.libvlc, "subsdelay" );
-    if( p_obj )
+    QVector<vout_thread_t*> p_vouts = THEMIM->getVouts();
+    foreach( vout_thread_t *p_vout, p_vouts )
     {
-        var_SetFloat( p_obj, SUBSDELAY_CFG_FACTOR, f_factor );
-        vlc_object_release( p_obj );
+        var_SetFloat( p_vout, SUBSDELAY_CFG_FACTOR, f_factor );
+        vlc_object_release( p_vout );
     }
 }
 

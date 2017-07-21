@@ -12,6 +12,7 @@ info()
 ARCH="x86_64"
 MINIMAL_OSX_VERSION="10.7"
 OSX_VERSION=`xcrun --show-sdk-version`
+OSX_KERNELVERSION=`uname -r | cut -d. -f1`
 SDKROOT=`xcode-select -print-path`/Platforms/MacOSX.platform/Developer/SDKs/MacOSX$OSX_VERSION.sdk
 
 usage()
@@ -25,6 +26,7 @@ OPTIONS:
    -h            Show some help
    -q            Be quiet
    -r            Rebuild everything (tools, contribs, vlc)
+   -c            Recompile contribs from sources
    -k <sdk>      Use the specified sdk (default: $SDKROOT)
    -a <arch>     Use the specified arch (default: $ARCH)
 EOF
@@ -41,7 +43,7 @@ spopd()
     popd > /dev/null
 }
 
-while getopts "hvrk:a:" OPTION
+while getopts "hvrck:a:" OPTION
 do
      case $OPTION in
          h)
@@ -54,6 +56,9 @@ do
          ;;
          r)
              REBUILD="yes"
+         ;;
+         c)
+             CONTRIBFROMSOURCE="yes"
          ;;
          a)
              ARCH=$OPTARG
@@ -89,14 +94,39 @@ builddir=`pwd`
 
 info "Building in \"$builddir\""
 
-TRIPLET=$ARCH-apple-darwin15
+TRIPLET=$ARCH-apple-darwin$OSX_KERNELVERSION
 
-export CC="xcrun clang"
-export CXX="xcrun clang++"
-export OBJC="xcrun clang"
+export CC="`xcrun --find clang`"
+export CXX="`xcrun --find clang++`"
+export OBJC="`xcrun --find clang`"
 export OSX_VERSION
 export SDKROOT
 export PATH="${vlcroot}/extras/tools/build/bin:${vlcroot}/contrib/${TRIPLET}/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:${PATH}"
+
+# Select avcodec flavor to compile contribs with
+export USE_FFMPEG=1
+
+# The following symbols do not exist on the minimal macOS version (10.7), so they are disabled
+# here. This allows compilation also with newer macOS SDKs.
+# Added symbols between 10.11 and 10.12
+export ac_cv_func_basename_r=no
+export ac_cv_func_clock_getres=no
+export ac_cv_func_clock_gettime=no
+export ac_cv_func_clock_settime=no
+export ac_cv_func_dirname_r=no
+export ac_cv_func_getentropy=no
+export ac_cv_func_mkostemp=no
+export ac_cv_func_mkostemps=no
+
+# Added symbols between 10.7 and 10.11
+export ac_cv_func_ffsll=no
+export ac_cv_func_flsll=no
+export ac_cv_func_fdopendir=no
+export ac_cv_func_openat=no # Disables fstatat as well
+
+
+# libnetwork does not exist yet on 10.7 (used by libcddb)
+export ac_cv_lib_network_connect=no
 
 #
 # vlc/extras/tools
@@ -111,6 +141,8 @@ fi
 make > $out
 spopd
 
+core_count=`sysctl -n machdep.cpu.core_count`
+let jobs=$core_count+1
 
 #
 # vlc/contribs
@@ -123,8 +155,13 @@ mkdir -p contrib-$TRIPLET && cd contrib-$TRIPLET
 if [ "$REBUILD" = "yes" ]; then
     make clean
 fi
+if [ "$CONTRIBFROMSOURCE" = "yes" ]; then
+    make fetch
+    make -j$jobs
+else
 if [ ! -e "../$TRIPLET" ]; then
     make prebuilt > $out
+fi
 fi
 spopd
 
@@ -159,8 +196,6 @@ fi
 # make
 #
 
-core_count=`sysctl -n machdep.cpu.core_count`
-let jobs=$core_count+1
 
 if [ "$REBUILD" = "yes" ]; then
     info "Running make clean"

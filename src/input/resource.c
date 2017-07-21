@@ -92,8 +92,10 @@ static sout_instance_t *RequestSout( input_resource_t *p_resource,
     if( !p_sout && !psz_sout )
     {
         if( p_resource->p_sout )
+        {
             msg_Dbg( p_resource->p_sout, "destroying useless sout" );
-        DestroySout( p_resource );
+            DestroySout( p_resource );
+        }
         return NULL;
     }
 
@@ -193,7 +195,7 @@ static void DisplayVoutTitle( input_resource_t *p_resource,
 }
 static vout_thread_t *RequestVout( input_resource_t *p_resource,
                                    vout_thread_t *p_vout,
-                                   video_format_t *p_fmt, unsigned dpb_size,
+                                   const video_format_t *p_fmt, unsigned dpb_size,
                                    bool b_recycle )
 {
     vlc_assert_locked( &p_resource->lock );
@@ -458,7 +460,7 @@ void input_resource_SetInput( input_resource_t *p_resource, input_thread_t *p_in
 
 vout_thread_t *input_resource_RequestVout( input_resource_t *p_resource,
                                             vout_thread_t *p_vout,
-                                            video_format_t *p_fmt, unsigned dpb_size,
+                                            const video_format_t *p_fmt, unsigned dpb_size,
                                             bool b_recycle )
 {
     vlc_mutex_lock( &p_resource->lock );

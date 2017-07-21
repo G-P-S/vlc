@@ -763,8 +763,7 @@ static block_t *Packetize(decoder_t *p_dec, block_t **pp_block)
         p_sys->i_frame_size = 0;
 
         p_dec->fmt_out.audio.i_channels = p_sys->i_channels;
-        p_dec->fmt_out.audio.i_physical_channels =
-        p_dec->fmt_out.audio.i_original_channels = pi_channels_maps[p_sys->stream_info.channels];
+        p_dec->fmt_out.audio.i_physical_channels = pi_channels_maps[p_sys->stream_info.channels];
 
         /* So p_block doesn't get re-added several times */
         if ( pp_block )
@@ -808,7 +807,6 @@ static int Open(vlc_object_t *p_this)
 
     /* */
     es_format_Copy(&p_dec->fmt_out, &p_dec->fmt_in);
-    p_dec->fmt_out.i_cat   = AUDIO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_FLAC;
     p_dec->fmt_out.b_packetized = true;
 

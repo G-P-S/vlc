@@ -210,7 +210,7 @@ static void ActivateSets( decoder_t *p_dec, const h264_sequence_parameter_set_t 
         if( p_sps->vui.b_valid )
         {
             if( !p_dec->fmt_in.video.i_frame_rate_base &&
-                 p_sps->vui.b_fixed_frame_rate && p_sps->vui.i_num_units_in_tick > 0 )
+                p_sps->vui.i_num_units_in_tick > 0 && p_sps->vui.i_time_scale > 1 )
             {
                 const unsigned i_rate_base = p_sps->vui.i_num_units_in_tick;
                 const unsigned i_rate = p_sps->vui.i_time_scale >> 1; /* num_clock_ts == 2 */
@@ -345,7 +345,7 @@ static int Open( vlc_object_t *p_this )
     h264_poc_context_init( &p_sys->pocctx );
     p_sys->prevdatedpoc.pts = VLC_TS_INVALID;
 
-    date_Init( &p_sys->dts, 1, 1 );
+    date_Init( &p_sys->dts, 30000 * 2, 1001 );
     date_Set( &p_sys->dts, VLC_TS_INVALID );
 
     /* Setup properties */
@@ -354,7 +354,8 @@ static int Open( vlc_object_t *p_this )
     p_dec->fmt_out.b_packetized = true;
 
     if( p_dec->fmt_in.video.i_frame_rate_base &&
-        p_dec->fmt_in.video.i_frame_rate )
+        p_dec->fmt_in.video.i_frame_rate &&
+        p_dec->fmt_in.video.i_frame_rate <= UINT_MAX / 2 )
     {
         date_Change( &p_sys->dts, p_dec->fmt_in.video.i_frame_rate * 2,
                                   p_dec->fmt_in.video.i_frame_rate_base );
@@ -901,11 +902,11 @@ static block_t *OutputPicture( decoder_t *p_dec )
     }
 
 #if 0
-    msg_Err(p_dec, "F/BOC %d/%d POC %d %d rec %d flags %x ref%d fn %d fp %d %d pts %ld",
+    msg_Err(p_dec, "F/BOC %d/%d POC %d %d rec %d flags %x ref%d fn %d fp %d %d pts %ld len %ld",
                     tFOC, bFOC, PictureOrderCount,
                     p_sys->slice.type, p_sys->b_recovered, p_pic->i_flags,
                     p_sys->slice.i_nal_ref_idc, p_sys->slice.i_frame_num, p_sys->slice.i_field_pic_flag,
-                    p_pic->i_pts - p_pic->i_dts, p_pic->i_pts % (100*CLOCK_FREQ));
+                    p_pic->i_pts - p_pic->i_dts, p_pic->i_pts % (100*CLOCK_FREQ), p_pic->i_length);
 #endif
 
     /* save for next pic fixups */

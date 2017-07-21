@@ -52,7 +52,7 @@ vlc_module_begin ()
 #   define ARIBSUB_CFG_PREFIX "aribsub-"
     set_description( N_("ARIB subtitles decoder") )
     set_shortname( N_("ARIB subtitles") )
-    set_capability( "decoder", 50 )
+    set_capability( "spu decoder", 50 )
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_SCODEC )
     set_callbacks( Open, Close )
@@ -118,7 +118,6 @@ static int Open( vlc_object_t *p_this )
 
     p_dec->p_sys = p_sys;
     p_dec->pf_decode = Decode;
-    p_dec->fmt_out.i_cat = SPU_ES;
     p_dec->fmt_out.i_codec = 0;
 
     p_sys->b_a_profile = ( p_dec->fmt_in.i_codec == VLC_CODEC_ARIB_A );

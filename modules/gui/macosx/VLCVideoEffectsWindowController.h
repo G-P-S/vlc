@@ -31,6 +31,7 @@
 /* generic */
 @property (readwrite, weak) IBOutlet NSTabView *tabView;
 @property (readwrite, weak) IBOutlet NSPopUpButton *profilePopup;
+@property (readwrite, weak) IBOutlet NSButton *applyProfileCheckbox;
 
 /* basic */
 @property (readwrite, weak) IBOutlet NSButton *adjustCheckbox;
@@ -168,10 +169,11 @@
 
 /* generic */
 - (void)updateCocoaWindowLevel:(NSInteger)i_level;
-- (void)saveCurrentProfile;
+- (void)saveCurrentProfileAtTerminate;
 
 - (void)toggleWindow:(id)sender;
 - (IBAction)profileSelectorAction:(id)sender;
+- (IBAction)applyProfileCheckboxChanged:(id)sender;
 
 /* basic */
 - (IBAction)enableAdjust:(id)sender;

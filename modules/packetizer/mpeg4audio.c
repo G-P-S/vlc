@@ -220,7 +220,6 @@ static int OpenPacketizer(vlc_object_t *p_this)
     p_sys->i_warnings = 0;
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_MP4A;
 
     msg_Dbg(p_dec, "running MPEG4 audio packetizer");
@@ -837,7 +836,15 @@ static int LOASParse(decoder_t *p_dec, uint8_t *p_buffer, int i_buffer)
 
     /* Wait for the configuration */
     if (!p_sys->b_latm_cfg)
-        return 0;
+    {
+        /* WAVE_FORMAT_MPEG_LOAS, configuration provided as AAC header :/ */
+        if( p_dec->fmt_in.i_extra > 0 &&
+            p_sys->i_channels && p_sys->i_rate && p_sys->i_frame_length )
+        {
+            p_sys->b_latm_cfg = true;
+        }
+        else return 0;
+    }
 
     /* FIXME do we need to split the subframe into independent packet ? */
     if (p_sys->latm.i_sub_frames > 1)
@@ -971,7 +978,6 @@ static void SetupOutput(decoder_t *p_dec, block_t *p_block)
     p_dec->fmt_out.audio.i_frame_length = p_sys->i_frame_length;
 
 #if 0
-    p_dec->fmt_out.audio.i_original_channels = p_sys->i_channels_conf;
     p_dec->fmt_out.audio.i_physical_channels = p_sys->i_channels_conf;
 #endif
 

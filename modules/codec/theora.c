@@ -114,7 +114,7 @@ vlc_module_begin ()
     set_subcategory( SUBCAT_INPUT_VCODEC )
     set_shortname( "Theora" )
     set_description( N_("Theora video decoder") )
-    set_capability( "decoder", 100 )
+    set_capability( "video decoder", 100 )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_shortcut( "theora" )
 #   define DEC_CFG_PREFIX "theora-"
@@ -166,7 +166,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     p_sys->tcx = NULL;
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_I420;
 
     /* Set callbacks */

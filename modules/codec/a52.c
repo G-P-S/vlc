@@ -81,7 +81,7 @@ vlc_module_begin ()
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_ACODEC )
     add_bool( "a52-dynrng", true, DYNRNG_TEXT, DYNRNG_LONGTEXT, false )
-    set_capability( "decoder", 60 )
+    set_capability( "audio decoder", 60 )
     set_callbacks( Open, Close )
 vlc_module_end ()
 
@@ -126,30 +126,6 @@ static void Duplicate( sample_t *restrict p_out, const sample_t *restrict p_in )
 
         *p_out++ = s;
         *p_out++ = s;
-#endif
-    }
-}
-
-/*
- * Helper function to exchange left & right channels
- */
-static void Exchange( sample_t *restrict p_out, const sample_t *restrict p_in )
-{
-    const sample_t *p_first = p_in + 256;
-    const sample_t *p_second = p_in;
-
-    for( unsigned i = 0; i < 256; i++ )
-    {
-#ifdef LIBA52_FIXED
-        uint32_t spl[2];
-
-        spl[0] = ((uint32_t)*p_first++) << 4;
-        spl[1] = ((uint32_t)*p_second++) << 4;
-        memcpy( p_out, spl, sizeof(spl) );
-        p_out += 2;
-#else
-        *p_out++ = *p_first++;
-        *p_out++ = *p_second++;
 #endif
     }
 }
@@ -215,12 +191,6 @@ static int Decode( decoder_t *p_dec, block_t *p_in_buf )
             Duplicate( (sample_t *)(p_out_buf->p_buffer + i * i_bytes_per_block),
                        p_samples );
         }
-        else if ( p_dec->fmt_out.audio.i_original_channels
-                    & AOUT_CHAN_REVERSESTEREO )
-        {
-            Exchange( (sample_t *)(p_out_buf->p_buffer + i * i_bytes_per_block),
-                      p_samples );
-        }
         else
         {
             /* Interleave the *$£%ù samples. */
@@ -245,26 +215,24 @@ static int channels_vlc2a52( const audio_format_t *p_audio, int *p_flags )
     switch ( p_audio->i_physical_channels & ~AOUT_CHAN_LFE )
     {
     case AOUT_CHAN_CENTER:
-        if ( (p_audio->i_original_channels & AOUT_CHAN_CENTER)
-              || (p_audio->i_original_channels
+        if ( (p_audio->i_physical_channels & AOUT_CHAN_CENTER)
+              || (p_audio->i_physical_channels
                    & (AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT)) )
             i_flags = A52_MONO;
-        else if ( p_audio->i_original_channels & AOUT_CHAN_LEFT )
+        else if ( p_audio->i_physical_channels & AOUT_CHAN_LEFT )
             i_flags = A52_CHANNEL1;
         else
             i_flags = A52_CHANNEL2;
         break;
 
     case AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT:
-        if ( p_audio->i_original_channels & AOUT_CHAN_DOLBYSTEREO )
+        if ( p_audio->i_chan_mode & AOUT_CHANMODE_DOLBYSTEREO )
             i_flags = A52_DOLBY;
-        else if ( p_audio->i_original_channels == AOUT_CHAN_CENTER )
-            i_flags = A52_MONO;
-        else if ( p_audio->i_original_channels & AOUT_CHAN_DUALMONO )
+        else if ( p_audio->i_chan_mode & AOUT_CHANMODE_DUALMONO )
             i_flags = A52_CHANNEL;
-        else if ( !(p_audio->i_original_channels & AOUT_CHAN_RIGHT) )
+        else if ( !(p_audio->i_physical_channels & AOUT_CHAN_RIGHT) )
             i_flags = A52_CHANNEL1;
-        else if ( !(p_audio->i_original_channels & AOUT_CHAN_LEFT) )
+        else if ( !(p_audio->i_physical_channels & AOUT_CHAN_LEFT) )
             i_flags = A52_CHANNEL2;
         else
             i_flags = A52_STEREO;
@@ -311,7 +279,6 @@ static int Open( vlc_object_t *p_this )
     if( p_dec->fmt_in.i_codec != VLC_CODEC_A52
      || p_dec->fmt_in.audio.i_rate == 0
      || p_dec->fmt_in.audio.i_physical_channels == 0
-     || p_dec->fmt_in.audio.i_original_channels == 0
      || p_dec->fmt_in.audio.i_bytes_per_frame == 0
      || p_dec->fmt_in.audio.i_frame_length == 0 )
         return VLC_EGENERIC;
@@ -352,7 +319,6 @@ static int Open( vlc_object_t *p_this )
                               p_dec->fmt_in.audio.i_physical_channels,
                               p_sys->pi_chan_table );
 
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.audio = p_dec->fmt_in.audio;
 #ifdef LIBA52_FIXED
     p_dec->fmt_out.audio.i_format = VLC_CODEC_S32N;
@@ -365,7 +331,6 @@ static int Open( vlc_object_t *p_this )
 
     if( decoder_UpdateAudioFormat( p_dec ) )
     {
-        es_format_Init( &p_dec->fmt_out, UNKNOWN_ES, 0 );
         Close( p_this );
         return VLC_EGENERIC;
     }

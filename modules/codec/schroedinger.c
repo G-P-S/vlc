@@ -361,7 +361,7 @@ vlc_module_begin ()
     set_subcategory( SUBCAT_INPUT_VCODEC )
     set_shortname( "Schroedinger" )
     set_description( N_("Dirac video decoder using libschroedinger") )
-    set_capability( "decoder", 200 )
+    set_capability( "video decoder", 200 )
     set_callbacks( OpenDecoder, CloseDecoder )
     add_shortcut( "schroedinger" )
 
@@ -584,7 +584,6 @@ static int OpenDecoder( vlc_object_t *p_this )
     p_sys->i_frame_pts_delta = 0;
 
     /* Set output properties */
-    p_dec->fmt_out.i_cat = VIDEO_ES;
     p_dec->fmt_out.i_codec = VLC_CODEC_I420;
 
     /* Set callbacks */

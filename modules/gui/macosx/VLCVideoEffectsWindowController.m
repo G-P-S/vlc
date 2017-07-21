@@ -27,6 +27,12 @@
 #import "VLCPopupPanelController.h"
 #import "VLCTextfieldPanelController.h"
 #import "VLCCoreInteraction.h"
+#import "VLCHexNumberFormatter.h"
+
+#define getWidgetBoolValue(w)   ((vlc_value_t){ .b_bool = [w state] })
+#define getWidgetIntValue(w)    ((vlc_value_t){ .i_int = [w intValue] })
+#define getWidgetFloatValue(w)  ((vlc_value_t){ .f_float = [w floatValue] })
+#define getWidgetStringValue(w) ((vlc_value_t){ .psz_string = (char *)[[w stringValue] UTF8String] })
 
 @interface VLCVideoEffectsWindowController()
 {
@@ -56,7 +62,112 @@
         self.textfieldPanel = [[VLCTextfieldPanelController alloc] init];
     }
 
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults boolForKey:@"VideoEffectApplyProfileOnStartup"]) {
+        [self resetValues];
+        [self loadProfile];
+    }
+    else
+        [defaults setInteger:0 forKey:@"VideoEffectSelectedProfile"];
+
     return self;
+}
+
+- (void)loadProfile
+{
+    intf_thread_t *p_intf = getIntf();
+    playlist_t *p_playlist = pl_Get(p_intf);
+    VLCCoreInteraction *vci_si = [VLCCoreInteraction sharedInstance];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSUInteger profile = [defaults integerForKey:@"VideoEffectSelectedProfile"];
+
+    /* fetch preset */
+    NSArray *items = [[[defaults objectForKey:@"VideoEffectProfiles"] objectAtIndex:profile] componentsSeparatedByString:@";"];
+
+    // version 1 of profile string has 32 entries
+    if ([items count] < 32) {
+        msg_Err(p_intf, "Error in parsing profile string");
+        return;
+    }
+
+    /* filter handling */
+    NSString *tempString = B64DecNSStr([items firstObject]);
+    NSArray<NSValue *> *vouts = getVouts();
+
+    /* enable the new filters */
+    var_SetString(p_playlist, "video-filter", [tempString UTF8String]);
+    if (vouts)
+        for (NSValue *ptr in vouts) {
+            vout_thread_t *p_vout = [ptr pointerValue];
+            var_SetString(p_vout, "video-filter", [tempString UTF8String]);
+        }
+
+    tempString = B64DecNSStr([items objectAtIndex:1]);
+    /* enable another round of new filters */
+    var_SetString(p_playlist, "sub-source", [tempString UTF8String]);
+    if (vouts)
+        for (NSValue *ptr in vouts) {
+            vout_thread_t *p_vout = [ptr pointerValue];
+            var_SetString(p_vout, "sub-source", [tempString UTF8String]);
+            vlc_object_release(p_vout);
+        }
+
+    tempString = B64DecNSStr([items objectAtIndex:2]);
+    /* enable another round of new filters */
+    char *psz_current_splitter = var_GetString(p_playlist, "video-splitter");
+    bool b_filter_changed = ![tempString isEqualToString:toNSStr(psz_current_splitter)];
+    free(psz_current_splitter);
+
+    if (b_filter_changed)
+        var_SetString(p_playlist, "video-splitter", [tempString UTF8String]);
+
+    /* try to set filter values on-the-fly and store them appropriately */
+    // index 3 is deprecated
+    [vci_si setVideoFilterProperty: "contrast" forFilter: "adjust" withValue: getWidgetFloatValue([items objectAtIndex:4])];
+    [vci_si setVideoFilterProperty: "brightness" forFilter: "adjust" withValue: getWidgetFloatValue([items objectAtIndex:5])];
+    [vci_si setVideoFilterProperty: "saturation" forFilter: "adjust" withValue: getWidgetFloatValue([items objectAtIndex:6])];
+    [vci_si setVideoFilterProperty: "gamma" forFilter: "adjust" withValue: getWidgetFloatValue([items objectAtIndex:7])];
+    [vci_si setVideoFilterProperty: "sharpen-sigma" forFilter: "sharpen" withValue: getWidgetFloatValue([items objectAtIndex:8])];
+    [vci_si setVideoFilterProperty: "gradfun-radius" forFilter: "gradfun" withValue: getWidgetIntValue([items objectAtIndex:9])];
+    [vci_si setVideoFilterProperty: "grain-variance" forFilter: "grain" withValue: getWidgetFloatValue([items objectAtIndex:10])];
+    [vci_si setVideoFilterProperty: "transform-type" forFilter: "transform" withValue: (vlc_value_t){ .psz_string = (char *)[B64DecNSStr([items objectAtIndex:11]) UTF8String] }];
+    [vci_si setVideoFilterProperty: "puzzle-rows" forFilter: "puzzle" withValue: getWidgetIntValue([items objectAtIndex:12])];
+    [vci_si setVideoFilterProperty: "puzzle-cols" forFilter: "puzzle" withValue: getWidgetIntValue([items objectAtIndex:13])];
+    [vci_si setVideoFilterProperty: "colorthres-color" forFilter: "colorthres" withValue: getWidgetIntValue([items objectAtIndex:14])];
+    [vci_si setVideoFilterProperty: "colorthres-saturationthres" forFilter: "colorthres" withValue: getWidgetIntValue([items objectAtIndex:15])];
+    [vci_si setVideoFilterProperty: "colorthres-similaritythres" forFilter: "colorthres" withValue: getWidgetIntValue([items objectAtIndex:16])];
+    [vci_si setVideoFilterProperty: "sepia-intensity" forFilter: "sepia" withValue: getWidgetIntValue([items objectAtIndex:17])];
+    [vci_si setVideoFilterProperty: "gradient-mode" forFilter: "gradient" withValue: (vlc_value_t){ .psz_string = (char *)[B64DecNSStr([items objectAtIndex:18]) UTF8String] }];
+    [vci_si setVideoFilterProperty: "gradient-cartoon" forFilter: "gradient" withValue: (vlc_value_t){ .b_bool = [[items objectAtIndex:19] intValue] }];
+    [vci_si setVideoFilterProperty: "gradient-type" forFilter: "gradient" withValue: getWidgetIntValue([items objectAtIndex:20])];
+    [vci_si setVideoFilterProperty: "extract-component" forFilter: "extract" withValue: getWidgetIntValue([items objectAtIndex:21])];
+    [vci_si setVideoFilterProperty: "posterize-level" forFilter: "posterize" withValue: getWidgetIntValue([items objectAtIndex:22])];
+    [vci_si setVideoFilterProperty: "blur-factor" forFilter: "motionblur" withValue: getWidgetIntValue([items objectAtIndex:23])];
+    [vci_si setVideoFilterProperty: "marq-marquee" forFilter: "marq" withValue: (vlc_value_t){ .psz_string = (char *)[B64DecNSStr([items objectAtIndex:24]) UTF8String] }];
+    [vci_si setVideoFilterProperty: "marq-position" forFilter: "marq" withValue: getWidgetIntValue([items objectAtIndex:25])];
+    [vci_si setVideoFilterProperty: "logo-file" forFilter: "logo" withValue: (vlc_value_t){ .psz_string = (char *)[B64DecNSStr([items objectAtIndex:26]) UTF8String] }];
+    [vci_si setVideoFilterProperty: "logo-position" forFilter: "logo" withValue: getWidgetIntValue([items objectAtIndex:27])];
+    [vci_si setVideoFilterProperty: "logo-opacity" forFilter: "logo" withValue: getWidgetIntValue([items objectAtIndex:28])];
+    [vci_si setVideoFilterProperty: "clone-count" forFilter: "clone" withValue: getWidgetIntValue([items objectAtIndex:29])];
+    [vci_si setVideoFilterProperty: "wall-rows" forFilter: "wall" withValue: getWidgetIntValue([items objectAtIndex:30])];
+    [vci_si setVideoFilterProperty: "wall-cols" forFilter: "wall" withValue: getWidgetIntValue([items objectAtIndex:31])];
+
+    if ([items count] >= 33) { // version >=2 of profile string
+        [vci_si setVideoFilterProperty: "brightness-threshold" forFilter: "adjust" withValue: (vlc_value_t){ .b_bool = [[items objectAtIndex:32] intValue] }];
+    }
+
+    vlc_value_t hueValue;
+    if ([items count] >= 34) { // version >=3 of profile string
+        hueValue.f_float = [[items objectAtIndex:33] floatValue];
+    } else {
+        hueValue.f_float = [[items objectAtIndex:3] intValue]; // deprecated since 3.0.0
+        // convert to new scale ([0,360] --> [-180,180])
+        hueValue.f_float -= 180;
+    }
+    [vci_si setVideoFilterProperty: "hue" forFilter: "adjust" withValue: hueValue];
+
+    [defaults setInteger:profile forKey:@"VideoEffectSelectedProfile"];
+    [defaults synchronize];
 }
 
 - (void)windowDidLoad
@@ -70,6 +181,8 @@
     [[_tabView tabViewItemAtIndex:[_tabView indexOfTabViewItemWithIdentifier:@"geometry"]] setLabel:_NS("Geometry")];
     [[_tabView tabViewItemAtIndex:[_tabView indexOfTabViewItemWithIdentifier:@"color"]] setLabel:_NS("Color")];
     [[_tabView tabViewItemAtIndex:[_tabView indexOfTabViewItemWithIdentifier:@"misc"]] setLabel:_NS("Miscellaneous")];
+
+    [_applyProfileCheckbox setState:[[NSUserDefaults standardUserDefaults] boolForKey:@"VideoEffectApplyProfileOnStartup"]];
 
     [self resetProfileSelector];
 
@@ -97,14 +210,19 @@
     [_transformCheckbox setTitle:_NS("Transform")];
     [_transformPopup removeAllItems];
     [_transformPopup addItemWithTitle: _NS("Rotate by 90 degrees")];
+    [[_transformPopup lastItem] setRepresentedObject: @"90"];
     [[_transformPopup lastItem] setTag: 90];
     [_transformPopup addItemWithTitle: _NS("Rotate by 180 degrees")];
+    [[_transformPopup lastItem] setRepresentedObject: @"180"];
     [[_transformPopup lastItem] setTag: 180];
     [_transformPopup addItemWithTitle: _NS("Rotate by 270 degrees")];
+    [[_transformPopup lastItem] setRepresentedObject: @"270"];
     [[_transformPopup lastItem] setTag: 270];
     [_transformPopup addItemWithTitle: _NS("Flip horizontally")];
+    [[_transformPopup lastItem] setRepresentedObject: @"hflip"];
     [[_transformPopup lastItem] setTag: 1];
     [_transformPopup addItemWithTitle: _NS("Flip vertically")];
+    [[_transformPopup lastItem] setRepresentedObject: @"vflip"];
     [[_transformPopup lastItem] setTag: 2];
     [_zoomCheckbox setTitle:_NS("Magnification/Zoom")];
     [_puzzleCheckbox setTitle:_NS("Puzzle game")];
@@ -118,6 +236,7 @@
 
     [_thresholdCheckbox setTitle:_NS("Color threshold")];
     [_thresholdColorLabel setStringValue:_NS("Color")];
+    [_thresholdColorTextField setFormatter:[[VLCHexNumberFormatter alloc] init]];
     [_thresholdSaturationLabel setStringValue:_NS("Saturation")];
     [_thresholdSimilarityLabel setStringValue:_NS("Similarity")];
     [_sepiaCheckbox setTitle:_NS("Sepia")];
@@ -127,15 +246,19 @@
     [_gradientModeLabel setStringValue:_NS("Mode")];
     [_gradientModePopup removeAllItems];
     [_gradientModePopup addItemWithTitle: _NS("Gradient")];
+    [[_gradientModePopup lastItem] setRepresentedObject: @"gradient"];
     [[_gradientModePopup lastItem] setTag: 1];
     [_gradientModePopup addItemWithTitle: _NS("Edge")];
+    [[_gradientModePopup lastItem] setRepresentedObject: @"edge"];
     [[_gradientModePopup lastItem] setTag: 2];
     [_gradientModePopup addItemWithTitle: _NS("Hough")];
+    [[_gradientModePopup lastItem] setRepresentedObject: @"hough"];
     [[_gradientModePopup lastItem] setTag: 3];
     [_gradientColorCheckbox setTitle:_NS("Color")];
     [_gradientCartoonCheckbox setTitle:_NS("Cartoon")];
     [_extractCheckbox setTitle:_NS("Color extraction")];
     [_extractLabel setStringValue:_NS("Color")];
+    [_extractTextField setFormatter:[[VLCHexNumberFormatter alloc] init]];
     [_invertCheckbox setTitle:_NS("Invert colors")];
     [_posterizeCheckbox setTitle:_NS("Posterize")];
     [_posterizeLabel setStringValue:_NS("Posterize level")];
@@ -146,7 +269,6 @@
     [_wavesCheckbox setTitle:_NS("Waves")];
     [_psychedelicCheckbox setTitle:_NS("Psychedelic")];
     [_anaglyphCheckbox setTitle:_NS("Anaglyph")];
-
     [_addTextCheckbox setTitle:_NS("Add text")];
     [_addTextTextLabel setStringValue:_NS("Text")];
     [_addTextPositionLabel setStringValue:_NS("Position")];
@@ -200,7 +322,6 @@
                                                  name:VLCInputChangedNotification
                                                object:nil];
 
-
     [self resetValues];
 }
 
@@ -247,19 +368,87 @@
     }
 
     [_profilePopup selectItemAtIndex:[defaults integerForKey:@"VideoEffectSelectedProfile"]];
-    [self profileSelectorAction:self];
+    if (i_old_profile_index || [defaults integerForKey:@"VideoEffectSelectedProfile"])
+        [self profileSelectorAction:self];
+}
+
+- (void)setWidgetValue: (id)widget forOption: (char *)psz_option enabled: (bool)b_state
+{
+    intf_thread_t *p_intf = getIntf();
+    playlist_t *p_playlist = pl_Get(p_intf);
+
+    vlc_value_t val;
+    int i_type = config_GetType(p_intf, psz_option) & VLC_VAR_CLASS;
+    switch (i_type)
+    {
+    case VLC_VAR_BOOL:
+    case VLC_VAR_INTEGER:
+    case VLC_VAR_FLOAT:
+    case VLC_VAR_STRING:
+        break;
+    default:
+        msg_Err(p_intf, "%s variable is of an unsupported type (%d)", psz_option, i_type);
+        return;
+    }
+    if (var_Create(p_playlist, psz_option, i_type | VLC_VAR_DOINHERIT) ||
+        var_GetChecked(p_playlist, psz_option, i_type, &val))
+        return;
+
+    if (i_type == VLC_VAR_BOOL || i_type == VLC_VAR_INTEGER)
+    {
+        if ([widget isKindOfClass: [NSSlider class]])
+        {
+            [widget setIntValue: val.i_int];
+            [widget setToolTip: [NSString stringWithFormat:@"%lli", val.i_int]];
+        }
+        else if ([widget isKindOfClass: [NSButton class]])
+            [widget setState: val.i_int ? NSOnState : NSOffState];
+        else if ([widget isKindOfClass: [NSTextField class]])
+            [widget setIntValue: val.i_int];
+        else if ([widget isKindOfClass: [NSStepper class]])
+            [widget setIntValue: val.i_int];
+        else if ([widget isKindOfClass: [NSPopUpButton class]])
+            [widget selectItemWithTag: val.i_int];
+    }
+    else if (i_type == VLC_VAR_FLOAT)
+    {
+        if ([widget isKindOfClass: [NSSlider class]])
+        {
+            [widget setFloatValue: val.f_float];
+            [widget setToolTip: [NSString stringWithFormat:@"%0.3f", val.f_float]];
+        }
+    }
+    else if (i_type == VLC_VAR_STRING)
+    {
+        if ([widget isKindOfClass: [NSPopUpButton class]])
+        {
+            for (NSMenuItem *item in [widget itemArray])
+                if ([item representedObject] &&
+                    !strcmp([[item representedObject] UTF8String], val.psz_string))
+                {
+                    [widget selectItemWithTitle: [item title]];
+                    break;
+                }
+        }
+        else if ([widget isKindOfClass: [NSTextField class]])
+            [widget setStringValue: toNSStr(val.psz_string)];
+        free(val.psz_string);
+    }
+
+    [widget setEnabled: b_state];
 }
 
 - (void)resetValues
 {
     intf_thread_t *p_intf = getIntf();
+    playlist_t *p_playlist = pl_Get(p_intf);
     NSString *tmpString;
     char *tmpChar;
     BOOL b_state;
 
     /* do we have any filter enabled? if yes, show it. */
     char * psz_vfilters;
-    psz_vfilters = config_GetPsz(p_intf, "video-filter");
+    psz_vfilters = var_InheritString(p_playlist, "video-filter");
     if (psz_vfilters) {
         [_adjustCheckbox setState: (NSInteger)strstr(psz_vfilters, "adjust")];
         [_sharpenCheckbox setState: (NSInteger)strstr(psz_vfilters, "sharpen")];
@@ -305,7 +494,7 @@
         [_anaglyphCheckbox setState: NSOffState];
     }
 
-    psz_vfilters = config_GetPsz(p_intf, "sub-source");
+    psz_vfilters = var_InheritString(p_playlist, "sub-source");
     if (psz_vfilters) {
         [_addTextCheckbox setState: (NSInteger)strstr(psz_vfilters, "marq")];
         [_addLogoCheckbox setState: (NSInteger)strstr(psz_vfilters, "logo")];
@@ -315,7 +504,7 @@
         [_addLogoCheckbox setState: NSOffState];
     }
 
-    psz_vfilters = config_GetPsz(p_intf, "video-splitter");
+    psz_vfilters = var_InheritString(p_playlist, "video-splitter");
     if (psz_vfilters) {
         [_cloneCheckbox setState: (NSInteger)strstr(psz_vfilters, "clone")];
         [_wallCheckbox setState: (NSInteger)strstr(psz_vfilters, "wall")];
@@ -326,25 +515,13 @@
     }
 
     /* fetch and show the various values */
-    [_adjustHueSlider setFloatValue: config_GetFloat(p_intf, "hue")];
-    [_adjustContrastSlider setFloatValue: config_GetFloat(p_intf, "contrast")];
-    [_adjustBrightnessSlider setFloatValue: config_GetFloat(p_intf, "brightness")];
-    [_adjustSaturationSlider setFloatValue: config_GetFloat(p_intf, "saturation")];
-    [_adjustBrightnessCheckbox setState:(config_GetInt(p_intf, "brightness-threshold") != 0 ? NSOnState : NSOffState)];
-    [_adjustGammaSlider setFloatValue: config_GetFloat(p_intf, "gamma")];
-    [_adjustBrightnessSlider setToolTip: [NSString stringWithFormat:@"%0.3f", config_GetFloat(p_intf, "brightness")]];
-    [_adjustContrastSlider setToolTip: [NSString stringWithFormat:@"%0.3f", config_GetFloat(p_intf, "contrast")]];
-    [_adjustGammaSlider setToolTip: [NSString stringWithFormat:@"%0.3f", config_GetFloat(p_intf, "gamma")]];
-    [_adjustHueSlider setToolTip: [NSString stringWithFormat:@"%.0f", config_GetFloat(p_intf, "hue")]];
-    [_adjustSaturationSlider setToolTip: [NSString stringWithFormat:@"%0.3f", config_GetFloat(p_intf, "saturation")]];
     b_state = [_adjustCheckbox state];
-
-    [_adjustBrightnessSlider setEnabled: b_state];
-    [_adjustBrightnessCheckbox setEnabled: b_state];
-    [_adjustContrastSlider setEnabled: b_state];
-    [_adjustGammaSlider setEnabled: b_state];
-    [_adjustHueSlider setEnabled: b_state];
-    [_adjustSaturationSlider setEnabled: b_state];
+    [self setWidgetValue: _adjustHueSlider forOption: "hue" enabled: b_state];
+    [self setWidgetValue: _adjustContrastSlider forOption: "contrast" enabled: b_state];
+    [self setWidgetValue: _adjustBrightnessSlider forOption: "brightness" enabled: b_state];
+    [self setWidgetValue: _adjustSaturationSlider forOption: "saturation" enabled: b_state];
+    [self setWidgetValue: _adjustBrightnessCheckbox forOption: "brightness-threshold" enabled: b_state];
+    [self setWidgetValue: _adjustGammaSlider forOption: "gamma" enabled: b_state];
     [_adjustBrightnessLabel setEnabled: b_state];
     [_adjustContrastLabel setEnabled: b_state];
     [_adjustGammaLabel setEnabled: b_state];
@@ -352,19 +529,13 @@
     [_adjustSaturationLabel setEnabled: b_state];
     [_adjustResetButton setEnabled: b_state];
 
-    [_sharpenSlider setFloatValue: config_GetFloat(p_intf, "sharpen-sigma")];
-    [_sharpenSlider setToolTip: [NSString stringWithFormat:@"%0.3f", config_GetFloat(p_intf, "sharpen-sigma")]];
-    [_sharpenSlider setEnabled: [_sharpenCheckbox state]];
+    [self setWidgetValue: _sharpenSlider forOption: "sharpen-sigma" enabled: [_sharpenCheckbox state]];
     [_sharpenLabel setEnabled: [_sharpenCheckbox state]];
 
-    [_bandingSlider setIntValue: config_GetInt(p_intf, "gradfun-radius")];
-    [_bandingSlider setToolTip: [NSString stringWithFormat:@"%lli", config_GetInt(p_intf, "gradfun-radius")]];
-    [_bandingSlider setEnabled: [_bandingCheckbox state]];
+    [self setWidgetValue: _bandingSlider forOption: "gradfun-radius" enabled: [_bandingCheckbox state]];
     [_bandingLabel setEnabled: [_bandingCheckbox state]];
 
-    [_grainSlider setFloatValue: config_GetFloat(p_intf, "grain-variance")];
-    [_grainSlider setToolTip: [NSString stringWithFormat:@"%0.3f", config_GetFloat(p_intf, "grain-variance")]];
-    [_grainSlider setEnabled: [_grainCheckbox state]];
+    [self setWidgetValue: _grainSlider forOption: "grain-variance" enabled: [_grainCheckbox state]];
     [_grainLabel setEnabled: [_grainCheckbox state]];
 
     [self setCropLeftValue: 0];
@@ -374,162 +545,115 @@
     [_cropSyncTopBottomCheckbox setState: NSOffState];
     [_cropSyncLeftRightCheckbox setState: NSOffState];
 
-    tmpChar = config_GetPsz(p_intf, "transform-type");
-    tmpString = toNSStr(tmpChar);
-    if ([tmpString isEqualToString:@"hflip"])
-        [_transformPopup selectItemWithTag: 1];
-    else if ([tmpString isEqualToString:@"vflip"])
-        [_transformPopup selectItemWithTag: 2];
-    else
-        [_transformPopup selectItemWithTag:[tmpString intValue]];
-    FREENULL(tmpChar);
-    [_transformPopup setEnabled: [_transformCheckbox state]];
+    [self setWidgetValue: _transformPopup forOption: "transform-type" enabled: [_transformCheckbox state]];
 
-    [self setPuzzleColumnsValue: config_GetInt(p_intf, "puzzle-cols")];
-    [self setPuzzleRowsValue: config_GetInt(p_intf, "puzzle-rows")];
     b_state = [_puzzleCheckbox state];
-    [_puzzleRowsTextField setEnabled: b_state];
-    [_puzzleRowsStepper setEnabled: b_state];
+    [self setWidgetValue: _puzzleColumnsTextField forOption: "puzzle-cols" enabled: b_state];
+    [self setWidgetValue: _puzzleColumnsStepper forOption: "puzzle-cols" enabled: b_state];
+    [self setWidgetValue: _puzzleRowsTextField forOption: "puzzle-rows" enabled: b_state];
+    [self setWidgetValue: _puzzleRowsStepper forOption: "puzzle-rows" enabled: b_state];
     [_puzzleRowsLabel setEnabled: b_state];
-    [_puzzleColumnsTextField setEnabled: b_state];
-    [_puzzleColumnsStepper setEnabled: b_state];
     [_puzzleColumnsLabel setEnabled: b_state];
 
-    [self setCloneValue: config_GetInt(p_intf, "clone-count")];
     b_state = [_cloneCheckbox state];
+    [self setWidgetValue: _cloneNumberTextField forOption: "clone-count" enabled: b_state];
+    [self setWidgetValue: _cloneNumberStepper forOption: "clone-count" enabled: b_state];
     [_cloneNumberLabel setEnabled: b_state];
-    [_cloneNumberTextField setEnabled: b_state];
-    [_cloneNumberStepper setEnabled: b_state];
 
     b_state = [_wallCheckbox state];
-    [self setWallRowsValue: config_GetInt(p_intf, "wall-rows")];
+    [self setWidgetValue: _wallNumbersOfRowsTextField forOption: "wall-rows" enabled: b_state];
+    [self setWidgetValue: _wallNumbersOfRowsStepper forOption: "wall-rows" enabled: b_state];
+    [self setWidgetValue: _wallNumberOfColumnsTextField forOption: "wall-cols" enabled: b_state];
+    [self setWidgetValue: _wallNumberOfColumnsStepper forOption: "wall-cols" enabled: b_state];
     [_wallNumbersOfRowsLabel setEnabled: b_state];
-    [_wallNumbersOfRowsTextField setEnabled: b_state];
-    [_wallNumbersOfRowsStepper setEnabled: b_state];
-    [self setWallColumnsValue: config_GetInt(p_intf, "wall-cols")];
     [_wallNumberOfColumnsLabel setEnabled: b_state];
-    [_wallNumberOfColumnsTextField setEnabled: b_state];
-    [_wallNumberOfColumnsStepper setEnabled: b_state];
-
-    [_thresholdColorTextField setStringValue: [[NSString stringWithFormat:@"%llx", config_GetInt(p_intf, "colorthres-color")] uppercaseString]];
-    [_thresholdSaturationSlider setIntValue: config_GetInt(p_intf, "colorthres-saturationthres")];
-    [_thresholdSaturationSlider setToolTip: [NSString stringWithFormat:@"%lli", config_GetInt(p_intf, "colorthres-saturationthres")]];
-    [_thresholdSimilaritySlider setIntValue: config_GetInt(p_intf, "colorthres-similaritythres")];
-    [_thresholdSimilaritySlider setToolTip: [NSString stringWithFormat:@"%lli", config_GetInt(p_intf, "colorthres-similaritythres")]];
 
     b_state = [_thresholdCheckbox state];
-    [_thresholdColorTextField setEnabled: b_state];
+    [self setWidgetValue: _thresholdColorTextField forOption: "colorthres-color" enabled: b_state];
+    [self setWidgetValue: _thresholdSaturationSlider forOption: "colorthres-saturationthres" enabled: b_state];
+    [self setWidgetValue: _thresholdSimilaritySlider forOption: "colorthres-similaritythres" enabled: b_state];
     [_thresholdColorLabel setEnabled: b_state];
-    [_thresholdSaturationSlider setEnabled: b_state];
     [_thresholdSaturationLabel setEnabled: b_state];
-    [_thresholdSimilaritySlider setEnabled: b_state];
     [_thresholdSimilarityLabel setEnabled: b_state];
 
-    [self setSepiaValue: config_GetInt(p_intf, "sepia-intensity")];
     b_state = [_sepiaCheckbox state];
-    [_sepiaTextField setEnabled: b_state];
-    [_sepiaStepper setEnabled: b_state];
+    [self setWidgetValue: _sepiaTextField forOption: "sepia-intensity" enabled: b_state];
+    [self setWidgetValue: _sepiaStepper forOption: "sepia-intensity" enabled: b_state];
     [_sepiaLabel setEnabled: b_state];
 
-    tmpChar = config_GetPsz(p_intf, "gradient-mode");
-    tmpString = toNSStr(tmpChar);
-    if ([tmpString isEqualToString:@"hough"])
-        [_gradientModePopup selectItemWithTag: 3];
-    else if ([tmpString isEqualToString:@"edge"])
-        [_gradientModePopup selectItemWithTag: 2];
-    else
-        [_gradientModePopup selectItemWithTag: 1];
-    FREENULL(tmpChar);
-    [_gradientCartoonCheckbox setState: config_GetInt(p_intf, "gradient-cartoon")];
-    [_gradientColorCheckbox setState: config_GetInt(p_intf, "gradient-type")];
     b_state = [_gradientCheckbox state];
-    [_gradientModePopup setEnabled: b_state];
+    [self setWidgetValue: _gradientModePopup forOption: "gradient-mode" enabled: b_state];
+    [self setWidgetValue: _gradientCartoonCheckbox forOption: "gradient-cartoon" enabled: b_state];
+    [self setWidgetValue: _gradientColorCheckbox forOption: "gradient-type" enabled: b_state];
     [_gradientModeLabel setEnabled: b_state];
-    [_gradientCartoonCheckbox setEnabled: b_state];
-    [_gradientColorCheckbox setEnabled: b_state];
 
-    [_extractTextField setStringValue: [[NSString stringWithFormat:@"%llx", config_GetInt(p_intf, "extract-component")] uppercaseString]];
-    [_extractTextField setEnabled: [_extractCheckbox state]];
+    [self setWidgetValue: _extractTextField forOption: "extract-component" enabled: [_extractCheckbox state]];
     [_extractLabel setEnabled: [_extractCheckbox state]];
 
-    [self setPosterizeValue: config_GetInt(p_intf, "posterize-level")];
     b_state = [_posterizeCheckbox state];
-    [_posterizeTextField setEnabled: b_state];
-    [_posterizeStepper setEnabled: b_state];
+    [self setWidgetValue: _posterizeTextField forOption: "posterize-level" enabled: b_state];
+    [self setWidgetValue: _posterizeStepper forOption: "posterize-level" enabled: b_state];
     [_posterizeLabel setEnabled: b_state];
 
-    [_blurSlider setIntValue: config_GetInt(p_intf, "blur-factor")];
-    [_blurSlider setToolTip: [NSString stringWithFormat:@"%lli", config_GetInt(p_intf, "blur-factor")]];
-    [_blurSlider setEnabled: [_blurCheckbox state]];
+    [self setWidgetValue: _blurSlider forOption: "blur-factor" enabled: [_blurCheckbox state]];
     [_blurLabel setEnabled: [_blurCheckbox state]];
 
-    tmpChar = config_GetPsz(p_intf, "marq-marquee");
-    [_addTextTextTextField setStringValue:toNSStr(tmpChar)];
-    if (tmpChar)
-        FREENULL(tmpChar);
-    [_addTextPositionPopup selectItemWithTag: config_GetInt(p_intf, "marq-position")];
     b_state = [_addTextCheckbox state];
-    [_addTextPositionPopup setEnabled: b_state];
+    [self setWidgetValue: _addTextTextTextField forOption: "marq-marquee" enabled: b_state];
+    [self setWidgetValue: _addTextPositionPopup forOption: "marq-position" enabled: b_state];
     [_addTextPositionLabel setEnabled: b_state];
     [_addTextTextLabel setEnabled: b_state];
-    [_addTextTextTextField setEnabled: b_state];
 
-    tmpChar = config_GetPsz(p_intf, "logo-file");
-    [_addLogoLogoTextField setStringValue: toNSStr(tmpChar)];
-    if (tmpChar)
-        FREENULL(tmpChar);
-    [_addLogoPositionPopup selectItemWithTag: config_GetInt(p_intf, "logo-position")];
-    [_addLogoTransparencySlider setIntValue: config_GetInt(p_intf, "logo-opacity")];
-    [_addLogoTransparencySlider setToolTip: [NSString stringWithFormat:@"%lli", config_GetInt(p_intf, "logo-opacity")]];
     b_state = [_addLogoCheckbox state];
-    [_addLogoPositionPopup setEnabled: b_state];
+    [self setWidgetValue: _addLogoLogoTextField forOption: "logo-file" enabled: b_state];
+    [self setWidgetValue: _addLogoPositionPopup forOption: "logo-position" enabled: b_state];
+    [self setWidgetValue: _addLogoTransparencySlider forOption: "logo-opacity" enabled: b_state];
     [_addLogoPositionLabel setEnabled: b_state];
-    [_addLogoLogoTextField setEnabled: b_state];
     [_addLogoLogoLabel setEnabled: b_state];
-    [_addLogoTransparencySlider setEnabled: b_state];
     [_addLogoTransparencyLabel setEnabled: b_state];
 }
 
 - (NSString *)generateProfileString
 {
     intf_thread_t *p_intf = getIntf();
+    playlist_t *p_playlist = pl_Get(p_intf);
     return [NSString stringWithFormat:@"%@;%@;%@;%lli;%f;%f;%f;%f;%f;%lli;%f;%@;%lli;%lli;%lli;%lli;%lli;%lli;%@;%lli;%lli;%lli;%lli;%lli;%@;%lli;%@;%lli;%lli;%lli;%lli;%lli;%lli;%f",
-            B64EncAndFree(config_GetPsz(p_intf, "video-filter")),
-            B64EncAndFree(config_GetPsz(p_intf, "sub-source")),
-            B64EncAndFree(config_GetPsz(p_intf, "video-splitter")),
-            0LL, // former "hue" value, deprecated since 3.0.0
-            config_GetFloat(p_intf, "contrast"),
-            config_GetFloat(p_intf, "brightness"),
-            config_GetFloat(p_intf, "saturation"),
-            config_GetFloat(p_intf, "gamma"),
-            config_GetFloat(p_intf, "sharpen-sigma"),
-            config_GetInt(p_intf, "gradfun-radius"),
-            config_GetFloat(p_intf, "grain-variance"),
-            B64EncAndFree(config_GetPsz(p_intf, "transform-type")),
-            config_GetInt(p_intf, "puzzle-rows"),
-            config_GetInt(p_intf, "puzzle-cols"),
-            config_GetInt(p_intf, "colorthres-color"),
-            config_GetInt(p_intf, "colorthres-saturationthres"),
-            config_GetInt(p_intf, "colorthres-similaritythres"),
-            config_GetInt(p_intf, "sepia-intensity"),
-            B64EncAndFree(config_GetPsz(p_intf, "gradient-mode")),
-            config_GetInt(p_intf, "gradient-cartoon"),
-            config_GetInt(p_intf, "gradient-type"),
-            config_GetInt(p_intf, "extract-component"),
-            config_GetInt(p_intf, "posterize-level"),
-            config_GetInt(p_intf, "blur-factor"),
-            B64EncAndFree(config_GetPsz(p_intf, "marq-marquee")),
-            config_GetInt(p_intf, "marq-position"),
-            B64EncAndFree(config_GetPsz(p_intf, "logo-file")),
-            config_GetInt(p_intf, "logo-position"),
-            config_GetInt(p_intf, "logo-opacity"),
-            config_GetInt(p_intf, "clone-count"),
-            config_GetInt(p_intf, "wall-rows"),
-            config_GetInt(p_intf, "wall-cols"),
-            // version 2 of profile string:
-            config_GetInt(p_intf, "brightness-threshold"), // index: 32
-            // version 3 of profile string: (vlc-3.0.0)
-            config_GetFloat(p_intf, "hue") // index: 33
+                     B64EncAndFree(var_InheritString(p_playlist, "video-filter")),
+                     B64EncAndFree(var_InheritString(p_playlist, "sub-source")),
+                     B64EncAndFree(var_InheritString(p_playlist, "video-splitter")),
+                     0LL, // former "hue" value, deprecated since 3.0.0
+                     var_InheritFloat(p_playlist, "contrast"),
+                     var_InheritFloat(p_playlist, "brightness"),
+                     var_InheritFloat(p_playlist, "saturation"),
+                     var_InheritFloat(p_playlist, "gamma"),
+                     var_InheritFloat(p_playlist, "sharpen-sigma"),
+                     var_InheritInteger(p_playlist, "gradfun-radius"),
+                     var_InheritFloat(p_playlist, "grain-variance"),
+                     B64EncAndFree(var_InheritString(p_playlist, "transform-type")),
+                     var_InheritInteger(p_playlist, "puzzle-rows"),
+                     var_InheritInteger(p_playlist, "puzzle-cols"),
+                     var_InheritInteger(p_playlist, "colorthres-color"),
+                     var_InheritInteger(p_playlist, "colorthres-saturationthres"),
+                     var_InheritInteger(p_playlist, "colorthres-similaritythres"),
+                     var_InheritInteger(p_playlist, "sepia-intensity"),
+                     B64EncAndFree(var_InheritString(p_playlist, "gradient-mode")),
+                     (int64_t)var_InheritBool(p_playlist, "gradient-cartoon"),
+                     var_InheritInteger(p_playlist, "gradient-type"),
+                     var_InheritInteger(p_playlist, "extract-component"),
+                     var_InheritInteger(p_playlist, "posterize-level"),
+                     var_InheritInteger(p_playlist, "blur-factor"),
+                     B64EncAndFree(var_InheritString(p_playlist, "marq-marquee")),
+                     var_InheritInteger(p_playlist, "marq-position"),
+                     B64EncAndFree(var_InheritString(p_playlist, "logo-file")),
+                     var_InheritInteger(p_playlist, "logo-position"),
+                     var_InheritInteger(p_playlist, "logo-opacity"),
+                     var_InheritInteger(p_playlist, "clone-count"),
+                     var_InheritInteger(p_playlist, "wall-rows"),
+                     var_InheritInteger(p_playlist, "wall-cols"),
+                     // version 2 of profile string:
+                     (int64_t)var_InheritBool(p_playlist, "brightness-threshold"), // index: 32
+                     // version 3 of profile string: (vlc-3.0.0)
+                     var_InheritFloat(p_playlist, "hue") // index: 33
             ];
 }
 
@@ -538,7 +662,7 @@
 
 - (void)saveCurrentProfile
 {
-    if (i_old_profile_index == -1)
+    if (!i_old_profile_index || i_old_profile_index == -1)
         return;
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -554,6 +678,35 @@
     [defaults synchronize];
 }
 
+- (void)saveCurrentProfileAtTerminate
+{
+    if (i_old_profile_index)
+        return [self saveCurrentProfile];
+
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *newProfile = [self generateProfileString];
+    if ([newProfile compare:[[defaults objectForKey:@"VideoEffectProfiles"] firstObject]] == NSOrderedSame)
+        return;
+
+    NSMutableArray *workArray = [[NSMutableArray alloc] initWithArray:[defaults objectForKey:@"VideoEffectProfiles"]];
+    [workArray addObject:newProfile];
+    [defaults setObject:[NSArray arrayWithArray:workArray] forKey:@"VideoEffectProfiles"];
+
+    NSArray<NSString *> *profileNames = [defaults objectForKey:@"VideoEffectProfileNames"];
+    NSString *newProfileName;
+
+    unsigned int num_custom = 0;
+    do
+        newProfileName = [@"Custom" stringByAppendingString:[NSString stringWithFormat:@"%03i",num_custom++]];
+    while ([profileNames containsObject:newProfileName]);
+
+    workArray = [[NSMutableArray alloc] initWithArray:[defaults objectForKey:@"VideoEffectProfileNames"]];
+    [workArray addObject:newProfileName];
+    [defaults setObject:[NSArray arrayWithArray:workArray] forKey:@"VideoEffectProfileNames"];
+
+    [defaults synchronize];
+}
+
 - (IBAction)toggleWindow:(id)sender
 {
     if ([self.window isKeyWindow])
@@ -566,116 +719,31 @@
 
 - (IBAction)profileSelectorAction:(id)sender
 {
-    intf_thread_t *p_intf = getIntf();
     [self saveCurrentProfile];
     i_old_profile_index = [_profilePopup indexOfSelectedItem];
-    VLCCoreInteraction *vci_si = [VLCCoreInteraction sharedInstance];
-
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSUInteger selectedProfile = [_profilePopup indexOfSelectedItem];
-
-    /* fetch preset */
-    NSArray *items = [[[defaults objectForKey:@"VideoEffectProfiles"] objectAtIndex:selectedProfile] componentsSeparatedByString:@";"];
-
-    // version 1 of profile string has 32 entries
-    if ([items count] < 32) {
-        msg_Err(p_intf, "Error in parsing profile string");
-        [self resetValues];
-        return;
-    }
-
-    /* filter handling */
-    NSString *tempString = B64DecNSStr([items firstObject]);
-    vout_thread_t *p_vout = getVout();
-
-    /* enable the new filters */
-    config_PutPsz(p_intf, "video-filter", [tempString UTF8String]);
-    if (p_vout) {
-        var_SetString(p_vout, "video-filter", [tempString UTF8String]);
-    }
-
-    tempString = B64DecNSStr([items objectAtIndex:1]);
-    /* enable another round of new filters */
-    config_PutPsz(p_intf, "sub-source", [tempString UTF8String]);
-    if (p_vout) {
-        var_SetString(p_vout, "sub-source", [tempString UTF8String]);
-    }
-
-    if (p_vout) {
-        vlc_object_release(p_vout);
-    }
-
-    tempString = B64DecNSStr([items objectAtIndex:2]);
-    /* enable another round of new filters */
-    char *psz_current_splitter = var_GetString(pl_Get(p_intf), "video-splitter");
-    bool b_filter_changed = ![tempString isEqualToString:toNSStr(psz_current_splitter)];
-    free(psz_current_splitter);
-
-    if (b_filter_changed) {
-        config_PutPsz(p_intf, "video-splitter", [tempString UTF8String]);
-        var_SetString(pl_Get(p_intf), "video-splitter", [tempString UTF8String]);
-    }
-
-    /* try to set filter values on-the-fly and store them appropriately */
-    // index 3 is deprecated
-    [vci_si setVideoFilterProperty:"contrast" forFilter:"adjust" float:[[items objectAtIndex:4] floatValue]];
-    [vci_si setVideoFilterProperty:"brightness" forFilter:"adjust" float:[[items objectAtIndex:5] floatValue]];
-    [vci_si setVideoFilterProperty:"saturation" forFilter:"adjust" float:[[items objectAtIndex:6] floatValue]];
-    [vci_si setVideoFilterProperty:"gamma" forFilter:"adjust" float:[[items objectAtIndex:7] floatValue]];
-    [vci_si setVideoFilterProperty:"sharpen-sigma" forFilter:"sharpen" float:[[items objectAtIndex:8] floatValue]];
-    [vci_si setVideoFilterProperty:"gradfun-radius" forFilter:"gradfun" integer:[[items objectAtIndex:9] intValue]];
-    [vci_si setVideoFilterProperty:"grain-variance" forFilter:"grain" float:[[items objectAtIndex:10] floatValue]];
-    [vci_si setVideoFilterProperty:"transform-type" forFilter:"transform" string:[B64DecNSStr([items objectAtIndex:11]) UTF8String]];
-    [vci_si setVideoFilterProperty:"puzzle-rows" forFilter:"puzzle" integer:[[items objectAtIndex:12] intValue]];
-    [vci_si setVideoFilterProperty:"puzzle-cols" forFilter:"puzzle" integer:[[items objectAtIndex:13] intValue]];
-    [vci_si setVideoFilterProperty:"colorthres-color" forFilter:"colorthres" integer:[[items objectAtIndex:14] intValue]];
-    [vci_si setVideoFilterProperty:"colorthres-saturationthres" forFilter:"colorthres" integer:[[items objectAtIndex:15] intValue]];
-    [vci_si setVideoFilterProperty:"colorthres-similaritythres" forFilter:"colorthres" integer:[[items objectAtIndex:16] intValue]];
-    [vci_si setVideoFilterProperty:"sepia-intensity" forFilter:"sepia" integer:[[items objectAtIndex:17] intValue]];
-    [vci_si setVideoFilterProperty:"gradient-mode" forFilter:"gradient" string:[B64DecNSStr([items objectAtIndex:18]) UTF8String]];
-    [vci_si setVideoFilterProperty:"gradient-cartoon" forFilter:"gradient" boolean:[[items objectAtIndex:19] intValue]];
-    [vci_si setVideoFilterProperty:"gradient-type" forFilter:"gradient" integer:[[items objectAtIndex:20] intValue]];
-    [vci_si setVideoFilterProperty:"extract-component" forFilter:"extract" integer:[[items objectAtIndex:21] intValue]];
-    [vci_si setVideoFilterProperty:"posterize-level" forFilter:"posterize" integer:[[items objectAtIndex:22] intValue]];
-    [vci_si setVideoFilterProperty:"blur-factor" forFilter:"motionblur" integer:[[items objectAtIndex:23] intValue]];
-    [vci_si setVideoFilterProperty:"marq-marquee" forFilter:"marq" string:[B64DecNSStr([items objectAtIndex:24]) UTF8String]];
-    [vci_si setVideoFilterProperty:"marq-position" forFilter:"marq" integer:[[items objectAtIndex:25] intValue]];
-    [vci_si setVideoFilterProperty:"logo-file" forFilter:"logo" string:[B64DecNSStr([items objectAtIndex:26]) UTF8String]];
-    [vci_si setVideoFilterProperty:"logo-position" forFilter:"logo" integer:[[items objectAtIndex:27] intValue]];
-    [vci_si setVideoFilterProperty:"logo-opacity" forFilter:"logo" integer:[[items objectAtIndex:28] intValue]];
-    [vci_si setVideoFilterProperty:"clone-count" forFilter:"clone" integer:[[items objectAtIndex:29] intValue]];
-    [vci_si setVideoFilterProperty:"wall-rows" forFilter:"wall" integer:[[items objectAtIndex:30] intValue]];
-    [vci_si setVideoFilterProperty:"wall-cols" forFilter:"wall" integer:[[items objectAtIndex:31] intValue]];
-
-    if ([items count] >= 33) { // version >=2 of profile string
-        [vci_si setVideoFilterProperty: "brightness-threshold" forFilter: "adjust" boolean: [[items objectAtIndex:32] intValue]];
-    }
-
-    float hueValue;
-    if ([items count] >= 34) { // version >=3 of profile string
-        hueValue = [[items objectAtIndex:33] floatValue];
-    } else {
-        hueValue = [[items objectAtIndex:3] intValue]; // deprecated since 3.0.0
-        // convert to new scale ([0,360] --> [-180,180])
-        hueValue -= 180;
-    }
-    [vci_si setVideoFilterProperty:"hue" forFilter:"adjust" float:hueValue];
-
-    [defaults setInteger:selectedProfile forKey:@"VideoEffectSelectedProfile"];
-    [defaults synchronize];
-
+    [[NSUserDefaults standardUserDefaults] setInteger:i_old_profile_index forKey:@"VideoEffectSelectedProfile"];
+    [self loadProfile];
     [self resetValues];
 }
 
 - (void)addProfile:(id)sender
 {
     /* show panel */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+#ifdef MAC_OS_X_VERSION_10_10
+    if (OSX_YOSEMITE_AND_HIGHER) {
+        [[_textfieldPanel window] setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameVibrantDark]];
+    }
+#endif
+#pragma clang diagnostic pop
     [_textfieldPanel setTitleString:_NS("Duplicate current profile for a new profile")];
     [_textfieldPanel setSubTitleString:_NS("Enter a name for the new profile:")];
     [_textfieldPanel setCancelButtonString:_NS("Cancel")];
     [_textfieldPanel setOkButtonString:_NS("Save")];
 
-    __weak typeof(self) _self = self;
+    // TODO: Change to weak, when dropping 10.7 support
+    __unsafe_unretained typeof(self) _self = self;
     [_textfieldPanel runModalForWindow:self.window completionHandler:^(NSInteger returnCode, NSString *resultingText) {
 
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -728,18 +796,32 @@
 - (void)removeProfile:(id)sender
 {
     /* show panel */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+#ifdef MAC_OS_X_VERSION_10_10
+    if (OSX_YOSEMITE_AND_HIGHER) {
+        [[_popupPanel window] setAppearance:[NSAppearance appearanceNamed:NSAppearanceNameVibrantDark]];
+    }
+#endif
+#pragma clang diagnostic pop
     [_popupPanel setTitleString:_NS("Remove a preset")];
     [_popupPanel setSubTitleString:_NS("Select the preset you would like to remove:")];
     [_popupPanel setOkButtonString:_NS("Remove")];
     [_popupPanel setCancelButtonString:_NS("Cancel")];
     [_popupPanel setPopupButtonContent:[[NSUserDefaults standardUserDefaults] objectForKey:@"VideoEffectProfileNames"]];
 
-    __weak typeof(self) _self = self;
+    // TODO: Change to weak, when dropping 10.7 support
+    __unsafe_unretained typeof(self) _self = self;
     [_popupPanel runModalForWindow:self.window completionHandler:^(NSInteger returnCode, NSInteger selectedIndex) {
 
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
         if (returnCode != NSOKButton) {
+            [_profilePopup selectItemAtIndex:[defaults integerForKey:@"VideoEffectSelectedProfile"]];
+            return;
+        }
+
+        if (!selectedIndex) { // TODO: add popup to notify user
             [_profilePopup selectItemAtIndex:[defaults integerForKey:@"VideoEffectSelectedProfile"]];
             return;
         }
@@ -766,50 +848,15 @@
     }];
 }
 
+- (IBAction)applyProfileCheckboxChanged:(id)sender
+{
+    [[NSUserDefaults standardUserDefaults] setBool:[sender state] forKey:@"VideoEffectApplyProfileOnStartup"];
+}
+
 #pragma mark -
 #pragma mark basic
 - (IBAction)enableAdjust:(id)sender
 {
-    BOOL b_state = [_adjustCheckbox state];
-
-    [[VLCCoreInteraction sharedInstance] setVideoFilter: "adjust" on: b_state];
-    [_adjustBrightnessSlider setEnabled: b_state];
-    [_adjustBrightnessCheckbox setEnabled: b_state];
-    [_adjustBrightnessLabel setEnabled: b_state];
-    [_adjustContrastSlider setEnabled: b_state];
-    [_adjustContrastLabel setEnabled: b_state];
-    [_adjustGammaSlider setEnabled: b_state];
-    [_adjustGammaLabel setEnabled: b_state];
-    [_adjustHueSlider setEnabled: b_state];
-    [_adjustHueLabel setEnabled: b_state];
-    [_adjustSaturationSlider setEnabled: b_state];
-    [_adjustSaturationLabel setEnabled: b_state];
-    [_adjustResetButton setEnabled: b_state];
-}
-
-- (IBAction)adjustSliderChanged:(id)sender
-{
-    if (sender == _adjustBrightnessSlider)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "brightness" forFilter: "adjust" float: [_adjustBrightnessSlider floatValue]];
-    else if (sender == _adjustContrastSlider)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "contrast" forFilter: "adjust" float: [_adjustContrastSlider floatValue]];
-    else if (sender == _adjustGammaSlider)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gamma" forFilter: "adjust" float: [_adjustGammaSlider floatValue]];
-    else if (sender == _adjustHueSlider)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "hue" forFilter: "adjust" float: [_adjustHueSlider floatValue]];
-    else if (sender == _adjustSaturationSlider)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "saturation" forFilter: "adjust" float: [_adjustSaturationSlider floatValue]];
-
-    if (sender == _adjustHueSlider)
-        [_adjustHueSlider setToolTip: [NSString stringWithFormat:@"%.0f", [_adjustHueSlider floatValue]]];
-    else
-        [sender setToolTip: [NSString stringWithFormat:@"%0.3f", [sender floatValue]]];
-}
-
-- (IBAction)enableAdjustBrightnessThreshold:(id)sender
-{
-    VLCCoreInteraction *vci_si = [VLCCoreInteraction sharedInstance];
-
     if (sender == _adjustResetButton) {
         [_adjustBrightnessSlider setFloatValue: 1.0];
         [_adjustContrastSlider setFloatValue: 1.0];
@@ -821,14 +868,59 @@
         [_adjustGammaSlider setToolTip: [NSString stringWithFormat:@"%0.3f", 1.0]];
         [_adjustHueSlider setToolTip: [NSString stringWithFormat:@"%.0f", 0.0]];
         [_adjustSaturationSlider setToolTip: [NSString stringWithFormat:@"%0.3f", 1.0]];
-        [vci_si setVideoFilterProperty: "brightness" forFilter: "adjust" float: 1.0];
-        [vci_si setVideoFilterProperty: "contrast" forFilter: "adjust" float: 1.0];
-        [vci_si setVideoFilterProperty: "gamma" forFilter: "adjust" float: 1.0];
-        [vci_si setVideoFilterProperty: "hue" forFilter: "adjust" float: 0.0];
-        [vci_si setVideoFilterProperty: "saturation" forFilter: "adjust" float: 1.0];
-    } else
-        [vci_si setVideoFilterProperty: "brightness-threshold" forFilter: "adjust" boolean: [_adjustBrightnessCheckbox state]];
 
+        VLCCoreInteraction *vci_si = [VLCCoreInteraction sharedInstance];
+        [vci_si setVideoFilterProperty: "brightness" forFilter: "adjust" withValue: (vlc_value_t){ .f_float = 1.f }];
+        [vci_si setVideoFilterProperty: "contrast" forFilter: "adjust" withValue: (vlc_value_t){ .f_float = 1.f }];
+        [vci_si setVideoFilterProperty: "gamma" forFilter: "adjust" withValue: (vlc_value_t){ .f_float = 1.f }];
+        [vci_si setVideoFilterProperty: "hue" forFilter: "adjust" withValue: (vlc_value_t){ .f_float = .0f }];
+        [vci_si setVideoFilterProperty: "saturation" forFilter: "adjust" withValue: (vlc_value_t){ .f_float = 1.f }];
+    } else {
+        BOOL b_state = [_adjustCheckbox state];
+
+        [[VLCCoreInteraction sharedInstance] setVideoFilter: "adjust" on: b_state];
+        [_adjustBrightnessSlider setEnabled: b_state];
+        [_adjustBrightnessCheckbox setEnabled: b_state];
+        [_adjustBrightnessLabel setEnabled: b_state];
+        [_adjustContrastSlider setEnabled: b_state];
+        [_adjustContrastLabel setEnabled: b_state];
+        [_adjustGammaSlider setEnabled: b_state];
+        [_adjustGammaLabel setEnabled: b_state];
+        [_adjustHueSlider setEnabled: b_state];
+        [_adjustHueLabel setEnabled: b_state];
+        [_adjustSaturationSlider setEnabled: b_state];
+        [_adjustSaturationLabel setEnabled: b_state];
+        [_adjustResetButton setEnabled: b_state];
+    }
+}
+
+- (IBAction)adjustSliderChanged:(id)sender
+{
+    char const *psz_property;
+
+    if (sender == _adjustBrightnessSlider)
+        psz_property = "brightness";
+    else if (sender == _adjustContrastSlider)
+        psz_property = "contrast";
+    else if (sender == _adjustGammaSlider)
+        psz_property = "gamma";
+    else if (sender == _adjustHueSlider)
+        psz_property = "hue";
+    else if (sender == _adjustSaturationSlider)
+        psz_property = "saturation";
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: psz_property forFilter: "adjust" withValue: getWidgetFloatValue(sender)];
+
+    if (sender == _adjustHueSlider)
+        [_adjustHueSlider setToolTip: [NSString stringWithFormat:@"%.0f", [_adjustHueSlider floatValue]]];
+    else
+        [sender setToolTip: [NSString stringWithFormat:@"%0.3f", [sender floatValue]]];
+}
+
+- (IBAction)enableAdjustBrightnessThreshold:(id)sender
+{
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "brightness-threshold"
+                                                      forFilter: "adjust"
+                                                      withValue: getWidgetBoolValue(sender)];
 }
 
 - (IBAction)enableSharpen:(id)sender
@@ -842,7 +934,7 @@
 
 - (IBAction)sharpenSliderChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "sharpen-sigma" forFilter: "sharpen" float: [sender floatValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "sharpen-sigma" forFilter: "sharpen" withValue: getWidgetFloatValue(sender)];
     [sender setToolTip: [NSString stringWithFormat:@"%0.3f", [sender floatValue]]];
 }
 
@@ -857,7 +949,7 @@
 
 - (IBAction)bandingSliderChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradfun-radius" forFilter: "gradfun" integer: [sender intValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradfun-radius" forFilter: "gradfun" withValue: getWidgetIntValue(sender)];
     [sender setToolTip: [NSString stringWithFormat:@"%i", [sender intValue]]];
 }
 
@@ -872,7 +964,7 @@
 
 - (IBAction)grainSliderChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "grain-variance" forFilter: "grain" float: [sender floatValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "grain-variance" forFilter: "grain" withValue: getWidgetFloatValue(sender)];
     [sender setToolTip: [NSString stringWithFormat:@"%0.3f", [sender floatValue]]];
 }
 
@@ -895,14 +987,16 @@
             [self setCropRightValue: [self cropLeftValue]];
     }
 
-    vout_thread_t *p_vout = getVout();
-    if (p_vout) {
-        var_SetInteger(p_vout, "crop-top", [_cropTopTextField intValue]);
-        var_SetInteger(p_vout, "crop-bottom", [_cropBottomTextField intValue]);
-        var_SetInteger(p_vout, "crop-left", [_cropLeftTextField intValue]);
-        var_SetInteger(p_vout, "crop-right", [_cropRightTextField intValue]);
-        vlc_object_release(p_vout);
-    }
+    NSArray<NSValue *> *vouts = getVouts();
+    if (vouts)
+        for (NSValue *ptr in vouts) {
+            vout_thread_t *p_vout = [ptr pointerValue];
+            var_SetInteger(p_vout, "crop-top", [_cropTopTextField intValue]);
+            var_SetInteger(p_vout, "crop-bottom", [_cropBottomTextField intValue]);
+            var_SetInteger(p_vout, "crop-left", [_cropLeftTextField intValue]);
+            var_SetInteger(p_vout, "crop-right", [_cropRightTextField intValue]);
+            vlc_object_release(p_vout);
+        }
 }
 
 #pragma mark -
@@ -915,14 +1009,8 @@
 
 - (IBAction)transformModifierChanged:(id)sender
 {
-    NSInteger tag = [[_transformPopup selectedItem] tag];
-    const char *psz_string = [[NSString stringWithFormat:@"%li", tag] UTF8String];
-    if (tag == 1)
-        psz_string = "hflip";
-    else if (tag == 2)
-        psz_string = "vflip";
-
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "transform-type" forFilter: "transform" string: psz_string];
+    vlc_value_t value = { .psz_string = (char *)[[[_transformPopup selectedItem] representedObject] UTF8String] };
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "transform-type" forFilter: "transform" withValue: value];
 }
 
 - (IBAction)enableZoom:(id)sender
@@ -946,9 +1034,9 @@
 - (IBAction)puzzleModifierChanged:(id)sender
 {
     if (sender == _puzzleColumnsTextField || sender == _puzzleColumnsStepper)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "puzzle-cols" forFilter: "puzzle" integer: [sender intValue]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "puzzle-cols" forFilter: "puzzle" withValue: getWidgetIntValue(sender)];
     else
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "puzzle-rows" forFilter: "puzzle" integer: [sender intValue]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "puzzle-rows" forFilter: "puzzle" withValue: getWidgetIntValue(sender)];
 }
 
 - (IBAction)enableClone:(id)sender
@@ -968,7 +1056,7 @@
 
 - (IBAction)cloneModifierChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "clone-count" forFilter: "clone" integer: [_cloneNumberTextField intValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "clone-count" forFilter: "clone" withValue: getWidgetIntValue(_cloneNumberTextField)];
 }
 
 - (IBAction)enableWall:(id)sender
@@ -992,10 +1080,12 @@
 
 - (IBAction)wallModifierChanged:(id)sender
 {
+    char const *psz_property;
     if (sender == _wallNumberOfColumnsTextField || sender == _wallNumberOfColumnsStepper)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "wall-cols" forFilter: "wall" integer: [sender intValue]];
+        psz_property = "wall-cols";
     else
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "wall-rows" forFilter: "wall" integer: [sender intValue]];
+        psz_property = "wall-rows";
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: psz_property forFilter: "wall" withValue: getWidgetIntValue(sender)];
 }
 
 #pragma mark -
@@ -1016,12 +1106,12 @@
 - (IBAction)thresholdModifierChanged:(id)sender
 {
     if (sender == _thresholdColorTextField)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "colorthres-color" forFilter: "colorthres" integer: [_thresholdColorTextField intValue]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "colorthres-color" forFilter: "colorthres" withValue: getWidgetIntValue(sender)];
     else if (sender == _thresholdSaturationSlider) {
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "colorthres-saturationthres" forFilter: "colorthres" integer: [_thresholdSaturationSlider intValue]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "colorthres-saturationthres" forFilter: "colorthres" withValue: getWidgetIntValue(sender)];
         [_thresholdSaturationSlider setToolTip: [NSString stringWithFormat:@"%i", [_thresholdSaturationSlider intValue]]];
     } else {
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "colorthres-similaritythres" forFilter: "colorthres" integer: [_thresholdSimilaritySlider intValue]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "colorthres-similaritythres" forFilter: "colorthres" withValue: getWidgetIntValue(sender)];
         [_thresholdSimilaritySlider setToolTip: [NSString stringWithFormat:@"%i", [_thresholdSimilaritySlider intValue]]];
     }
 }
@@ -1038,7 +1128,7 @@
 
 - (IBAction)sepiaModifierChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "sepia-intensity" forFilter: "sepia" integer: [_sepiaTextField intValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "sepia-intensity" forFilter: "sepia" withValue: getWidgetIntValue(sender)];
 }
 
 - (IBAction)enableNoise:(id)sender
@@ -1060,16 +1150,12 @@
 - (IBAction)gradientModifierChanged:(id)sender
 {
     if (sender == _gradientModePopup) {
-        if ([[_gradientModePopup selectedItem] tag] == 3)
-            [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-mode" forFilter: "gradient" string: "hough"];
-        else if ([[_gradientModePopup selectedItem] tag] == 2)
-            [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-mode" forFilter: "gradient" string: "edge"];
-        else
-            [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-mode" forFilter: "gradient" string: "gradient"];
+        vlc_value_t value = { .psz_string = (char *)[[[sender selectedItem] representedObject] UTF8String] };
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-mode" forFilter: "gradient" withValue: value];
     } else if (sender == _gradientColorCheckbox)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-type" forFilter: "gradient" integer: [_gradientColorCheckbox state]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-type" forFilter: "gradient" withValue: getWidgetBoolValue(sender)];
     else
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-cartoon" forFilter: "gradient" boolean: [_gradientCartoonCheckbox state]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "gradient-cartoon" forFilter: "gradient" withValue: getWidgetBoolValue(sender)];
 }
 
 - (IBAction)enableExtract:(id)sender
@@ -1082,7 +1168,7 @@
 
 - (IBAction)extractModifierChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "extract-component" forFilter: "extract" integer: [_extractTextField intValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "extract-component" forFilter: "extract" withValue: getWidgetIntValue(sender)];
 }
 
 - (IBAction)enableInvert:(id)sender
@@ -1102,7 +1188,7 @@
 
 - (IBAction)posterizeModifierChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "posterize-level" forFilter: "posterize" integer: [_posterizeTextField intValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "posterize-level" forFilter: "posterize" withValue: getWidgetIntValue(sender)];
 }
 
 - (IBAction)enableBlur:(id)sender
@@ -1116,7 +1202,7 @@
 
 - (IBAction)blurModifierChanged:(id)sender
 {
-    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "blur-factor" forFilter: "motionblur" integer: [sender intValue]];
+    [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "blur-factor" forFilter: "motionblur" withValue: getWidgetIntValue(sender)];
     [sender setToolTip: [NSString stringWithFormat:@"%i", [sender intValue]]];
 }
 
@@ -1152,16 +1238,16 @@
     [_addTextTextLabel setEnabled: b_state];
     [_addTextTextTextField setEnabled: b_state];
     [vci_si setVideoFilter: "marq" on: b_state];
-    [vci_si setVideoFilterProperty: "marq-marquee" forFilter: "marq" string: [[_addTextTextTextField stringValue] UTF8String]];
-    [vci_si setVideoFilterProperty: "marq-position" forFilter: "marq" integer: [[_addTextPositionPopup selectedItem] tag]];
+    [vci_si setVideoFilterProperty: "marq-marquee" forFilter: "marq" withValue: getWidgetStringValue(_addTextTextTextField)];
+    [vci_si setVideoFilterProperty: "marq-position" forFilter: "marq" withValue: (vlc_value_t){ .i_int = [[_addTextPositionPopup selectedItem] tag] }];
 }
 
 - (IBAction)addTextModifierChanged:(id)sender
 {
     if (sender == _addTextTextTextField)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "marq-marquee" forFilter: "marq" string:[[_addTextTextTextField stringValue] UTF8String]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "marq-marquee" forFilter: "marq" withValue: getWidgetStringValue(sender)];
     else
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "marq-position" forFilter: "marq" integer: [[_addTextPositionPopup selectedItem] tag]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "marq-position" forFilter: "marq" withValue: (vlc_value_t){ .i_int = [[sender selectedItem] tag] }];
 }
 
 - (IBAction)enableAddLogo:(id)sender
@@ -1180,11 +1266,11 @@
 - (IBAction)addLogoModifierChanged:(id)sender
 {
     if (sender == _addLogoLogoTextField)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "logo-file" forFilter: "logo" string: [[_addLogoLogoTextField stringValue] UTF8String]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "logo-file" forFilter: "logo" withValue: getWidgetStringValue(sender)];
     else if (sender == _addLogoPositionPopup)
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "logo-position" forFilter: "logo" integer: [[_addLogoPositionPopup selectedItem] tag]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "logo-position" forFilter: "logo" withValue: (vlc_value_t){ .i_int = [[_addLogoPositionPopup selectedItem] tag] }];
     else {
-        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "logo-opacity" forFilter: "logo" integer: [_addLogoTransparencySlider intValue]];
+        [[VLCCoreInteraction sharedInstance] setVideoFilterProperty: "logo-opacity" forFilter: "logo" withValue: getWidgetIntValue(sender)];
         [_addLogoTransparencySlider setToolTip: [NSString stringWithFormat:@"%i", [_addLogoTransparencySlider intValue]]];
     }
 }

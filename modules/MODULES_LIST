@@ -78,6 +78,7 @@ $Id$
  * chorus_flanger: Basic chorus/flanger/variable delay audio filter
  * chroma_omx: OMX Development Layer chroma conversions
  * chroma_yuv_neon: ARM NEON video chroma conversion
+ * ci_filters: CoreImage hardware-accelerated adjust/invert/posterize/sepia/sharpen filters
  * clone: Clone video filter
  * colorthres:  Theshold color based on similarity to reference color Video filter
  * compressor: Dynamic range compressor
@@ -105,8 +106,11 @@ $Id$
  * demuxdump: Pseudo-demuxer that dumps the stream
  * diracsys: BBC Dirac demuxer
  * direct3d11: video output module using the Direct3D11 API
+ * direct3d11_adjust: adjust filter for Direct3D11 video decoding
  * direct3d11_deinterlace: deinterlacer for Direct3D11 video decoding
  * direct3d9: video output module using the Direct3D9 API
+ * direct3d9_adjust: adjust filter for Direct3D9 video decoding
+ * direct3d9_deinterlace: deinterlacer for Direct3D9/DxVA video decoding
  * directdraw: video output module using the DirectDraw API
  * directfb: Direct Framebuffer video output
  * directsound: audio output module using the DirectSound API
@@ -124,7 +128,6 @@ $Id$
  * dvdread: input module for accessing DVDs, uses libdvdread
  * dxa9: Convert D3D9 GPU textures to YUV planes
  * dxva2: DxVA2 hardware-accelerated decoding
- * dxva2_deinterlace: deinterlacer for DxVA 2.0 video decoding
  * dynamicoverlay: subpicture filter using shared memory that can be written to by external applications
  * edgedetection: edge detection video filter
  * edummy: dummy encoder
@@ -259,6 +262,7 @@ $Id$
  * netsync: synchronizes the clock of remote VLCs with a server for synchronous playback
  * nfs: NFS access module using libnfs
  * normvol: a audio filter for volume normalization
+ * noseek: seek prevention demuxing filter
  * notify: notifications using libnotify
  * nsc: decoder for Microsoft proprietary NSC descriptors
  * nsspeechsynthesizer: Text to speech subtitles renderer
@@ -349,10 +353,12 @@ $Id$
  * sid: Sidplay demuxer
  * simple_channel_mixer: channel mixer
  * skins2: Skinnable interface, new generation
+ * skiptags: APE & ID3 tags-skipping stream filter
  * smb: SMB shares access module
  * smf: Standard MIDI file demuxer
  * sndio: OpenBSD sndio audio output
  * soxr: SoX Resampler library audio filter
+ * spatialaudio: Ambisonics to binaural and array of speaker converter
  * spatializer: A spatializer audio filter
  * spdif: S/PDIF audio pass-through decoder
  * speex: a speex audio decoder/packetizer using the libspeex library
@@ -416,7 +422,9 @@ $Id$
  * uleaddvaudio: codec for DV Audio from Ulead
  * upnp: libupnp UPNP service discovery
  * v4l2: Video 4 Linux 2 input module
+ * vaapi_dr: VAAPI hardware-accelerated decoding with vout backend (direct rendering)
  * vaapi_drm: VAAPI hardware-accelerated decoding with drm backend
+ * vaapi_filters: VAAPI hardware-accelerated deinterlacing/chroma/adjust/sharpen/chroma filters
  * vaapi_x11: VAAPI hardware-accelerated decoding with x11 backend
  * vc1: VC-1 Video demuxer
  * vcd: input module for accessing Video CDs

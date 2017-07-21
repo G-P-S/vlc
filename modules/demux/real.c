@@ -346,7 +346,7 @@ static int Demux( demux_t *p_demux )
     mtime_t i_pcr = VLC_TS_INVALID;
     for( int i = 0; i < p_sys->i_track; i++ )
     {
-        real_track_t *tk = p_sys->track[i];
+        tk = p_sys->track[i];
 
         if( i_pcr <= VLC_TS_INVALID || ( tk->i_last_dts > VLC_TS_INVALID && tk->i_last_dts < i_pcr ) )
             i_pcr = tk->i_last_dts;
@@ -964,7 +964,7 @@ static int ControlSeekByte( demux_t *p_demux, int64_t i_bytes )
  *****************************************************************************/
 
 /**
- * This function will read a pascal string with size stored in 2 bytes from
+ * This function will read a Pascal string with size stored in 2 bytes from
  * a stream_t.
  *
  * FIXME what is the right charset ?
@@ -980,12 +980,18 @@ static char *StreamReadString2( stream_t *s )
     if( i_length <= 0 )
         return NULL;
 
-    char *psz_string = xcalloc( 1, i_length + 1 );
+    char *psz_string = malloc( i_length + 1 );
+    if( unlikely(psz_string == NULL) )
+        return NULL;
 
-    vlc_stream_Read( s, psz_string, i_length ); /* Valid even if !psz_string */
+    if( vlc_stream_Read( s, psz_string, i_length ) < i_length )
+    {
+        free( psz_string );
+        return NULL;
+    }
 
-    if( psz_string )
-        EnsureUTF8( psz_string );
+    psz_string[i_length] = '\0';
+    EnsureUTF8( psz_string );
     return psz_string;
 }
 
@@ -1199,9 +1205,8 @@ static void HeaderINDX( demux_t *p_demux )
     if( p_sys->i_index_offset == 0 )
         return;
 
-    vlc_stream_Seek( p_demux->s, p_sys->i_index_offset );
-
-    if( vlc_stream_Read( p_demux->s, buffer, 20 ) < 20 )
+    if( vlc_stream_Seek( p_demux->s, p_sys->i_index_offset )
+     || vlc_stream_Read( p_demux->s, buffer, 20 ) < 20 )
         return ;
 
     const uint32_t i_id = VLC_FOURCC( buffer[0], buffer[1], buffer[2], buffer[3] );
@@ -1611,6 +1616,7 @@ static int CodecAudioParse( demux_t *p_demux, int i_tk_id, const uint8_t *p_data
         // can be selected.
         fmt.i_bitrate = fmt.audio.i_rate;
         msg_Dbg( p_demux, "    - sipr flavor=%i", i_flavor );
+        /* fall through */
 
     case VLC_CODEC_COOK:
     case VLC_CODEC_ATRAC3:

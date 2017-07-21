@@ -68,7 +68,7 @@ static void Close (vlc_object_t *);
 
 vlc_module_begin ()
     set_description (N_("FluidSynth MIDI synthesizer"))
-    set_capability ("decoder", 100)
+    set_capability ("audio decoder", 100)
     set_shortname (N_("FluidSynth"))
     set_category (CAT_INPUT)
     set_subcategory (SUBCAT_INPUT_ACODEC)
@@ -167,14 +167,11 @@ static int Open (vlc_object_t *p_this)
     fluid_synth_set_reverb_on (p_sys->synth,
                                var_InheritBool (p_this, "synth-reverb"));
 
-    p_dec->fmt_out.i_cat = AUDIO_ES;
     p_dec->fmt_out.audio.i_rate =
         var_InheritInteger (p_this, "synth-sample-rate");;
     fluid_synth_set_sample_rate (p_sys->synth, p_dec->fmt_out.audio.i_rate);
     p_dec->fmt_out.audio.i_channels = 2;
-    p_dec->fmt_out.audio.i_original_channels =
-    p_dec->fmt_out.audio.i_physical_channels =
-        AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT;
+    p_dec->fmt_out.audio.i_physical_channels = AOUT_CHAN_LEFT | AOUT_CHAN_RIGHT;
     p_dec->fmt_out.i_codec = VLC_CODEC_FL32;
     p_dec->fmt_out.audio.i_bitspersample = 32;
     date_Init (&p_sys->end_date, p_dec->fmt_out.audio.i_rate, 1);

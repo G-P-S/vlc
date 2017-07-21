@@ -108,12 +108,6 @@ static int Lock(vlc_va_t *va, picture_t *pic, uint8_t **data)
     return VLC_SUCCESS;
 }
 
-static int Copy(vlc_va_t *va, picture_t *pic, uint8_t *data)
-{
-    (void) va; (void) pic; (void) data;
-    return VLC_SUCCESS;
-}
-
 static int Open(vlc_va_t *va, AVCodecContext *avctx, enum PixelFormat pix_fmt,
                 const es_format_t *fmt, picture_sys_t *p_sys)
 {
@@ -203,8 +197,6 @@ static int Open(vlc_va_t *va, AVCodecContext *avctx, enum PixelFormat pix_fmt,
 
     va->description = infos;
     va->get = Lock;
-    va->release = NULL;
-    va->extract = Copy;
     return VLC_SUCCESS;
 
 error:
@@ -213,14 +205,14 @@ error:
     return VLC_EGENERIC;
 }
 
-static void Close(vlc_va_t *va, AVCodecContext *avctx)
+static void Close(vlc_va_t *va, void **hwctx)
 {
     vlc_va_sys_t *sys = va->sys;
 
     for (unsigned i = 0; sys->pool[i] != NULL; i++)
         vlc_vdp_video_destroy(sys->pool[i]);
     vdp_release_x11(sys->vdp);
-    av_freep(&avctx->hwaccel_context);
+    av_freep(hwctx);
     free(sys);
 }
 

@@ -336,6 +336,7 @@ libvlccore_la_SOURCES = \
 	misc/messages.c \
 	misc/mime.c \
 	misc/objects.c \
+	misc/objres.c \
 	misc/variables.h \
 	misc/variables.c \
 	misc/error.c \
@@ -467,7 +468,7 @@ libvlccore_la_LDFLAGS = \
 libvlccore_la_DEPENDENCIES = libvlccore.sym
 if HAVE_WIN32
 libvlccore_la_DEPENDENCIES += libvlc_win32_rc.$(OBJEXT)
-libvlccore_la_LDFLAGS += -Wl,libvlc_win32_rc.$(OBJEXT) -avoid-version -Wc,-static
+libvlccore_la_LDFLAGS += -Wl,libvlc_win32_rc.$(OBJEXT) -avoid-version -Wc,-static $(LIBCOM)
 endif
 if HAVE_OS2
 libvlccore_la_LDFLAGS += -avoid-version
@@ -493,7 +494,7 @@ fourcc_gen$(BUILDEXEEXT): misc/fourcc_gen.c misc/fourcc_list.h ../include/vlc_fo
 
 fourcc_tables.h: fourcc_gen$(BUILDEXEEXT)
 	$(AM_V_at)rm -f -- $@.tmp
-	$(AM_V_GEN)$(builddir)/fourcc_gen > $@.tmp
+	$(AM_V_GEN)$(builddir)/fourcc_gen$(BUILDEXEEXT) > $@.tmp
 	$(AM_V_at)mv -f -- $@.tmp $@
 
 # Unit/regression tests

@@ -40,7 +40,9 @@
 #define D3D_DecoderType     IUnknown
 #define D3D_DecoderDevice   IUnknown
 #define D3D_DecoderSurface  IUnknown
-typedef struct vlc_va_surface_t vlc_va_surface_t;
+struct picture_sys_t {
+    void *dummy;
+};
 #include "directx_va.h"
 
 #include "avcodec.h"
@@ -159,7 +161,7 @@ DEFINE_GUID(DXVA_ModeVP9_VLD_Profile0,              0x463707f8, 0xa1d0, 0x4585, 
 typedef struct {
     const char   *name;
     const GUID   *guid;
-    int          codec;
+    enum AVCodecID codec;
     const int    *p_profiles; // NULL or ends with 0
 } directx_va_mode_t;
 
@@ -261,8 +263,7 @@ static const directx_va_mode_t DXVA_MODES[] = {
     { NULL, NULL, 0, NULL }
 };
 
-static int FindVideoServiceConversion(vlc_va_t *, directx_sys_t *, const es_format_t *fmt);
-static void DestroyVideoDecoder(vlc_va_t *, directx_sys_t *);
+static int FindVideoServiceConversion(vlc_va_t *, directx_sys_t *, const es_format_t *, const AVCodecContext *);
 
 char *directx_va_GetDecoderName(const GUID *guid)
 {
@@ -278,26 +279,19 @@ char *directx_va_GetDecoderName(const GUID *guid)
 }
 
 /* */
-int directx_va_Setup(vlc_va_t *va, directx_sys_t *dx_sys, AVCodecContext *avctx)
+int directx_va_Setup(vlc_va_t *va, directx_sys_t *dx_sys, const AVCodecContext *avctx,
+                     const es_format_t *fmt)
 {
-    int surface_alignment = 16;
-    int surface_count = 2;
-
-    if (dx_sys->width == avctx->coded_width && dx_sys->height == avctx->coded_height
-     && dx_sys->decoder != NULL)
-        goto ok;
-
     /* */
-    DestroyVideoDecoder(va, dx_sys);
-
-    avctx->hwaccel_context = NULL;
-    if (avctx->coded_width <= 0 || avctx->coded_height <= 0)
+    if (FindVideoServiceConversion(va, dx_sys, fmt, avctx)) {
+        msg_Err(va, "FindVideoServiceConversion failed");
         return VLC_EGENERIC;
+    }
 
-    /* */
-    msg_Dbg(va, "directx_va_Setup id %d %dx%d", dx_sys->codec_id, avctx->coded_width, avctx->coded_height);
+    int surface_alignment = 16;
+    unsigned surface_count = 2;
 
-    switch ( dx_sys->codec_id )
+    switch ( avctx->codec_id )
     {
     case AV_CODEC_ID_MPEG2VIDEO:
         /* decoding MPEG-2 requires additional alignment on some Intel GPUs,
@@ -321,133 +315,23 @@ int directx_va_Setup(vlc_va_t *va, directx_sys_t *dx_sys, AVCodecContext *avctx)
     if ( avctx->active_thread_type & FF_THREAD_FRAME )
         surface_count += avctx->thread_count;
 
-    if (surface_count > MAX_SURFACE_COUNT)
-        return VLC_EGENERIC;
-
-    dx_sys->surface_count = surface_count;
-
-#define ALIGN(x, y) (((x) + ((y) - 1)) & ~((y) - 1))
-    dx_sys->width  = avctx->coded_width;
-    dx_sys->height = avctx->coded_height;
-    dx_sys->surface_width  = ALIGN(dx_sys->width, surface_alignment);
-    dx_sys->surface_height = ALIGN(dx_sys->height, surface_alignment);
-
-    /* FIXME transmit a video_format_t by VaSetup directly */
-    video_format_t fmt;
-    memset(&fmt, 0, sizeof(fmt));
-    fmt.i_width = dx_sys->width;
-    fmt.i_height = dx_sys->height;
-    fmt.i_frame_rate = avctx->framerate.num;
-    fmt.i_frame_rate_base = avctx->framerate.den;
-
-    if (dx_sys->pf_create_decoder_surfaces(va, dx_sys->codec_id, &fmt))
-        return VLC_EGENERIC;
-
-    if (avctx->coded_width != dx_sys->surface_width ||
-        avctx->coded_height != dx_sys->surface_height)
-        msg_Warn( va, "surface dimensions (%dx%d) differ from avcodec dimensions (%dx%d)",
-                  dx_sys->surface_width, dx_sys->surface_height,
-                  avctx->coded_width, avctx->coded_height);
-
-    for (int i = 0; i < dx_sys->surface_count; i++) {
-        vlc_va_surface_t *surface = malloc(sizeof(*surface));
-        if (unlikely(surface==NULL))
-        {
-            dx_sys->surface_count = i;
-            return VLC_ENOMEM;
-        }
-        atomic_init(&surface->refcount, 1);
-        dx_sys->surface[i] = surface;
-    }
-
-    dx_sys->pf_setup_avcodec_ctx(va);
-
-ok:
-    return VLC_SUCCESS;
-}
-
-void DestroyVideoDecoder(vlc_va_t *va, directx_sys_t *dx_sys)
-{
-    dx_sys->pf_destroy_surfaces(va);
-
-    for (int i = 0; i < dx_sys->surface_count; i++)
-    {
-        IUnknown_Release( dx_sys->hw_surface[i] );
-        directx_va_Release(dx_sys->surface[i]);
-    }
-
-    dx_sys->surface_count = 0;
-}
-
-static vlc_va_surface_t *GetSurface(directx_sys_t *dx_sys)
-{
-    for (int i = 0; i < dx_sys->surface_count; i++) {
-        vlc_va_surface_t *surface = dx_sys->surface[i];
-        uintptr_t expected = 1;
-
-        if (atomic_compare_exchange_strong(&surface->refcount, &expected, 2))
-        {
-            /* TODO do a copy to allow releasing locally and keep forward alive atomic_fetch_sub(&surface->refs, 1);*/
-            surface->decoderSurface = dx_sys->hw_surface[i];
-            return surface;
-        }
-    }
-    return NULL;
-}
-
-vlc_va_surface_t *directx_va_Get(vlc_va_t *va, directx_sys_t *dx_sys)
-{
-    /* Check the device */
-    if (dx_sys->pf_check_device(va)!=VLC_SUCCESS)
-        return NULL;
-
-    unsigned tries = (CLOCK_FREQ + VOUT_OUTMEM_SLEEP) / VOUT_OUTMEM_SLEEP;
-    vlc_va_surface_t *field;
-
-    while ((field = GetSurface(dx_sys)) == NULL)
-    {
-        if (--tries == 0)
-            return NULL;
-        /* Pool empty. Wait for some time as in src/input/decoder.c.
-         * XXX: Both this and the core should use a semaphore or a CV. */
-        msleep(VOUT_OUTMEM_SLEEP);
-    }
-    return field;
-}
-
-void directx_va_AddRef(vlc_va_surface_t *surface)
-{
-    atomic_fetch_add(&surface->refcount, 1);
-}
-
-void directx_va_Release(vlc_va_surface_t *surface)
-{
-    if (atomic_fetch_sub(&surface->refcount, 1) != 1)
-        return;
-    free(surface);
+    int err = va_pool_SetupDecoder(va, &dx_sys->va_pool, avctx, surface_count, surface_alignment);
+    if (err != VLC_SUCCESS)
+        return err;
+    if (dx_sys->can_extern_pool)
+        return VLC_SUCCESS;
+    return va_pool_SetupSurfaces(va, &dx_sys->va_pool, surface_count);
 }
 
 void directx_va_Close(vlc_va_t *va, directx_sys_t *dx_sys)
 {
-    DestroyVideoDecoder(va, dx_sys);
-    dx_sys->pf_destroy_video_service(va);
-    if (dx_sys->d3ddec)
-        IUnknown_Release(dx_sys->d3ddec);
-    if (dx_sys->pf_destroy_device_manager)
-        dx_sys->pf_destroy_device_manager(va);
-    dx_sys->pf_destroy_device(va);
-    if (dx_sys->d3ddev)
-        IUnknown_Release( dx_sys->d3ddev );
-
+    va_pool_Close(va, &dx_sys->va_pool);
     if (dx_sys->hdecoder_dll)
         FreeLibrary(dx_sys->hdecoder_dll);
 }
 
-int directx_va_Open(vlc_va_t *va, directx_sys_t *dx_sys,
-                    AVCodecContext *ctx, const es_format_t *fmt, bool b_dll)
+int directx_va_Open(vlc_va_t *va, directx_sys_t *dx_sys, bool b_dll)
 {
-    dx_sys->codec_id = ctx->codec_id;
-
     if (b_dll) {
         /* Load dll*/
         dx_sys->hdecoder_dll = LoadLibrary(dx_sys->psz_decoder_dll);
@@ -458,29 +342,8 @@ int directx_va_Open(vlc_va_t *va, directx_sys_t *dx_sys,
         msg_Dbg(va, "DLLs loaded");
     }
 
-    /* */
-    if (dx_sys->pf_create_device(va)) {
-        msg_Err(va, "Failed to create DirectX device");
+    if (va_pool_Open(va, &dx_sys->va_pool) != VLC_SUCCESS)
         goto error;
-    }
-    msg_Dbg(va, "CreateDevice succeed");
-
-    if (dx_sys->pf_create_device_manager &&
-        dx_sys->pf_create_device_manager(va) != VLC_SUCCESS) {
-        msg_Err(va, "CreateDeviceManager failed");
-        goto error;
-    }
-
-    if (dx_sys->pf_create_video_service(va)) {
-        msg_Err(va, "CreateVideoService failed");
-        goto error;
-    }
-
-    /* */
-    if (FindVideoServiceConversion(va, dx_sys, fmt)) {
-        msg_Err(va, "FindVideoServiceConversion failed");
-        goto error;
-    }
 
     return VLC_SUCCESS;
 
@@ -524,7 +387,8 @@ static bool profile_supported(const directx_va_mode_t *mode, const es_format_t *
 /**
  * Find the best suited decoder mode GUID and render format.
  */
-static int FindVideoServiceConversion(vlc_va_t *va, directx_sys_t *dx_sys, const es_format_t *fmt)
+static int FindVideoServiceConversion(vlc_va_t *va, directx_sys_t *dx_sys,
+                                      const es_format_t *fmt, const AVCodecContext *avctx)
 {
     input_list_t p_list = { 0 };
     int err = dx_sys->pf_get_input_list(va, &p_list);
@@ -547,7 +411,7 @@ static int FindVideoServiceConversion(vlc_va_t *va, directx_sys_t *dx_sys, const
     /* Try all supported mode by our priority */
     const directx_va_mode_t *mode = DXVA_MODES;
     for (; mode->name; ++mode) {
-        if (!mode->codec || mode->codec != dx_sys->codec_id)
+        if (!mode->codec || mode->codec != avctx->codec_id)
             continue;
 
         /* */

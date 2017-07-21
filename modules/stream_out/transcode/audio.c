@@ -58,7 +58,7 @@ static const int pi_channels_maps[9] =
 static int audio_update_format( decoder_t *p_dec )
 {
     aout_FormatPrepare( &p_dec->fmt_out.audio );
-    return 0;
+    return ( p_dec->fmt_out.audio.i_bitspersample > 0 ) ? 0 : -1;
 }
 
 static int transcode_audio_initialize_filters( sout_stream_t *p_stream, sout_stream_id_sys_t *id,
@@ -71,7 +71,7 @@ static int transcode_audio_initialize_filters( sout_stream_t *p_stream, sout_str
     if( p_sys->psz_af )
         var_SetString( p_stream, "audio-filter", p_sys->psz_af );
     id->p_af_chain = aout_FiltersNew( p_stream, fmt_last,
-                                      &id->p_encoder->fmt_in.audio, NULL );
+                                      &id->p_encoder->fmt_in.audio, NULL, NULL );
     var_Destroy( p_stream, "audio-filter" );
     var_Destroy( p_stream, "audio-time-stretch" );
     if( id->p_af_chain == NULL )
@@ -120,12 +120,10 @@ static int transcode_audio_initialize_encoder( sout_stream_id_sys_t *id, sout_st
 
     /* Fix input format */
     id->p_encoder->fmt_in.audio.i_format = id->p_encoder->fmt_in.i_codec;
-    if( !id->p_encoder->fmt_in.audio.i_physical_channels
-     || !id->p_encoder->fmt_in.audio.i_original_channels )
+    if( !id->p_encoder->fmt_in.audio.i_physical_channels )
     {
         if( id->p_encoder->fmt_in.audio.i_channels < (sizeof(pi_channels_maps) / sizeof(*pi_channels_maps)) )
             id->p_encoder->fmt_in.audio.i_physical_channels =
-            id->p_encoder->fmt_in.audio.i_original_channels =
                       pi_channels_maps[id->p_encoder->fmt_in.audio.i_channels];
     }
     aout_FormatPrepare( &id->p_encoder->fmt_in.audio );
@@ -155,7 +153,7 @@ static block_t *transcode_dequeue_all_audios( sout_stream_id_sys_t *id )
     return p_audio_bufs;
 }
 
-int transcode_audio_new( sout_stream_t *p_stream,
+static int transcode_audio_new( sout_stream_t *p_stream,
                                 sout_stream_id_sys_t *id )
 {
     sout_stream_sys_t *p_sys = p_stream->p_sys;
@@ -175,7 +173,7 @@ int transcode_audio_new( sout_stream_t *p_stream,
     id->p_decoder->pf_aout_format_update = audio_update_format;
     /* id->p_decoder->p_cfg = p_sys->p_audio_cfg; */
     id->p_decoder->p_module =
-        module_need( id->p_decoder, "decoder", "$codec", false );
+        module_need( id->p_decoder, "audio decoder", "$codec", false );
     if( !id->p_decoder->p_module )
     {
         msg_Err( p_stream, "cannot find audio decoder" );
@@ -264,10 +262,6 @@ int transcode_audio_process( sout_stream_t *p_stream,
                 id->p_decoder->fmt_out.audio.i_bitspersample;
             id->p_encoder->fmt_out.audio.i_channels = p_sys->i_channels > 0 ?
                 p_sys->i_channels : id->p_decoder->fmt_out.audio.i_channels;
-
-            id->p_encoder->fmt_in.audio.i_original_channels =
-            id->p_encoder->fmt_out.audio.i_original_channels =
-                id->p_decoder->fmt_out.audio.i_physical_channels;
 
             id->p_encoder->fmt_in.audio.i_physical_channels =
             id->p_encoder->fmt_out.audio.i_physical_channels =
@@ -387,10 +381,6 @@ bool transcode_audio_add( sout_stream_t *p_stream, const es_format_t *p_fmt,
         p_fmt->audio.i_bitspersample;
     id->p_encoder->fmt_out.audio.i_channels = p_sys->i_channels > 0 ?
         p_sys->i_channels : p_fmt->audio.i_channels;
-
-    id->p_encoder->fmt_in.audio.i_original_channels =
-    id->p_encoder->fmt_out.audio.i_original_channels =
-        id->p_decoder->fmt_out.audio.i_physical_channels;
 
     id->p_encoder->fmt_in.audio.i_physical_channels =
     id->p_encoder->fmt_out.audio.i_physical_channels =

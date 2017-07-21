@@ -333,8 +333,8 @@ typedef struct
 
 typedef struct
 {
-    ts_stream_t  ts;
-    pes_stream_t pes;
+    tsmux_stream_t  ts;
+    pesmux_stream_t pes;
     pes_state_t  state;
 } sout_input_sys_t;
 
@@ -354,10 +354,10 @@ struct sout_mux_sys_t
     unsigned        i_num_pmt;
     int             i_pmtslots;
     int             i_pat_version_number;
-    ts_stream_t     pat;
+    tsmux_stream_t  pat;
 
     int             i_pmt_version_number;
-    ts_stream_t     pmt[MAX_PMT];
+    tsmux_stream_t  pmt[MAX_PMT];
     pmt_map_t       pmtmap[MAX_PMT_PID];
     int             i_pmt_program_number[MAX_PMT];
     bool            b_data_alignment;
@@ -895,7 +895,7 @@ static void SelectPCRStream( sout_mux_t *p_mux, sout_input_t *p_removed_pcr_inpu
 
         if( p_input->p_fmt->i_cat == VIDEO_ES &&
            (p_sys->p_pcr_input == NULL ||
-            p_sys->p_pcr_input->fmt.i_cat != VIDEO_ES) )
+            p_sys->p_pcr_input->p_fmt->i_cat != VIDEO_ES) )
         {
             p_sys->p_pcr_input = p_input;
             break;
@@ -938,15 +938,15 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
                         &p_stream->ts, &p_stream->pes ) != VLC_SUCCESS )
     {
         msg_Warn( p_mux, "rejecting stream with unsupported codec %4.4s",
-                  (char*)&p_input->fmt.i_codec );
+                  (char*)&p_input->p_fmt->i_codec );
         free( p_stream );
         return VLC_EGENERIC;
     }
 
     if( p_input->p_fmt->i_cat == VIDEO_ES )
     {
-        p_stream->pes.i_width = p_input->fmt.video.i_width;
-        p_stream->pes.i_height = p_input->fmt.video.i_height;
+        p_stream->pes.i_width = p_input->p_fmt->video.i_width;
+        p_stream->pes.i_height = p_input->p_fmt->video.i_height;
     }
 
     p_stream->pes.i_langs = 1 + p_input->p_fmt->i_extra_languages;

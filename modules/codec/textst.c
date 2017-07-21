@@ -49,7 +49,7 @@ vlc_module_begin()
     set_description(N_("HDMV TextST subtitles decoder"))
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_SCODEC)
-    set_capability("decoder", 10)
+    set_capability("spu decoder", 10)
     set_callbacks(Open, Close)
 vlc_module_end()
 
@@ -273,7 +273,6 @@ static int Open(vlc_object_t *object)
 
     p_dec->p_sys = p_sys;
     p_dec->pf_decode = Decode;
-    p_dec->fmt_out.i_cat = SPU_ES;
     p_dec->fmt_out.i_codec = 0;
 
     return VLC_SUCCESS;

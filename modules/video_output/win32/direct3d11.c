@@ -228,7 +228,12 @@ static void Direct3D11DeleteRegions(int, picture_t **);
 static int Direct3D11MapSubpicture(vout_display_t *, int *, picture_t ***, subpicture_t *);
 
 static int SetupQuad(vout_display_t *, const video_format_t *, d3d_quad_t *,
-                     const d3d_format_t *, ID3D11PixelShader *, video_projection_mode_t);
+                     const d3d_format_t *, ID3D11PixelShader *, video_projection_mode_t,
+                     video_orientation_t);
+static bool UpdateQuadPosition( vout_display_t *vd, d3d_quad_t *quad,
+                                const video_format_t *fmt,
+                                video_projection_mode_t projection,
+                                video_orientation_t orientation );
 static void ReleaseQuad(d3d_quad_t *);
 static void UpdatePicQuadPosition(vout_display_t *);
 
@@ -577,7 +582,7 @@ static void Close(vlc_object_t *object)
 static int AllocateTextures(vout_display_t *vd, const d3d_format_t *cfg,
                             video_format_t *fmt, unsigned pool_size,
                             ID3D11Texture2D *textures[],
-                            bool pool_type_display, bool processor_input)
+                            bool pool_type_display)
 {
     vout_display_sys_t *sys = vd->sys;
     int plane;
@@ -588,16 +593,10 @@ static int AllocateTextures(vout_display_t *vd, const d3d_format_t *cfg,
     texDesc.MipLevels = 1;
     texDesc.SampleDesc.Count = 1;
     texDesc.MiscFlags = 0; //D3D11_RESOURCE_MISC_SHARED;
-    texDesc.Usage = D3D11_USAGE_DEFAULT;
-    texDesc.CPUAccessFlags = 0;
     texDesc.Format = cfg->formatTexture;
-    if (pool_type_display)
-        texDesc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
-    if (processor_input)
-        texDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-    if (is_d3d11_opaque(fmt->i_chroma))
+    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    if (is_d3d11_opaque(fmt->i_chroma)) {
         texDesc.BindFlags |= D3D11_BIND_DECODER;
-    if (is_d3d11_opaque(fmt->i_chroma) || processor_input) {
         texDesc.Usage = D3D11_USAGE_DEFAULT;
         texDesc.CPUAccessFlags = 0;
     } else {
@@ -681,24 +680,18 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
         surface_fmt.i_width  = (surface_fmt.i_width  + 0x7F) & ~0x7F;
         surface_fmt.i_height = (surface_fmt.i_height + 0x7F) & ~0x7F;
     }
+    else if ( sys->picQuadConfig->formatTexture != DXGI_FORMAT_R8G8B8A8_UNORM &&
+              sys->picQuadConfig->formatTexture != DXGI_FORMAT_B5G6R5_UNORM )
+    {
+        surface_fmt.i_width  = (surface_fmt.i_width  + 0x01) & ~0x01;
+        surface_fmt.i_height = (surface_fmt.i_height + 0x01) & ~0x01;
+    }
 
     if (AllocateTextures(vd, sys->picQuadConfig, &surface_fmt, pool_size, textures,
-                         true, false))
+                         true))
         goto error;
 
-    if (vd->info.is_slow) {
-        picture_resource_t resource = {
-            .p_sys = &sys->picQuad.picSys,
-            .pf_destroy = DestroyDisplayPoolPicture,
-        };
-
-        picture = picture_NewFromResource(&surface_fmt, &resource);
-        if (likely(picture != NULL)) {
-            pool_cfg.picture       = &picture;
-            pool_cfg.lock          = Direct3D11MapPoolTexture;
-            //pool_cfg.unlock        = Direct3D11UnmapPoolTexture;
-        }
-    } else {
+    if (!vd->info.is_slow) {
         HRESULT           hr;
         ID3D10Multithread *pMultithread;
         hr = ID3D11Device_QueryInterface( sys->d3ddevice, &IID_ID3D10Multithread, (void **)&pMultithread);
@@ -750,8 +743,13 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
         video_format_Copy(&staging_fmt, &surface_fmt);
         staging_fmt.i_width = staging_fmt.i_visible_width;
         staging_fmt.i_height = staging_fmt.i_visible_height;
-        if (AllocateTextures(vd, sys->picQuadConfig, &staging_fmt, 1, textures, true,
-                             false))
+        if ( sys->picQuadConfig->formatTexture != DXGI_FORMAT_R8G8B8A8_UNORM &&
+             sys->picQuadConfig->formatTexture != DXGI_FORMAT_B5G6R5_UNORM )
+        {
+            staging_fmt.i_width  = (staging_fmt.i_width  + 0x01) & ~0x01;
+            staging_fmt.i_height = (staging_fmt.i_height + 0x01) & ~0x01;
+        }
+        if (AllocateTextures(vd, sys->picQuadConfig, &staging_fmt, 1, textures, true))
             goto error;
 
         sys->picQuad.i_x_offset = 0;
@@ -782,7 +780,7 @@ static picture_pool_t *Pool(vout_display_t *vd, unsigned pool_size)
     }
 
     if (SetupQuad( vd, &surface_fmt, &sys->picQuad, sys->picQuadConfig, sys->picQuadPixelShader,
-                   surface_fmt.projection_mode) != VLC_SUCCESS) {
+                   surface_fmt.projection_mode, vd->fmt.orientation ) != VLC_SUCCESS) {
         msg_Err(vd, "Could not Create the main quad picture.");
         return NULL;
     }
@@ -1053,18 +1051,50 @@ static void SetQuadVSProjection(vout_display_t *vd, d3d_quad_t *quad, const vlc_
 #undef RAD
 }
 
+static void UpdateSize(vout_display_t *vd)
+{
+    vout_display_sys_t *sys = vd->sys;
+#if defined(HAVE_ID3D11VIDEODECODER)
+    if( sys->context_lock != INVALID_HANDLE_VALUE )
+    {
+        WaitForSingleObjectEx( sys->context_lock, INFINITE, FALSE );
+    }
+#endif
+    msg_Dbg(vd, "Detected size change %dx%d", RECTWidth(sys->sys.rect_dest_clipped),
+            RECTHeight(sys->sys.rect_dest_clipped));
+
+    UpdateBackBuffer(vd);
+
+    UpdatePicQuadPosition(vd);
+#if defined(HAVE_ID3D11VIDEODECODER)
+    if( sys->context_lock != INVALID_HANDLE_VALUE )
+    {
+        ReleaseMutex( sys->context_lock );
+    }
+#endif
+}
+
 static int Control(vout_display_t *vd, int query, va_list args)
 {
+    vout_display_sys_t *sys = vd->sys;
+    RECT size_before = sys->sys.rect_dest_clipped;
+
     int res = CommonControl( vd, query, args );
 
     if (query == VOUT_DISPLAY_CHANGE_VIEWPOINT)
     {
         const vout_display_cfg_t *cfg = va_arg(args, const vout_display_cfg_t*);
-        if ( vd->sys->picQuad.pVertexShaderConstants )
+        if ( sys->picQuad.pVertexShaderConstants )
         {
-            SetQuadVSProjection( vd, &vd->sys->picQuad, &cfg->viewpoint );
+            SetQuadVSProjection( vd, &sys->picQuad, &cfg->viewpoint );
             res = VLC_SUCCESS;
         }
+    }
+
+    if (RECTWidth(size_before)  != RECTWidth(sys->sys.rect_dest_clipped) ||
+        RECTHeight(size_before) != RECTHeight(sys->sys.rect_dest_clipped))
+    {
+        UpdateSize(vd);
     }
 
     return res;
@@ -1080,24 +1110,7 @@ static void Manage(vout_display_t *vd)
     if (RECTWidth(size_before)  != RECTWidth(sys->sys.rect_dest_clipped) ||
         RECTHeight(size_before) != RECTHeight(sys->sys.rect_dest_clipped))
     {
-#if defined(HAVE_ID3D11VIDEODECODER)
-        if( sys->context_lock != INVALID_HANDLE_VALUE )
-        {
-            WaitForSingleObjectEx( sys->context_lock, INFINITE, FALSE );
-        }
-#endif
-        msg_Dbg(vd, "Manage detected size change %dx%d", RECTWidth(sys->sys.rect_dest_clipped),
-                RECTHeight(sys->sys.rect_dest_clipped));
-
-        UpdateBackBuffer(vd);
-
-        UpdatePicQuadPosition(vd);
-#if defined(HAVE_ID3D11VIDEODECODER)
-        if( sys->context_lock != INVALID_HANDLE_VALUE )
-        {
-            ReleaseMutex( sys->context_lock );
-        }
-#endif
+        UpdateSize(vd);
     }
 }
 
@@ -1109,8 +1122,7 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     if( sys->context_lock != INVALID_HANDLE_VALUE )
         WaitForSingleObjectEx( sys->context_lock, INFINITE, FALSE );
 #endif
-    struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
-    picture_sys_t *p_sys = pic_ctx ? &pic_ctx->picsys : picture->p_sys;
+    picture_sys_t *p_sys = ActivePictureSys(picture);
     if (!is_d3d11_opaque(picture->format.i_chroma) || sys->legacy_shader) {
         D3D11_TEXTURE2D_DESC texDesc;
         if (!is_d3d11_opaque(picture->format.i_chroma))
@@ -1131,7 +1143,6 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     }
     else
     {
-        /* copy pixels from the context texture to the picture_sys texture */
         D3D11_TEXTURE2D_DESC texDesc;
         ID3D11Texture2D_GetDesc(p_sys->texture[0], &texDesc);
         if (texDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
@@ -1140,20 +1151,16 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
              * display, do it preferrably when creating the texture */
             assert(p_sys->resourceView[0]!=NULL);
         }
-        else
+
+        if ( sys->picQuad.i_height != texDesc.Height ||
+             sys->picQuad.i_width != texDesc.Width )
         {
-            D3D11_BOX box = {
-                .top = picture->format.i_y_offset,
-                .bottom = picture->format.i_y_offset + texDesc.Height,
-                .left = picture->format.i_x_offset,
-                .right = picture->format.i_x_offset + texDesc.Width,
-                .back = 1,
-            };
-            ID3D11DeviceContext_CopySubresourceRegion(sys->d3dcontext,
-                                                      p_sys->resource[KNOWN_DXGI_INDEX],
-                                                      p_sys->slice_index, 0, 0, 0,
-                                                      pic_ctx->picsys.resource[KNOWN_DXGI_INDEX],
-                                                      pic_ctx->picsys.slice_index, &box);
+            /* the decoder produced different sizes than the vout, we need to
+             * adjust the vertex */
+            sys->picQuad.i_height = texDesc.Height;
+            sys->picQuad.i_width = texDesc.Width;
+            UpdateQuadPosition( vd, &sys->picQuad, &vd->fmt,
+                                vd->fmt.projection_mode, vd->fmt.orientation );
         }
     }
 
@@ -1221,8 +1228,7 @@ static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     if (!is_d3d11_opaque(picture->format.i_chroma) || sys->legacy_shader)
         DisplayD3DPicture(sys, &sys->picQuad, sys->stagingSys.resourceView);
     else {
-        struct va_pic_context *pic_ctx = (struct va_pic_context*)picture->context;
-        picture_sys_t *p_sys = pic_ctx ? &pic_ctx->picsys : picture->p_sys;
+        picture_sys_t *p_sys = ActivePictureSys(picture);
         DisplayD3DPicture(sys, &sys->picQuad, p_sys->resourceView);
     }
 
@@ -1478,10 +1484,15 @@ static int Direct3D11Open(vout_display_t *vd, video_format_t *fmt)
     HRESULT hr = S_OK;
 
 # if !defined(NDEBUG)
-    HINSTANCE sdklayer_dll = LoadLibrary(TEXT("d3d11_1sdklayers.dll"));
-    if (sdklayer_dll) {
-        creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-        FreeLibrary(sdklayer_dll);
+#  if !VLC_WINSTORE_APP
+    if (IsDebuggerPresent())
+#  endif
+    {
+        HINSTANCE sdklayer_dll = LoadLibrary(TEXT("d3d11_1sdklayers.dll"));
+        if (sdklayer_dll) {
+            creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+            FreeLibrary(sdklayer_dll);
+        }
     }
 # endif
 
@@ -1537,7 +1548,7 @@ static int Direct3D11Open(vout_display_t *vd, video_format_t *fmt)
     }
 
     IDXGIAdapter *dxgiadapter = D3D11DeviceAdapter(sys->d3ddevice);
-    if (FAILED(hr)) {
+    if (unlikely(dxgiadapter==NULL)) {
        msg_Err(vd, "Could not get the DXGI Adapter");
        return VLC_EGENERIC;
     }
@@ -2244,7 +2255,78 @@ static void Direct3D11DestroyPool(vout_display_t *vd)
     sys->sys.pool = NULL;
 }
 
-static void SetupQuadFlat(d3d_vertex_t *dst_data, const video_format_t *fmt, d3d_quad_t *quad, WORD *triangle_pos)
+/**
+ * Compute the vertex ordering needed to rotate the video. Without
+ * rotation, the vertices of the rectangle are defined in a clockwise
+ * order. This function computes a remapping of the coordinates to
+ * implement the rotation, given fixed texture coordinates.
+ * The unrotated order is the following:
+ * 0--1
+ * |  |
+ * 3--2
+ * For a 180 degrees rotation it should like this:
+ * 2--3
+ * |  |
+ * 1--0
+ * Vertex 0 should be assigned coordinates at index 2 from the
+ * unrotated order and so on, thus yielding order: 2 3 0 1.
+ */
+static void orientationVertexOrder(video_orientation_t orientation, int vertex_order[static 4])
+{
+    switch (orientation) {
+        case ORIENT_ROTATED_90:
+            vertex_order[0] = 3;
+            vertex_order[1] = 0;
+            vertex_order[2] = 1;
+            vertex_order[3] = 2;
+            break;
+        case ORIENT_ROTATED_270:
+            vertex_order[0] = 1;
+            vertex_order[1] = 2;
+            vertex_order[2] = 3;
+            vertex_order[3] = 0;
+            break;
+        case ORIENT_ROTATED_180:
+            vertex_order[0] = 2;
+            vertex_order[1] = 3;
+            vertex_order[2] = 0;
+            vertex_order[3] = 1;
+            break;
+        case ORIENT_TRANSPOSED:
+            vertex_order[0] = 2;
+            vertex_order[1] = 1;
+            vertex_order[2] = 0;
+            vertex_order[3] = 3;
+            break;
+        case ORIENT_HFLIPPED:
+            vertex_order[0] = 3;
+            vertex_order[1] = 2;
+            vertex_order[2] = 1;
+            vertex_order[3] = 0;
+            break;
+        case ORIENT_VFLIPPED:
+            vertex_order[0] = 1;
+            vertex_order[1] = 0;
+            vertex_order[2] = 3;
+            vertex_order[3] = 2;
+            break;
+        case ORIENT_ANTI_TRANSPOSED: /* transpose + vflip */
+            vertex_order[0] = 1;
+            vertex_order[1] = 2;
+            vertex_order[2] = 3;
+            vertex_order[3] = 0;
+            break;
+       default:
+            vertex_order[0] = 0;
+            vertex_order[1] = 1;
+            vertex_order[2] = 2;
+            vertex_order[3] = 3;
+            break;
+    }
+}
+
+static void SetupQuadFlat(d3d_vertex_t *dst_data, const video_format_t *fmt,
+                          d3d_quad_t *quad, WORD *triangle_pos, video_orientation_t orientation)
 {
     unsigned int dst_width = fmt->i_visible_width;
     unsigned int dst_height = fmt->i_visible_height;
@@ -2266,30 +2348,38 @@ static void SetupQuadFlat(d3d_vertex_t *dst_data, const video_format_t *fmt, d3d
     float top    =  (float) (2*src_x + dst_height) / (float) dst_height;
     float bottom = -(float) (2*src_height - dst_height - 2*src_y) / (float) dst_height;
 
+    const float vertices_coords[4][2] = {
+        { left,  bottom },
+        { right, bottom },
+        { right, top    },
+        { left,  top    },
+    };
+
+    /* Compute index remapping necessary to implement the rotation. */
+    int vertex_order[4];
+    orientationVertexOrder(orientation, vertex_order);
+
+    for (int i = 0; i < 4; ++i) {
+        dst_data[i].position.x  = vertices_coords[vertex_order[i]][0];
+        dst_data[i].position.y  = vertices_coords[vertex_order[i]][1];
+    }
+
     // bottom left
-    dst_data[0].position.x = left;
-    dst_data[0].position.y = bottom;
     dst_data[0].position.z = 0.0f;
     dst_data[0].texture.x = 0.0f;
     dst_data[0].texture.y = 1.0f;
 
     // bottom right
-    dst_data[1].position.x = right;
-    dst_data[1].position.y = bottom;
     dst_data[1].position.z = 0.0f;
     dst_data[1].texture.x = 1.0f;
     dst_data[1].texture.y = 1.0f;
 
     // top right
-    dst_data[2].position.x = right;
-    dst_data[2].position.y = top;
     dst_data[2].position.z = 0.0f;
     dst_data[2].texture.x = 1.0f;
     dst_data[2].texture.y = 0.0f;
 
     // top left
-    dst_data[3].position.x = left;
-    dst_data[3].position.y = top;
     dst_data[3].position.z = 0.0f;
     dst_data[3].texture.x = 0.0f;
     dst_data[3].texture.y = 0.0f;
@@ -2353,10 +2443,10 @@ static void SetupQuadSphere(d3d_vertex_t *dst_data, WORD *triangle_pos)
     }
 }
 
-static bool AllocQuadVertices(vout_display_t *vd, d3d_quad_t *quad, const video_format_t *fmt, video_projection_mode_t projection)
+static bool AllocQuadVertices(vout_display_t *vd, d3d_quad_t *quad,
+                              video_projection_mode_t projection)
 {
     HRESULT hr;
-    D3D11_MAPPED_SUBRESOURCE mappedResource;
     vout_display_sys_t *sys = vd->sys;
 
     if (projection == PROJECTION_MODE_RECTANGULAR)
@@ -2402,6 +2492,18 @@ static bool AllocQuadVertices(vout_display_t *vd, d3d_quad_t *quad, const video_
         return false;
     }
 
+    return true;
+}
+
+static bool UpdateQuadPosition( vout_display_t *vd, d3d_quad_t *quad,
+                                const video_format_t *fmt,
+                                video_projection_mode_t projection,
+                                video_orientation_t orientation )
+{
+    vout_display_sys_t *sys = vd->sys;
+    HRESULT hr;
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+
     /* create the vertices */
     hr = ID3D11DeviceContext_Map(sys->d3dcontext, (ID3D11Resource *)quad->pVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     if (FAILED(hr)) {
@@ -2420,7 +2522,7 @@ static bool AllocQuadVertices(vout_display_t *vd, d3d_quad_t *quad, const video_
     WORD *triangle_pos = mappedResource.pData;
 
     if ( projection == PROJECTION_MODE_RECTANGULAR )
-        SetupQuadFlat(dst_data, fmt, quad, triangle_pos);
+        SetupQuadFlat(dst_data, fmt, quad, triangle_pos, orientation);
     else
         SetupQuadSphere(dst_data, triangle_pos);
 
@@ -2432,7 +2534,7 @@ static bool AllocQuadVertices(vout_display_t *vd, d3d_quad_t *quad, const video_
 
 static int SetupQuad(vout_display_t *vd, const video_format_t *fmt, d3d_quad_t *quad,
                      const d3d_format_t *cfg, ID3D11PixelShader *d3dpixelShader,
-                     video_projection_mode_t projection)
+                     video_projection_mode_t projection, video_orientation_t orientation)
 {
     vout_display_sys_t *sys = vd->sys;
     HRESULT hr;
@@ -2578,7 +2680,9 @@ static int SetupQuad(vout_display_t *vd, const video_format_t *fmt, d3d_quad_t *
     quad->picSys.context = sys->d3dcontext;
     ID3D11DeviceContext_AddRef(quad->picSys.context);
 
-    if (!AllocQuadVertices(vd, quad, fmt, projection))
+    if (!AllocQuadVertices(vd, quad, projection))
+        goto error;
+    if (!UpdateQuadPosition(vd, quad, fmt, projection, orientation))
         goto error;
 
     quad->d3dpixelShader = d3dpixelShader;
@@ -2757,7 +2861,7 @@ static int Direct3D11MapSubpicture(vout_display_t *vd, int *subpicture_region_co
             if (unlikely(d3dquad==NULL)) {
                 continue;
             }
-            if (AllocateTextures(vd, sys->d3dregion_format, &r->fmt, 1, textures, true, false)) {
+            if (AllocateTextures(vd, sys->d3dregion_format, &r->fmt, 1, textures, true)) {
                 msg_Err(vd, "Failed to allocate %dx%d texture for OSD",
                         r->fmt.i_visible_width, r->fmt.i_visible_height);
                 for (int i=0; i<D3D11_MAX_SHADER_VIEW; i++)
@@ -2783,7 +2887,7 @@ static int Direct3D11MapSubpicture(vout_display_t *vd, int *subpicture_region_co
             d3dquad->i_width    = r->fmt.i_width;
             d3dquad->i_height   = r->fmt.i_height;
             err = SetupQuad( vd, &r->fmt, d3dquad, sys->d3dregion_format, sys->pSPUPixelShader,
-                             PROJECTION_MODE_RECTANGULAR );
+                             PROJECTION_MODE_RECTANGULAR, ORIENT_NORMAL );
             if (err != VLC_SUCCESS) {
                 msg_Err(vd, "Failed to create %dx%d quad for OSD",
                         r->fmt.i_visible_width, r->fmt.i_visible_height);
