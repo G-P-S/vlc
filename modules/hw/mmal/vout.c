@@ -196,7 +196,6 @@ static int Open(vlc_object_t *object)
     sys->layer = var_InheritInteger(vd, MMAL_LAYER_NAME);
     bcm_host_init();
 
-    vd->info.has_hide_mouse = true;
     sys->opaque = vd->fmt.i_chroma == VLC_CODEC_MMAL_OPAQUE;
 
     status = mmal_component_create(MMAL_COMPONENT_DEFAULT_VIDEO_RENDERER, &sys->component);
@@ -610,14 +609,9 @@ static int vd_control(vout_display_t *vd, int query, va_list args)
     vout_display_sys_t *sys = vd->sys;
     vout_display_cfg_t cfg;
     const vout_display_cfg_t *tmp_cfg;
-    const video_format_t *tmp_fmt;
     int ret = VLC_EGENERIC;
 
     switch (query) {
-        case VOUT_DISPLAY_HIDE_MOUSE:
-            ret = VLC_SUCCESS;
-            break;
-
         case VOUT_DISPLAY_CHANGE_DISPLAY_SIZE:
             tmp_cfg = va_arg(args, const vout_display_cfg_t *);
             if (tmp_cfg->display.width == sys->display_width &&
@@ -632,14 +626,13 @@ static int vd_control(vout_display_t *vd, int query, va_list args)
 
         case VOUT_DISPLAY_CHANGE_SOURCE_ASPECT:
         case VOUT_DISPLAY_CHANGE_SOURCE_CROP:
-            tmp_fmt = va_arg(args, const video_format_t *);
-            if (configure_display(vd, NULL, tmp_fmt) >= 0)
+            if (configure_display(vd, NULL, &vd->source) >= 0)
                 ret = VLC_SUCCESS;
             break;
 
-        case VOUT_DISPLAY_CHANGE_FULLSCREEN:
-        case VOUT_DISPLAY_CHANGE_ZOOM:
         case VOUT_DISPLAY_RESET_PICTURES:
+            vlc_assert_unreachable();
+        case VOUT_DISPLAY_CHANGE_ZOOM:
             msg_Warn(vd, "Unsupported control query %d", query);
             break;
 

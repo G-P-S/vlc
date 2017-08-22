@@ -1546,7 +1546,7 @@ static int ty_stream_seek_time(demux_t *p_demux, uint64_t l_seek_time)
     }
 
     /* determine which chunk has our seek_time */
-    for (unsigned i=0; i<p_sys->i_bits_per_seq_entry; i++) {
+    for (i=0; i<p_sys->i_bits_per_seq_entry; i++) {
         uint64_t l_chunk_nr = i_seq_entry * p_sys->i_bits_per_seq_entry + i;
         uint64_t l_chunk_offset = (l_chunk_nr + 1) * CHUNK_SIZE;
         msg_Dbg(p_demux, "testing part %d chunk %"PRIu64" mask 0x%02X bit %d",
@@ -1649,15 +1649,15 @@ static void parse_master(demux_t *p_demux)
         p_sys->i_seq_table_size = 0;
         return;
     }
-    for (unsigned i=0; i<p_sys->i_seq_table_size; i++) {
+    for (unsigned j=0; j<p_sys->i_seq_table_size; j++) {
         vlc_stream_Read(p_demux->s, mst_buf, 8);
-        p_sys->seq_table[i].l_timestamp = U64_AT(&mst_buf[0]);
+        p_sys->seq_table[j].l_timestamp = U64_AT(&mst_buf[0]);
         if (i_map_size > 8) {
             msg_Err(p_demux, "Unsupported SEQ bitmap size in master chunk");
             vlc_stream_Read(p_demux->s, NULL, i_map_size);
         } else {
             vlc_stream_Read(p_demux->s, mst_buf + 8, i_map_size);
-            memcpy(p_sys->seq_table[i].chunk_bitmask, &mst_buf[8], i_map_size);
+            memcpy(p_sys->seq_table[j].chunk_bitmask, &mst_buf[8], i_map_size);
         }
     }
 

@@ -455,7 +455,7 @@ static int Demux( demux_t *p_demux )
             p_sys->i_lastpack_byte = vlc_stream_Tell( p_demux->s );
             if( !p_sys->b_have_pack ) p_sys->b_have_pack = true;
             /* done later on to work around bad vcd/svcd streams */
-            /* es_out_Control( p_demux->out, ES_OUT_SET_PCR, p_sys->i_scr ); */
+            /* es_out_SetPCR( p_demux->out, p_sys->i_scr ); */
             if( i_mux_rate > 0 ) p_sys->i_mux_rate = i_mux_rate;
         }
         block_Release( p_pkt );
@@ -568,13 +568,13 @@ static int Demux( demux_t *p_demux )
                 if( (tk->fmt.i_cat == AUDIO_ES || tk->fmt.i_cat == VIDEO_ES) &&
                     tk->i_first_pts > VLC_TS_INVALID && tk->i_first_pts - p_sys->i_pack_scr > CLOCK_FREQ )
                 {
-                    msg_Warn( p_demux, "Incorrect SCR timing offset by of %ld ms, disabling",
+                    msg_Warn( p_demux, "Incorrect SCR timing offset by of %"PRId64 "ms, disabling",
                                        tk->i_first_pts - p_sys->i_pack_scr / 1000 );
                     p_sys->b_bad_scr = true; /* Disable Offset SCR */
                     p_sys->i_first_scr = -1;
                 }
                 else
-                    es_out_Control( p_demux->out, ES_OUT_SET_PCR, VLC_TS_0 + p_sys->i_pack_scr );
+                    es_out_SetPCR( p_demux->out, VLC_TS_0 + p_sys->i_pack_scr );
             }
 
             if( tk->b_configured && tk->es &&
@@ -585,7 +585,7 @@ static int Demux( demux_t *p_demux )
                     if( !p_sys->b_bad_scr && p_sys->i_pack_scr > 0 && p_pkt->i_pts > 0 &&
                         p_sys->i_pack_scr > p_pkt->i_pts + CLOCK_FREQ / 4 )
                     {
-                        msg_Warn( p_demux, "Incorrect SCR timing in advance of %ld ms, disabling",
+                        msg_Warn( p_demux, "Incorrect SCR timing in advance of %" PRId64 "ms, disabling",
                                            p_sys->i_pack_scr - p_pkt->i_pts / 1000 );
                         p_sys->b_bad_scr = true;
                         p_sys->i_first_scr = -1;
@@ -606,7 +606,7 @@ static int Demux( demux_t *p_demux )
                     p_sys->i_scr = p_pkt->i_pts;
                     if( p_sys->i_first_scr == -1 )
                         p_sys->i_first_scr = p_sys->i_scr;
-                    es_out_Control( p_demux->out, ES_OUT_SET_PCR, p_pkt->i_pts );
+                    es_out_SetPCR( p_demux->out, p_pkt->i_pts );
                 }
 
                 if( tk->fmt.i_codec == VLC_CODEC_TELETEXT &&

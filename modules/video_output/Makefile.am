@@ -22,6 +22,10 @@ if HAVE_IOS
 OPENGL_COMMONSOURCES += video_output/opengl/converter_cvpx.c
 OPENGL_COMMONCFLAGS += -DVLCGL_CONV_CVPX
 endif
+if HAVE_TVOS
+OPENGL_COMMONSOURCES += video_output/opengl/converter_cvpx.c
+OPENGL_COMMONCFLAGS += -DVLCGL_CONV_CVPX
+endif
 if HAVE_EGL
 if HAVE_VAAPI
 OPENGL_COMMONLIBS += $(LIBVA_LIBS) $(LIBVA_EGL_LIBS)
@@ -31,7 +35,7 @@ OPENGL_COMMONCFLAGS += -DVLCGL_CONV_VA
 if HAVE_WAYLAND_EGL
 if HAVE_VAAPI_WL
 OPENGL_COMMONLIBS += $(LIBVA_WL_LIBS)
-OPENGL_COMMONCFLAGS += -DHAVE_VA_WL
+OPENGL_COMMONCFLAGS += -DHAVE_VA_WL $(LIBVA_WL_CFLAGS)
 endif
 endif
 if HAVE_VAAPI_X11
@@ -234,6 +238,7 @@ libdirect3d9_plugin_la_SOURCES = video_output/win32/direct3d9.c \
 	video_chroma/copy.c video_chroma/copy.h \
 	video_output/win32/common.c video_output/win32/common.h \
 	video_output/win32/events.c video_output/win32/events.h \
+	video_output/win32/sensors.cpp \
 	video_output/win32/builtin_shaders.h \
 	video_output/win32/win32touch.c video_output/win32/win32touch.h \
 	video_chroma/d3d9_fmt.h
@@ -265,6 +270,7 @@ libdirect3d11_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) \
 if !HAVE_WINSTORE
 libdirect3d11_plugin_la_SOURCES += video_output/win32/events.c \
  video_output/win32/events.h \
+ video_output/win32/sensors.cpp \
  video_output/win32/win32touch.c video_output/win32/win32touch.h
 libdirect3d11_plugin_la_LIBADD = -lgdi32 $(LIBCOM) -luuid
 else
@@ -288,6 +294,7 @@ libdirectdraw_plugin_la_SOURCES = video_output/win32/directdraw.c \
 	video_output/win32/common.c video_output/win32/common.h \
 	video_chroma/copy.c video_chroma/copy.h \
 	video_output/win32/events.c video_output/win32/events.h \
+	video_output/win32/sensors.cpp \
 	video_output/win32/win32touch.c video_output/win32/win32touch.h
 libdirectdraw_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DMODULE_NAME_IS_directdraw
@@ -303,6 +310,7 @@ libglwin32_plugin_la_SOURCES = $(OPENGL_COMMONSOURCES) \
 	video_output/win32/common.c video_output/win32/common.h \
 	video_chroma/copy.c video_chroma/copy.h \
 	video_output/win32/events.c video_output/win32/events.h \
+	video_output/win32/sensors.cpp \
 	video_output/win32/win32touch.c video_output/win32/win32touch.h
 libwgl_plugin_la_SOURCES = video_output/win32/wgl.c $(OPENGL_COMMONSOURCES)
 
@@ -328,6 +336,7 @@ libwingdi_plugin_la_SOURCES = video_output/win32/wingdi.c \
 	video_output/win32/common.c video_output/win32/common.h \
 	video_chroma/copy.c video_chroma/copy.h \
 	video_output/win32/events.c video_output/win32/events.h \
+	video_output/win32/sensors.cpp \
 	video_output/win32/win32touch.c video_output/win32/win32touch.h
 libwingdi_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) \
 	-DMODULE_NAME_IS_wingdi
@@ -390,37 +399,15 @@ endif
 
 ### FrameBuffer ###
 
-libdirectfb_plugin_la_SOURCES = video_output/directfb.c
-libdirectfb_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS_directfb)
-libdirectfb_plugin_la_LIBADD = $(LIBS_directfb)
-libdirectfb_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
-EXTRA_LTLIBRARIES += libdirectfb_plugin.la
-vout_LTLIBRARIES += $(LTLIBdirectfb)
-
 libfb_plugin_la_SOURCES = video_output/fb.c
 libfb_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
 EXTRA_LTLIBRARIES += libfb_plugin.la
 vout_LTLIBRARIES += $(LTLIBfb)
 
 
-### Simple DirectMedia Layer ###
-libvout_sdl_plugin_la_SOURCES = video_output/sdl.c
-libvout_sdl_plugin_la_CFLAGS = $(AM_CFLAGS) $(SDL_CFLAGS)
-libvout_sdl_plugin_la_LIBADD = $(SDL_LIBS)
-if !HAVE_WIN32
-if !HAVE_OS2
-libvout_sdl_plugin_la_LIBADD += $(X_LIBS) $(X_PRE_LIBS) -lX11
-endif
-endif
-libvout_sdl_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(voutdir)'
-EXTRA_LTLIBRARIES += libvout_sdl_plugin.la
-vout_LTLIBRARIES += $(LTLIBvout_sdl)
-
-
-
 ### ASCII Art ###
 libaa_plugin_la_SOURCES = video_output/aa.c
-libaa_plugin_la_LIBADD = -laa
+libaa_plugin_la_LIBADD = libevent_thread.la -laa
 if !HAVE_WIN32
 libaa_plugin_la_LIBADD += $(X_LIBS) $(X_PRE_LIBS) -lX11
 endif
@@ -432,7 +419,7 @@ vout_LTLIBRARIES += $(LTLIBaa)
 ### Coloured ASCII art ###
 libcaca_plugin_la_SOURCES = video_output/caca.c
 libcaca_plugin_la_CFLAGS = $(AM_CFLAGS) $(CACA_CFLAGS)
-libcaca_plugin_la_LIBADD = $(CACA_LIBS)
+libcaca_plugin_la_LIBADD = libevent_thread.la $(CACA_LIBS)
 if !HAVE_WIN32
 if !HAVE_DARWIN
 libcaca_plugin_la_LIBADD += $(X_LIBS) $(X_PRE_LIBS) -lX11
@@ -467,3 +454,7 @@ vout_LTLIBRARIES += \
 	libvdummy_plugin.la \
 	libvmem_plugin.la \
 	libyuv_plugin.la
+
+libevent_thread_la_SOURCES = \
+	video_output/event_thread.c video_output/event_thread.h
+noinst_LTLIBRARIES += libevent_thread.la

@@ -23,6 +23,7 @@ pluginsincludedir = $(pkgincludedir)/plugins
 
 pluginsinclude_HEADERS = \
 	../include/vlc_access.h \
+	../include/vlc_actions.h \
 	../include/vlc_addons.h \
 	../include/vlc_aout.h \
 	../include/vlc_aout_volume.h \
@@ -58,7 +59,6 @@ pluginsinclude_HEADERS = \
 	../include/vlc_input.h \
 	../include/vlc_input_item.h \
 	../include/vlc_interface.h \
-	../include/vlc_keys.h \
 	../include/vlc_keystore.h \
 	../include/vlc_main.h \
 	../include/vlc_md5.h \
@@ -95,6 +95,7 @@ pluginsinclude_HEADERS = \
 	../include/vlc_tls.h \
 	../include/vlc_url.h \
 	../include/vlc_variables.h \
+	../include/vlc_viewpoint.h \
 	../include/vlc_vlm.h \
 	../include/vlc_video_splitter.h \
 	../include/vlc_vout.h \
@@ -194,7 +195,6 @@ libvlccore_la_SOURCES = \
 	config/file.c \
 	config/help.c \
 	config/intf.c \
-	config/keys.c \
 	config/cmdline.c \
 	config/getopt.c \
 	config/vlc_getopt.h \
@@ -295,6 +295,7 @@ libvlccore_la_SOURCES = \
 	video_output/vout_wrapper.c \
 	network/getaddrinfo.c \
 	network/http_auth.c \
+	network/httpd.c \
 	network/io.c \
 	network/tcp.c \
 	network/udp.c \
@@ -308,6 +309,7 @@ libvlccore_la_SOURCES = \
 	text/filesystem.c \
 	text/iso_lang.c \
 	text/iso-639_def.h \
+	misc/actions.c \
 	misc/background_worker.c \
 	misc/background_worker.h \
 	misc/md5.c \
@@ -438,10 +440,6 @@ endif
 endif
 endif
 
-if BUILD_HTTPD
-libvlccore_la_SOURCES += network/httpd.c
-endif
-
 if ENABLE_SOUT
 libvlccore_la_SOURCES += \
 	stream_output/sap.c stream_output/sdp.c \
@@ -506,6 +504,7 @@ check_PROGRAMS = \
 	test_interrupt \
 	test_md5 \
 	test_picture_pool \
+	test_sort \
 	test_timer \
 	test_url \
 	test_utf8 \
@@ -525,6 +524,7 @@ test_interrupt_SOURCES = test/interrupt.c
 test_interrupt_LDADD = $(LDADD) $(LIBS_libvlccore) $(LIBPTHREAD)
 test_md5_SOURCES = test/md5.c
 test_picture_pool_SOURCES = test/picture_pool.c
+test_sort_SOURCES = test/sort.c
 test_timer_SOURCES = test/timer.c
 test_url_SOURCES = test/url.c
 test_utf8_SOURCES = test/utf8.c

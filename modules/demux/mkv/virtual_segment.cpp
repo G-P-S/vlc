@@ -549,7 +549,7 @@ bool virtual_segment_c::Seek( demux_t & demuxer, mtime_t i_mk_date,
         }
         else
         {
-            typedef bool( matroska_segment_c::* seek_callback_t )( mtime_t, mtime_t );
+            typedef bool( matroska_segment_c::* seek_callback_t )( demux_t &, mtime_t, mtime_t );
 
             seek_callback_t pf_seek = &matroska_segment_c::Seek;
 
@@ -558,7 +558,7 @@ bool virtual_segment_c::Seek( demux_t & demuxer, mtime_t i_mk_date,
 
             p_current_vchapter = p_vchapter;
 
-            return ( p_current_vchapter->segment.*pf_seek )( i_mk_date, i_mk_time_offset );
+            return ( p_current_vchapter->segment.*pf_seek )( demuxer, i_mk_date, i_mk_time_offset );
         }
     }
     return false;
@@ -695,7 +695,7 @@ void virtual_segment_c::KeepTrackSelection( matroska_segment_c & old, matroska_s
     char *sub_lang = NULL, *aud_lang = NULL;
     for( tracks_map_t::iterator it = old.tracks.begin(); it != old.tracks.end(); ++it )
     {
-        tracks_map_t::mapped_type& track = it->second;
+        mkv_track_t &track = *it->second;
         if( track.p_es )
         {
             bool state = false;
@@ -711,8 +711,8 @@ void virtual_segment_c::KeepTrackSelection( matroska_segment_c & old, matroska_s
     }
     for( tracks_map_t::iterator it = next.tracks.begin(); it != next.tracks.end(); ++it )
     {
-        tracks_map_t::mapped_type& new_track = it->second;
-        es_format_t &              new_fmt   = new_track.fmt;
+        mkv_track_t & new_track = *it->second;
+        es_format_t & new_fmt   = new_track.fmt;
 
         /* Let's only do that for audio and video for now */
         if( new_fmt.i_cat == AUDIO_ES || new_fmt.i_cat == VIDEO_ES )
@@ -720,7 +720,7 @@ void virtual_segment_c::KeepTrackSelection( matroska_segment_c & old, matroska_s
             /* check for a similar elementary stream */
             for( tracks_map_t::iterator old_it = old.tracks.begin(); old_it != old.tracks.end(); ++old_it )
             {
-                tracks_map_t::mapped_type& old_track = old_it->second;
+                mkv_track_t& old_track = *old_it->second;
                 es_format_t& old_fmt = old_track.fmt;
 
                 if( !old_track.p_es )

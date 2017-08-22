@@ -32,6 +32,7 @@
 
 #include <map>
 #include <set>
+#include <memory>
 
 class EbmlParser;
 
@@ -74,7 +75,7 @@ public:
 class matroska_segment_c
 {
 public:
-    typedef std::map<mkv_track_t::track_id_t, mkv_track_t> tracks_map_t;
+    typedef std::map<mkv_track_t::track_id_t, std::unique_ptr<mkv_track_t>> tracks_map_t;
     typedef std::vector<Tag>            tags_t;
 
     matroska_segment_c( demux_sys_t & demuxer, EbmlStream & estream );
@@ -92,7 +93,7 @@ public:
 
     /* all tracks */
     tracks_map_t tracks;
-    std::vector<mkv_track_t::track_id_t> priority_tracks;
+    SegmentSeeker::track_ids_t priority_tracks;
 
     /* from seekhead */
     int                     i_seekhead_count;
@@ -138,12 +139,12 @@ public:
     bool PreloadClusters( uint64 i_cluster_position );
     void InformationCreate();
 
-    bool FastSeek( mtime_t i_mk_date, mtime_t i_mk_time_offset );
-    bool Seek( mtime_t i_mk_date, mtime_t i_mk_time_offset );
+    bool FastSeek( demux_t &, mtime_t i_mk_date, mtime_t i_mk_time_offset );
+    bool Seek( demux_t &, mtime_t i_mk_date, mtime_t i_mk_time_offset );
 
     int BlockGet( KaxBlock * &, KaxSimpleBlock * &, bool *, bool *, int64_t *);
 
-    int FindTrackByBlock(tracks_map_t::iterator* track_it, const KaxBlock *, const KaxSimpleBlock * );
+    mkv_track_t * FindTrackByBlock(const KaxBlock *, const KaxSimpleBlock * );
 
     bool ESCreate( );
     void ESDestroy( );
@@ -166,7 +167,7 @@ private:
     bool ParseCluster( KaxCluster *cluster, bool b_update_start_time = true, ScopeMode read_fully = SCOPE_ALL_DATA );
     bool ParseSimpleTags( SimpleTag* out, KaxTagSimple *tag, int level = 50 );
     void IndexAppendCluster( KaxCluster *cluster );
-    int32_t TrackInit( mkv_track_t * p_tk );
+    bool TrackInit( mkv_track_t * p_tk );
     void ComputeTrackPriority();
     void EnsureDuration();
 

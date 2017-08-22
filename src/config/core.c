@@ -26,7 +26,7 @@
 #endif
 
 #include <vlc_common.h>
-#include <vlc_keys.h>
+#include <vlc_actions.h>
 #include <vlc_modules.h>
 #include <vlc_plugin.h>
 
@@ -46,19 +46,14 @@ static inline char *strdupnull (const char *src)
     return src ? strdup (src) : NULL;
 }
 
-#undef config_GetType
 /*****************************************************************************
  * config_GetType: get the type of a variable (bool, int, float, string)
  *****************************************************************************
  * This function is used to get the type of a variable from its name.
- * Beware, this is quite slow.
  *****************************************************************************/
-int config_GetType( vlc_object_t *p_this, const char *psz_name )
+int config_GetType(const char *psz_name)
 {
-    module_config_t *p_config;
-    int i_type;
-
-    p_config = config_FindConfig( p_this, psz_name );
+    module_config_t *p_config = config_FindConfig(psz_name);
 
     /* sanity checks */
     if( !p_config )
@@ -68,33 +63,22 @@ int config_GetType( vlc_object_t *p_this, const char *psz_name )
 
     switch( CONFIG_CLASS(p_config->i_type) )
     {
-    case CONFIG_ITEM_FLOAT:
-        i_type = VLC_VAR_FLOAT;
-        break;
-
-    case CONFIG_ITEM_INTEGER:
-        i_type = VLC_VAR_INTEGER;
-        break;
-
-    case CONFIG_ITEM_BOOL:
-        i_type = VLC_VAR_BOOL;
-        break;
-
-    case CONFIG_ITEM_STRING:
-        i_type = VLC_VAR_STRING;
-        break;
-
-    default:
-        i_type = 0;
-        break;
+        case CONFIG_ITEM_FLOAT:
+            return VLC_VAR_FLOAT;
+        case CONFIG_ITEM_INTEGER:
+            return VLC_VAR_INTEGER;
+        case CONFIG_ITEM_BOOL:
+            return VLC_VAR_BOOL;
+        case CONFIG_ITEM_STRING:
+            return VLC_VAR_STRING;
+        default:
+            return 0;
     }
-
-    return i_type;
 }
 
 bool config_IsSafe( const char *name )
 {
-    module_config_t *p_config = config_FindConfig( NULL, name );
+    module_config_t *p_config = config_FindConfig( name );
     return p_config != NULL && p_config->b_safe;
 }
 
@@ -108,9 +92,7 @@ bool config_IsSafe( const char *name )
  *****************************************************************************/
 int64_t config_GetInt( vlc_object_t *p_this, const char *psz_name )
 {
-    module_config_t *p_config;
-
-    p_config = config_FindConfig( p_this, psz_name );
+    module_config_t *p_config = config_FindConfig( psz_name );
 
     /* sanity checks */
     if( !p_config )
@@ -119,11 +101,7 @@ int64_t config_GetInt( vlc_object_t *p_this, const char *psz_name )
         return -1;
     }
 
-    if (!IsConfigIntegerType (p_config->i_type))
-    {
-        msg_Err( p_this, "option %s does not refer to an int", psz_name );
-        return -1;
-    }
+    assert(IsConfigIntegerType(p_config->i_type));
 
     int64_t val;
 
@@ -144,7 +122,7 @@ float config_GetFloat( vlc_object_t *p_this, const char *psz_name )
 {
     module_config_t *p_config;
 
-    p_config = config_FindConfig( p_this, psz_name );
+    p_config = config_FindConfig( psz_name );
 
     /* sanity checks */
     if( !p_config )
@@ -153,11 +131,7 @@ float config_GetFloat( vlc_object_t *p_this, const char *psz_name )
         return -1;
     }
 
-    if (!IsConfigFloatType (p_config->i_type))
-    {
-        msg_Err( p_this, "option %s does not refer to a float", psz_name );
-        return -1;
-    }
+    assert(IsConfigFloatType(p_config->i_type));
 
     float val;
 
@@ -183,7 +157,7 @@ char * config_GetPsz( vlc_object_t *p_this, const char *psz_name )
 {
     module_config_t *p_config;
 
-    p_config = config_FindConfig( p_this, psz_name );
+    p_config = config_FindConfig( psz_name );
 
     /* sanity checks */
     if( !p_config )
@@ -192,11 +166,7 @@ char * config_GetPsz( vlc_object_t *p_this, const char *psz_name )
         return NULL;
     }
 
-    if (!IsConfigStringType (p_config->i_type))
-    {
-        msg_Err( p_this, "option %s does not refer to a string", psz_name );
-        return NULL;
-    }
+    assert(IsConfigStringType (p_config->i_type));
 
     /* return a copy of the string */
     vlc_rwlock_rdlock (&config_lock);
@@ -217,9 +187,7 @@ char * config_GetPsz( vlc_object_t *p_this, const char *psz_name )
 void config_PutPsz( vlc_object_t *p_this,
                       const char *psz_name, const char *psz_value )
 {
-    module_config_t *p_config;
-
-    p_config = config_FindConfig( p_this, psz_name );
+    module_config_t *p_config = config_FindConfig( psz_name );
 
 
     /* sanity checks */
@@ -229,11 +197,7 @@ void config_PutPsz( vlc_object_t *p_this,
         return;
     }
 
-    if (!IsConfigStringType (p_config->i_type))
-    {
-        msg_Err( p_this, "option %s does not refer to a string", psz_name );
-        return;
-    }
+    assert(IsConfigStringType(p_config->i_type));
 
     char *str, *oldstr;
     if ((psz_value != NULL) && *psz_value)
@@ -261,9 +225,7 @@ void config_PutPsz( vlc_object_t *p_this,
 void config_PutInt( vlc_object_t *p_this, const char *psz_name,
                     int64_t i_value )
 {
-    module_config_t *p_config;
-
-    p_config = config_FindConfig( p_this, psz_name );
+    module_config_t *p_config = config_FindConfig( psz_name );
 
     /* sanity checks */
     if( !p_config )
@@ -272,11 +234,7 @@ void config_PutInt( vlc_object_t *p_this, const char *psz_name,
         return;
     }
 
-    if (!IsConfigIntegerType (p_config->i_type))
-    {
-        msg_Err( p_this, "option %s does not refer to an int", psz_name );
-        return;
-    }
+    assert(IsConfigIntegerType(p_config->i_type));
 
     if (i_value < p_config->min.i)
         i_value = p_config->min.i;
@@ -299,9 +257,7 @@ void config_PutInt( vlc_object_t *p_this, const char *psz_name,
 void config_PutFloat( vlc_object_t *p_this,
                       const char *psz_name, float f_value )
 {
-    module_config_t *p_config;
-
-    p_config = config_FindConfig( p_this, psz_name );
+    module_config_t *p_config = config_FindConfig( psz_name );
 
     /* sanity checks */
     if( !p_config )
@@ -310,14 +266,10 @@ void config_PutFloat( vlc_object_t *p_this,
         return;
     }
 
-    if (!IsConfigFloatType (p_config->i_type))
-    {
-        msg_Err( p_this, "option %s does not refer to a float", psz_name );
-        return;
-    }
+    assert(IsConfigFloatType(p_config->i_type));
 
     /* if f_min == f_max == 0, then do not use them */
-    if ((p_config->min.f == 0) && (p_config->max.f == 0))
+    if ((p_config->min.f == 0.f) && (p_config->max.f == 0.f))
         ;
     else if (f_value < p_config->min.f)
         f_value = p_config->min.f;
@@ -344,7 +296,7 @@ ssize_t config_GetIntChoices (vlc_object_t *obj, const char *name,
     *values = NULL;
     *texts = NULL;
 
-    module_config_t *cfg = config_FindConfig (obj, name);
+    module_config_t *cfg = config_FindConfig(name);
     if (cfg == NULL)
     {
         msg_Warn (obj, "option %s does not exist", name);
@@ -448,7 +400,7 @@ ssize_t config_GetPszChoices (vlc_object_t *obj, const char *name,
 {
     *values = *texts = NULL;
 
-    module_config_t *cfg = config_FindConfig (obj, name);
+    module_config_t *cfg = config_FindConfig(name);
     if (cfg == NULL)
     {
         errno = ENOENT;
@@ -568,13 +520,9 @@ void config_UnsortConfig (void)
 
 /*****************************************************************************
  * config_FindConfig: find the config structure associated with an option.
- *****************************************************************************
- * FIXME: remove p_this pointer parameter (or use it)
  *****************************************************************************/
-module_config_t *config_FindConfig (vlc_object_t *p_this, const char *name)
+module_config_t *config_FindConfig(const char *name)
 {
-    VLC_UNUSED(p_this);
-
     if (unlikely(name == NULL))
         return NULL;
 

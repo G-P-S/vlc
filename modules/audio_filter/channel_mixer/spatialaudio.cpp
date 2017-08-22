@@ -34,8 +34,7 @@
 #include <vlc_plugin.h>
 #include <vlc_aout.h>
 #include <vlc_filter.h>
-#include <vlc_vout.h>
-#include <vlc_keys.h>
+#include <vlc_viewpoint.h>
 
 #include <new>
 #include <vector>
@@ -327,7 +326,12 @@ static int OpenBinauralizer(vlc_object_t *p_this)
     }
 
     unsigned s = 0;
-    p_sys->speakers = new CAmbisonicSpeaker[infmt->i_channels]();
+    p_sys->speakers = new(std::nothrow)CAmbisonicSpeaker[infmt->i_channels]();
+    if (!p_sys->speakers)
+    {
+        delete p_sys;
+        return VLC_ENOMEM;
+    }
 
     p_sys->speakers[s++].SetPosition({DegreesToRadians(30), 0.f, 1.f});
     p_sys->speakers[s++].SetPosition({DegreesToRadians(-30), 0.f, 1.f});

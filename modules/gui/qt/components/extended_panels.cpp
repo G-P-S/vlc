@@ -377,8 +377,7 @@ void ExtVideo::initComboBoxItems( QObject *widget )
     if( !combobox ) return;
 
     QString option = OptionFromWidgetName( widget );
-    module_config_t *p_item = config_FindConfig( VLC_OBJECT( p_intf ),
-                                                 qtu( option ) );
+    module_config_t *p_item = config_FindConfig( qtu( option ) );
     if( p_item == NULL )
     {
         msg_Err( p_intf, "Couldn't find option \"%s\".", qtu( option ) );
@@ -425,7 +424,7 @@ void ExtVideo::setWidgetValue( QObject *widget )
     //std::cout << "Option name: " << option.toStdString() << std::endl;
 
     vlc_value_t val;
-    int i_type = config_GetType( p_intf, qtu( option ) ) & VLC_VAR_CLASS;
+    int i_type = config_GetType( qtu( option ) ) & VLC_VAR_CLASS;
     switch( i_type )
     {
         case VLC_VAR_INTEGER:
@@ -501,7 +500,7 @@ void ExtVideo::setFilterOption( const char *psz_module, const char *psz_option,
         b_is_command = ( i_type & VLC_VAR_ISCOMMAND );
     }
     if( i_type == 0 )
-        i_type = config_GetType( p_intf, psz_option );
+        i_type = config_GetType( psz_option );
 
     vlc_value_t val;
     i_type &= VLC_VAR_CLASS;
@@ -874,7 +873,7 @@ float FilterSliderData::initialValue()
         }
     }
 
-    if ( ! config_FindConfig( VLC_OBJECT(p_intf), qtu(p_data->name) ) )
+    if ( ! config_FindConfig( qtu(p_data->name) ) )
         return f;
 
     f = config_GetFloat( p_intf, qtu(p_data->name) );
@@ -1014,7 +1013,7 @@ QStringList EqualizerSliderData::getBandsFromAout() const
     if ( bands.count() ) return bands;
     /* Or try config then */
 
-    if ( ! config_FindConfig( VLC_OBJECT(p_intf), qtu(p_data->name) ) )
+    if ( ! config_FindConfig( qtu(p_data->name) ) )
         return bands;
 
     char *psz_bands = config_GetPsz( p_intf, qtu(p_data->name) );

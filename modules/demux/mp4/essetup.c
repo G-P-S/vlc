@@ -356,7 +356,21 @@ int SetupVideoES( demux_t *p_demux, mp4_track_t *p_track, MP4_Box_t *p_sample )
         if( p_uuid->i_type == ATOM_uuid
             && !CmpUUID( &p_uuid->i_uuid, &XML360BoxUUID )
             && p_uuid->data.p_360 )
+        {
             p_track->fmt.video.projection_mode = p_uuid->data.p_360->i_projection_mode;
+            switch (p_uuid->data.p_360->e_stereo_mode)
+            {
+            case XML360_STEREOSCOPIC_TOP_BOTTOM:
+                p_track->fmt.video.multiview_mode = MULTIVIEW_STEREO_TB;
+                break;
+            case XML360_STEREOSCOPIC_LEFT_RIGHT:
+                p_track->fmt.video.multiview_mode = MULTIVIEW_STEREO_SBS;
+                break;
+            default:
+                p_track->fmt.video.multiview_mode = MULTIVIEW_2D;
+                break;
+            }
+        }
     }
 
     const MP4_Box_t *p_st3d = MP4_BoxGet( p_sample, "st3d" );
@@ -378,16 +392,29 @@ int SetupVideoES( demux_t *p_demux, mp4_track_t *p_track, MP4_Box_t *p_sample )
             break;
         }
     }
+    else
+    {
+        for( p_uuid = MP4_BoxGet( p_sample, "uuid" ); p_uuid;
+             p_uuid = p_uuid->p_next )
+        {
+            if( p_uuid->i_type == ATOM_uuid &&
+               !CmpUUID( &p_uuid->i_uuid, &PS3DDSBoxUUID ) &&
+                p_uuid->data.p_binary &&
+                p_uuid->data.p_binary->i_blob == 4 &&
+                !memcmp( p_uuid->data.p_binary->p_blob, "\x82\x81\x10\x02", 4 ) )
+            {
+                p_track->fmt.video.multiview_mode = MULTIVIEW_STEREO_FRAME;
+                break;
+            }
+        }
+    }
 
     const MP4_Box_t *p_prhd = MP4_BoxGet( p_sample, "sv3d/proj/prhd" );
     if (p_prhd && BOXDATA(p_prhd))
     {
-        p_track->fmt.video.pose.f_yaw_degrees
-                = BOXDATA(p_prhd)->f_pose_yaw_degrees;
-        p_track->fmt.video.pose.f_pitch_degrees
-                = BOXDATA(p_prhd)->f_pose_pitch_degrees;
-        p_track->fmt.video.pose.f_roll_degrees
-                = BOXDATA(p_prhd)->f_pose_roll_degrees;
+        p_track->fmt.video.pose.yaw = BOXDATA(p_prhd)->f_pose_yaw_degrees;
+        p_track->fmt.video.pose.pitch = BOXDATA(p_prhd)->f_pose_pitch_degrees;
+        p_track->fmt.video.pose.roll = BOXDATA(p_prhd)->f_pose_roll_degrees;
     }
 
     const MP4_Box_t *p_equi = MP4_BoxGet( p_sample, "sv3d/proj/equi" );

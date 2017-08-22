@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="10117" systemVersion="16F73" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="10117" systemVersion="16G29" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
         <deployment version="1070" identifier="macosx"/>
         <development version="7000" identifier="xcode"/>
@@ -18,7 +18,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" topStrut="YES"/>
             <rect key="contentRect" x="53" y="419" width="716" height="333"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="777"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="778"/>
             <view key="contentView" id="2">
                 <rect key="frame" x="0.0" y="0.0" width="716" height="333"/>
                 <autoresizingMask key="autoresizingMask"/>
@@ -68,7 +68,7 @@
                                     <action selector="buttonAction:" target="4850" id="4915"/>
                                 </connections>
                             </button>
-                            <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4899" customClass="VLCWindowTitleTextField">
+                            <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4899" customClass="VLCWindowTitleTextField">
                                 <rect key="frame" x="65" y="3" width="577" height="17"/>
                                 <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" alignment="center" title="VLC media player" allowsEditingTextAttributes="YES" usesSingleLineMode="YES" id="4900">
                                     <font key="font" metaFont="system"/>
@@ -117,12 +117,6 @@
                         <subviews>
                             <customView hidden="YES" focusRingType="none" translatesAutoresizingMaskIntoConstraints="NO" id="4665" customClass="VLCVoutView">
                                 <rect key="frame" x="0.0" y="0.0" width="716" height="275"/>
-                                <ciFilter key="compositingFilter" name="CIAdditionCompositing">
-                                    <configuration>
-                                        <null key="inputBackgroundImage"/>
-                                        <null key="inputImage"/>
-                                    </configuration>
-                                </ciFilter>
                             </customView>
                             <splitView dividerStyle="thin" vertical="YES" translatesAutoresizingMaskIntoConstraints="NO" id="4680" customClass="VLCMainWindowSplitView">
                                 <rect key="frame" x="0.0" y="0.0" width="716" height="275"/>
@@ -138,7 +132,7 @@
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
                                                         <outlineView focusRingType="none" verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" selectionHighlightStyle="sourceList" columnReordering="NO" multipleSelection="NO" emptySelection="NO" autosaveColumns="NO" rowHeight="20" indentationPerLevel="14" autoresizesOutlineColumn="YES" outlineTableColumn="4717" id="4714" customClass="PXSourceList">
-                                                            <rect key="frame" x="0.0" y="0.0" width="236" height="273"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="203" height="20"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES"/>
                                                             <size key="intercellSpacing" width="3" height="0.0"/>
                                                             <color key="backgroundColor" name="_sourceListBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -190,7 +184,7 @@
                                                         <rect key="frame" x="0.0" y="-4" width="477" height="27"/>
                                                         <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageAlignment="top" imageScaling="axesIndependently" image="topbar_background" id="4693"/>
                                                     </imageView>
-                                                    <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5610">
+                                                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="5610">
                                                         <rect key="frame" x="6" y="5" width="33" height="14"/>
                                                         <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Label" id="5611">
                                                             <font key="font" metaFont="smallSystem"/>
@@ -198,7 +192,7 @@
                                                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                                                         </textFieldCell>
                                                     </textField>
-                                                    <searchField wantsLayer="YES" verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5614">
+                                                    <searchField wantsLayer="YES" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="5614">
                                                         <rect key="frame" x="319" y="2" width="150" height="19"/>
                                                         <constraints>
                                                             <constraint firstAttribute="width" constant="150" id="AM9-aF-RtQ"/>
@@ -238,7 +232,7 @@
                                                             <customView translatesAutoresizingMaskIntoConstraints="NO" id="5605" customClass="VLCDragDropView">
                                                                 <rect key="frame" x="0.0" y="0.0" width="477" height="252"/>
                                                                 <subviews>
-                                                                    <box autoresizesSubviews="NO" borderType="none" title="Box" titlePosition="noTitle" transparent="YES" translatesAutoresizingMaskIntoConstraints="NO" id="4739">
+                                                                    <box autoresizesSubviews="NO" transparent="YES" title="Box" borderType="none" titlePosition="noTitle" translatesAutoresizingMaskIntoConstraints="NO" id="4739">
                                                                         <rect key="frame" x="89" y="10" width="300" height="230"/>
                                                                         <view key="contentView" id="pxq-Tn-LtA">
                                                                             <rect key="frame" x="0.0" y="0.0" width="300" height="230"/>
@@ -252,7 +246,7 @@
                                                                                     </constraints>
                                                                                     <imageCell key="cell" refusesFirstResponder="YES" alignment="left" animates="YES" imageScaling="proportionallyDown" image="dropzone" id="4726"/>
                                                                                 </imageView>
-                                                                                <textField verticalHuggingPriority="749" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4727">
+                                                                                <textField verticalHuggingPriority="749" translatesAutoresizingMaskIntoConstraints="NO" id="4727">
                                                                                     <rect key="frame" x="79" y="69" width="143" height="22"/>
                                                                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" alignment="center" title="Drop Media here" id="4728">
                                                                                         <font key="font" metaFont="system" size="18"/>
@@ -303,12 +297,6 @@
                                                             <constraint firstItem="5605" firstAttribute="leading" secondItem="4722" secondAttribute="leading" id="d47-SK-C7A"/>
                                                             <constraint firstAttribute="bottom" secondItem="5605" secondAttribute="bottom" id="fdA-1r-rKk"/>
                                                         </constraints>
-                                                        <ciFilter key="compositingFilter" name="CIDarkenBlendMode">
-                                                            <configuration>
-                                                                <null key="inputBackgroundImage"/>
-                                                                <null key="inputImage"/>
-                                                            </configuration>
-                                                        </ciFilter>
                                                     </customView>
                                                     <scrollView focusRingType="none" autohidesScrollers="YES" horizontalLineScroll="17" horizontalPageScroll="10" verticalLineScroll="17" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4372">
                                                         <rect key="frame" x="0.0" y="0.0" width="477" height="252"/>
@@ -438,7 +426,7 @@
                             <constraint firstAttribute="trailing" secondItem="4680" secondAttribute="trailing" id="tFU-RQ-RnY"/>
                         </constraints>
                     </customView>
-                    <customView translatesAutoresizingMaskIntoConstraints="NO" id="4756" customClass="VLCThreePartImageView">
+                    <customView translatesAutoresizingMaskIntoConstraints="NO" id="4756" customClass="VLCBottomBarView">
                         <rect key="frame" x="0.0" y="0.0" width="716" height="36"/>
                         <subviews>
                             <customView translatesAutoresizingMaskIntoConstraints="NO" id="5608" customClass="VLCDragDropView">
@@ -599,7 +587,19 @@
                                             <constraint firstItem="2789" firstAttribute="left" secondItem="4671" secondAttribute="right" id="pEa-Hl-83C"/>
                                         </constraints>
                                     </customView>
-                                    <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4423" customClass="VLCTimeField">
+                                    <slider hidden="YES" horizontalHuggingPriority="200" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4422" customClass="VLCSlider">
+                                        <rect key="frame" x="279" y="10" width="223" height="16"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="14" id="JuE-o0-ajo"/>
+                                        </constraints>
+                                        <sliderCell key="cell" controlSize="small" continuous="YES" state="on" alignment="left" maxValue="10000" doubleValue="3204.0777439024391" tickMarkPosition="above" sliderType="linear" id="4425" customClass="VLCSliderCell">
+                                            <font key="font" size="12" name="Helvetica"/>
+                                        </sliderCell>
+                                        <connections>
+                                            <action selector="timeSliderAction:" target="5339" id="5370"/>
+                                        </connections>
+                                    </slider>
+                                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4423" customClass="VLCTimeField">
                                         <rect key="frame" x="508" y="11" width="56" height="13"/>
                                         <constraints>
                                             <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="52" id="oTA-8E-R2c"/>
@@ -611,7 +611,7 @@
                                         </textFieldCell>
                                     </textField>
                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="3653">
-                                        <rect key="frame" x="570" y="13" width="5" height="11"/>
+                                        <rect key="frame" x="570" y="12" width="5" height="11"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="11" id="fR7-Fz-iWX"/>
                                         </constraints>
@@ -623,34 +623,16 @@
                                             <action selector="volumeAction:" target="5339" id="5361"/>
                                         </connections>
                                     </button>
-                                    <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3649" customClass="ITSlider">
-                                        <rect key="frame" x="578" y="11" width="48" height="15"/>
-                                        <ciFilter key="compositingFilter" name="CISourceOverCompositing">
-                                            <configuration>
-                                                <null key="inputBackgroundImage"/>
-                                                <null key="inputImage"/>
-                                            </configuration>
-                                        </ciFilter>
-                                        <sliderCell key="cell" controlSize="small" continuous="YES" alignment="left" maxValue="512" doubleValue="251.95348837209303" tickMarkPosition="above" sliderType="linear" id="4276" customClass="VolumeSliderCell">
-                                            <font key="font" size="12" name="Helvetica"/>
-                                        </sliderCell>
+                                    <slider verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="3649" customClass="VLCVolumeSlider">
+                                        <rect key="frame" x="578" y="11" width="48" height="13"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="48" id="XRa-UG-wuM"/>
+                                        </constraints>
+                                        <sliderCell key="cell" controlSize="mini" continuous="YES" alignment="left" maxValue="512" doubleValue="251.95348837209303" tickMarkPosition="above" sliderType="linear" id="4276" customClass="VLCVolumeSliderCell"/>
                                         <connections>
                                             <action selector="volumeAction:" target="5339" id="5358"/>
                                         </connections>
                                     </slider>
-                                    <imageView translatesAutoresizingMaskIntoConstraints="NO" id="4417">
-                                        <rect key="frame" x="578" y="16" width="48" height="5"/>
-                                        <constraints>
-                                            <constraint firstAttribute="height" constant="5" id="Xxv-t7-alW"/>
-                                        </constraints>
-                                        <ciFilter key="compositingFilter" name="CISourceOverCompositing">
-                                            <configuration>
-                                                <null key="inputBackgroundImage"/>
-                                                <null key="inputImage"/>
-                                            </configuration>
-                                        </ciFilter>
-                                        <imageCell key="cell" refusesFirstResponder="YES" alignment="left" image="volume-slider-track" id="4418"/>
-                                    </imageView>
                                     <button translatesAutoresizingMaskIntoConstraints="NO" id="3652">
                                         <rect key="frame" x="629" y="12" width="13" height="11"/>
                                         <constraints>
@@ -685,6 +667,7 @@
                                                 <rect key="frame" x="29" y="0.0" width="29" height="23"/>
                                                 <constraints>
                                                     <constraint firstAttribute="height" constant="23" id="FTh-fT-exD"/>
+                                                    <constraint firstAttribute="width" constant="29" id="b6s-NA-bQd"/>
                                                 </constraints>
                                                 <buttonCell key="cell" type="bevel" bezelStyle="regularSquare" image="fullscreen-double-buttons" imagePosition="only" alignment="center" alternateImage="fullscreen-double-buttons-pressed" id="4420">
                                                     <behavior key="behavior" pushIn="YES" changeContents="YES" lightByContents="YES"/>
@@ -701,48 +684,23 @@
                                             <constraint firstItem="4419" firstAttribute="left" secondItem="3654" secondAttribute="right" id="9Kw-Je-A1t"/>
                                             <constraint firstAttribute="bottom" secondItem="3654" secondAttribute="bottom" id="XlS-K9-Hjv"/>
                                             <constraint firstItem="3654" firstAttribute="left" secondItem="dff-fl-Mde" secondAttribute="left" id="icO-e8-nXO"/>
-                                            <constraint firstAttribute="trailing" secondItem="3654" secondAttribute="trailing" priority="250" id="tdE-3n-EwU">
-                                                <attributedString key="userComments">
-                                                    <fragment content="Optional constraint for fs button">
-                                                        <attributes>
-                                                            <font key="NSFont" metaFont="smallSystem"/>
-                                                            <paragraphStyle key="NSParagraphStyle" alignment="natural" lineBreakMode="wordWrapping" baseWritingDirection="natural" tighteningFactorForTruncation="0.0"/>
-                                                        </attributes>
-                                                    </fragment>
-                                                </attributedString>
-                                            </constraint>
                                             <constraint firstAttribute="right" secondItem="4419" secondAttribute="right" id="teb-w0-7R0"/>
                                         </constraints>
                                     </customView>
-                                    <slider hidden="YES" verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="4422" customClass="VLCSlider">
-                                        <rect key="frame" x="279" y="10" width="223" height="16"/>
-                                        <constraints>
-                                            <constraint firstAttribute="height" constant="14" id="JuE-o0-ajo"/>
-                                        </constraints>
-                                        <sliderCell key="cell" controlSize="small" continuous="YES" state="on" alignment="left" maxValue="10000" doubleValue="3204.0777439024391" tickMarkPosition="above" sliderType="linear" id="4425" customClass="VLCSliderCell">
-                                            <font key="font" size="12" name="Helvetica"/>
-                                        </sliderCell>
-                                        <connections>
-                                            <action selector="timeSliderAction:" target="5339" id="5370"/>
-                                        </connections>
-                                    </slider>
                                 </subviews>
                                 <constraints>
-                                    <constraint firstItem="3653" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="5K8-hV-nOQ"/>
                                     <constraint firstItem="mrr-Bw-co0" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="5tM-K0-mjZ"/>
                                     <constraint firstItem="3652" firstAttribute="leading" secondItem="3649" secondAttribute="trailing" constant="3" id="Apb-gM-P9J"/>
                                     <constraint firstItem="4423" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="HUU-wF-duH"/>
                                     <constraint firstItem="jlp-Z2-Qdl" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="Hnv-b4-wWi"/>
                                     <constraint firstItem="dff-fl-Mde" firstAttribute="leading" secondItem="3652" secondAttribute="trailing" constant="8" symbolic="YES" id="TVP-Cr-bfO"/>
-                                    <constraint firstItem="4417" firstAttribute="trailing" secondItem="3649" secondAttribute="trailing" id="WUo-ur-GGy"/>
                                     <constraint firstItem="3647" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="WdH-6H-Xhc"/>
+                                    <constraint firstItem="3653" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="WjR-sa-lQq"/>
                                     <constraint firstItem="4423" firstAttribute="leading" secondItem="4422" secondAttribute="trailing" constant="8" id="YpP-Vj-f9b"/>
                                     <constraint firstItem="4422" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="Zit-b0-8jR"/>
-                                    <constraint firstItem="4417" firstAttribute="leading" secondItem="3649" secondAttribute="leading" id="b86-zP-VqN"/>
-                                    <constraint firstItem="4417" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="gI8-2E-JGT"/>
+                                    <constraint firstItem="3652" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="cci-dm-60V"/>
                                     <constraint firstItem="dff-fl-Mde" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="gqZ-nc-67e"/>
                                     <constraint firstItem="3649" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="ll4-Gr-Hs6"/>
-                                    <constraint firstItem="3652" firstAttribute="centerY" secondItem="5608" secondAttribute="centerY" id="o7m-oP-mfd"/>
                                     <constraint firstItem="jlp-Z2-Qdl" firstAttribute="leading" secondItem="5608" secondAttribute="leading" constant="8" id="odn-Ek-4d1"/>
                                     <constraint firstItem="4422" firstAttribute="leading" secondItem="mrr-Bw-co0" secondAttribute="trailing" constant="8" id="tg9-ZJ-h8u"/>
                                     <constraint firstItem="3653" firstAttribute="leading" secondItem="4423" secondAttribute="trailing" constant="8" symbolic="YES" id="tn5-dP-NYa"/>
@@ -825,6 +783,7 @@
                 <outlet property="effectsButtonWidthConstraint" destination="cE9-ym-9VP" id="ZQQ-m6-t7W"/>
                 <outlet property="forwardButton" destination="3648" id="0bA-YS-tkr"/>
                 <outlet property="fullscreenButton" destination="4419" id="hgS-Tk-jle"/>
+                <outlet property="fullscreenButtonWidthConstraint" destination="b6s-NA-bQd" id="zsB-tJ-zUh"/>
                 <outlet property="nextButton" destination="HBS-xq-EkN" id="MIO-Ba-jDH"/>
                 <outlet property="nextButtonWidthConstraint" destination="uPv-u5-I21" id="Lsk-Nu-vmn"/>
                 <outlet property="playButton" destination="3571" id="5Mf-48-Ga9"/>
@@ -840,7 +799,6 @@
                 <outlet property="timeSlider" destination="4422" id="I3H-rQ-4GH"/>
                 <outlet property="volumeDownButton" destination="3653" id="brO-P5-sUM"/>
                 <outlet property="volumeSlider" destination="3649" id="NDW-el-poL"/>
-                <outlet property="volumeTrackImageView" destination="4417" id="xH3-Dg-2Ok"/>
                 <outlet property="volumeUpButton" destination="3652" id="vXR-KC-L2N"/>
             </connections>
         </customObject>
@@ -848,14 +806,14 @@
             <windowStyleMask key="styleMask" titled="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="265" y="520" width="612" height="157"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="777"/>
-            <value key="minSize" type="size" width="612" height="159"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="778"/>
+            <value key="minSize" type="size" width="612" height="157"/>
             <value key="maxSize" type="size" width="612" height="159"/>
             <view key="contentView" id="5266">
                 <rect key="frame" x="0.0" y="0.0" width="612" height="157"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5275">
+                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" preferredMaxLayoutWidth="572" translatesAutoresizingMaskIntoConstraints="NO" id="5275">
                         <rect key="frame" x="18" y="120" width="576" height="17"/>
                         <textFieldCell key="cell" selectable="YES" sendsActionOnEndEditing="YES" title="Subscribe to a podcast" id="5276">
                             <font key="font" metaFont="systemBold"/>
@@ -863,7 +821,7 @@
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
-                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5274">
+                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" preferredMaxLayoutWidth="572" translatesAutoresizingMaskIntoConstraints="NO" id="5274">
                         <rect key="frame" x="18" y="98" width="576" height="14"/>
                         <textFieldCell key="cell" selectable="YES" sendsActionOnEndEditing="YES" title="Enter URL of the podcast to subscribe to:" usesSingleLineMode="YES" id="5277">
                             <font key="font" metaFont="smallSystem"/>
@@ -871,7 +829,7 @@
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
-                    <textField verticalHuggingPriority="750" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5289">
+                    <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="5289">
                         <rect key="frame" x="20" y="68" width="572" height="22"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="5290">
                             <font key="font" metaFont="system"/>
@@ -928,14 +886,14 @@ Gw
             <windowStyleMask key="styleMask" titled="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="265" y="520" width="612" height="156"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="777"/>
-            <value key="minSize" type="size" width="612" height="159"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1280" height="778"/>
+            <value key="minSize" type="size" width="612" height="156"/>
             <value key="maxSize" type="size" width="612" height="159"/>
             <view key="contentView" id="5306">
                 <rect key="frame" x="0.0" y="0.0" width="612" height="156"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5311">
+                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" preferredMaxLayoutWidth="572" translatesAutoresizingMaskIntoConstraints="NO" id="5311">
                         <rect key="frame" x="18" y="119" width="576" height="17"/>
                         <textFieldCell key="cell" selectable="YES" sendsActionOnEndEditing="YES" title="Unsubscribe from a podcast" id="5312">
                             <font key="font" metaFont="systemBold"/>
@@ -943,7 +901,7 @@ Gw
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
-                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" allowsCharacterPickerTouchBarItem="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5310">
+                    <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" preferredMaxLayoutWidth="572" translatesAutoresizingMaskIntoConstraints="NO" id="5310">
                         <rect key="frame" x="18" y="97" width="576" height="14"/>
                         <textFieldCell key="cell" selectable="YES" sendsActionOnEndEditing="YES" title="Select the podcast you would like to unsubscribe from:" usesSingleLineMode="YES" id="5313">
                             <font key="font" metaFont="smallSystem"/>
@@ -1039,7 +997,6 @@ Gw
         <image name="stop-pressed" width="29" height="23"/>
         <image name="topbar_background" width="1" height="27"/>
         <image name="volume-high" width="13" height="11"/>
-        <image name="volume-low" width="5" height="10"/>
-        <image name="volume-slider-track" width="48" height="5"/>
+        <image name="volume-low" width="5" height="11"/>
     </resources>
 </document>

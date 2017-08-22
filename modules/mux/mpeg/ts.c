@@ -62,6 +62,8 @@
 
 #include "tables.h"
 
+#include "../../codec/jpeg2000.h"
+
 /*
  * TODO:
  *  - check PCR frequency requirement
@@ -930,7 +932,7 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
         goto oom;
 
     if ( p_sys->b_es_id_pid )
-        p_stream->ts.i_pid = p_input->p_fmt->i_id & 0x1fff;
+        p_stream->ts.i_pid = p_input->fmt.i_id & 0x1fff;
     else
         p_stream->ts.i_pid = AllocatePID( p_mux, p_input->p_fmt->i_cat );
 
@@ -943,21 +945,15 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
         return VLC_EGENERIC;
     }
 
-    if( p_input->p_fmt->i_cat == VIDEO_ES )
-    {
-        p_stream->pes.i_width = p_input->p_fmt->video.i_width;
-        p_stream->pes.i_height = p_input->p_fmt->video.i_height;
-    }
-
     p_stream->pes.i_langs = 1 + p_input->p_fmt->i_extra_languages;
     p_stream->pes.lang = calloc(1, p_stream->pes.i_langs * 4);
     if( !p_stream->pes.lang )
         goto oom;
 
     msg_Dbg( p_mux, "adding input codec=%4.4s pid=%d",
-             (char*)&p_stream->pes.i_codec, p_stream->ts.i_pid );
+             (char*)&p_input->fmt.i_codec, p_stream->ts.i_pid );
 
-    for (int i = 0; i < p_stream->pes.i_langs; i++) {
+    for (size_t i = 0; i < p_stream->pes.i_langs; i++) {
         char *lang = (i == 0)
             ? p_input->p_fmt->psz_language
             : p_input->p_fmt->p_extra_languages[i-1].psz_language;
@@ -971,68 +967,6 @@ static int AddStream( sout_mux_t *p_mux, sout_input_t *p_input )
             memcpy(&p_stream->pes.lang[i*4], code, 3);
             p_stream->pes.lang[i*4+3] = 0x00; /* audio type: 0x00 undefined */
             msg_Dbg( p_mux, "    - lang=%3.3s", &p_stream->pes.lang[i*4] );
-        }
-    }
-
-    /* Create decoder specific info for subt */
-    if( p_stream->pes.i_codec == VLC_CODEC_SUBT )
-    {
-        p_stream->pes.i_extra = 55;
-        p_stream->pes.p_extra = malloc( p_stream->pes.i_extra );
-        if (!p_stream->pes.p_extra)
-            goto oom;
-
-        uint8_t *p = p_stream->pes.p_extra;
-        p[0] = 0x10;    /* textFormat, 0x10 for 3GPP TS 26.245 */
-        p[1] = 0x00;    /* flags: 1b: associated video info flag
-                                3b: reserved
-                                1b: duration flag
-                                3b: reserved */
-        p[2] = 52;      /* remaining size */
-
-        p += 3;
-
-        p[0] = p[1] = p[2] = p[3] = 0; p+=4;    /* display flags */
-        *p++ = 0;  /* horizontal justification (-1: left, 0 center, 1 right) */
-        *p++ = 1;  /* vertical   justification (-1: top, 0 center, 1 bottom) */
-
-        p[0] = p[1] = p[2] = 0x00; p+=3;/* background rgb */
-        *p++ = 0xff;                    /* background a */
-
-        p[0] = p[1] = 0; p += 2;        /* text box top */
-        p[0] = p[1] = 0; p += 2;        /* text box left */
-        p[0] = p[1] = 0; p += 2;        /* text box bottom */
-        p[0] = p[1] = 0; p += 2;        /* text box right */
-
-        p[0] = p[1] = 0; p += 2;        /* start char */
-        p[0] = p[1] = 0; p += 2;        /* end char */
-        p[0] = p[1] = 0; p += 2;        /* default font id */
-
-        *p++ = 0;                       /* font style flags */
-        *p++ = 12;                      /* font size */
-
-        p[0] = p[1] = p[2] = 0x00; p+=3;/* foreground rgb */
-        *p++ = 0x00;                    /* foreground a */
-
-        p[0] = p[1] = p[2] = 0; p[3] = 22; p += 4;
-        memcpy( p, "ftab", 4 ); p += 4;
-        *p++ = 0; *p++ = 1;             /* entry count */
-        p[0] = p[1] = 0; p += 2;        /* font id */
-        *p++ = 9;                       /* font name length */
-        memcpy( p, "Helvetica", 9 );    /* font name */
-    }
-    else
-    {
-        /* Copy extra data (VOL for MPEG-4 and extra BitMapInfoHeader for VFW */
-        const es_format_t *fmt = p_input->p_fmt;
-        if( fmt->i_extra > 0 )
-        {
-            p_stream->pes.i_extra = fmt->i_extra;
-            p_stream->pes.p_extra = malloc( fmt->i_extra );
-            if( !p_stream->pes.p_extra )
-                goto oom;
-
-            memcpy( p_stream->pes.p_extra, fmt->p_extra, fmt->i_extra );
         }
     }
 
@@ -1076,9 +1010,6 @@ static void DelStream( sout_mux_t *p_mux, sout_input_t *p_input )
     /* Empty all data in chain_pes */
     BufferChainClean( &p_stream->state.chain_pes );
 
-    free(p_stream->pes.lang);
-    free( p_stream->pes.p_extra );
-
     pid = var_GetInteger( p_mux, SOUT_CFG_PREFIX "pid-video" );
     if ( pid > 0 && pid == p_stream->ts.i_pid )
     {
@@ -1098,6 +1029,7 @@ static void DelStream( sout_mux_t *p_mux, sout_input_t *p_input )
         msg_Dbg( p_mux, "freeing spu PID %d", pid);
     }
 
+    free(p_stream->pes.lang);
     free( p_stream );
 
     /* We only change PMT version (PAT isn't changed) */
@@ -1179,6 +1111,84 @@ static void SetBlockDuration( sout_input_t *p_input, block_t *p_data )
     {
         p_data->i_length = 1000;
     }
+}
+
+static block_t *Encap_J2K( block_t *p_data, const es_format_t *p_fmt )
+{
+    size_t i_offset = 0;
+    uint32_t i_box = 0;
+    while( p_data->i_buffer > 8 && p_data->i_buffer - i_offset > 8 )
+    {
+        const uint32_t i_size = GetDWBE( &p_data->p_buffer[i_offset] );
+        i_box = VLC_FOURCC( p_data->p_buffer[i_offset + 4],
+                            p_data->p_buffer[i_offset + 5],
+                            p_data->p_buffer[i_offset + 6],
+                            p_data->p_buffer[i_offset + 7] );
+        if( p_data->i_buffer - i_offset < i_size || i_size < 8 )
+        {
+            i_box = 0;
+            break;
+        }
+        else if( i_box == J2K_BOX_JP2C )
+        {
+            break;
+        }
+
+        i_offset += i_size;
+    }
+
+    if( i_box != J2K_BOX_JP2C )
+    {
+        block_Release( p_data );
+        return NULL;
+    }
+
+    if( i_offset < 38 )
+    {
+        block_t *p_realloc = block_Realloc( p_data, 38 - i_offset, p_data->i_buffer );
+        if( unlikely(!p_realloc) )
+        {
+            block_Release( p_data );
+            return NULL;
+        }
+        p_data = p_realloc;
+    }
+    else
+    {
+        p_data->p_buffer += (i_offset - 38);
+        p_data->i_buffer -= (i_offset - 38);
+    }
+
+    const int profile = j2k_get_profile( p_fmt->video.i_visible_width,
+                                         p_fmt->video.i_visible_height,
+                                         p_fmt->video.i_frame_rate,
+                                         p_fmt->video.i_frame_rate_base, true );
+    memcpy(  p_data->p_buffer,     "elsmfrat", 8 );
+    SetWBE( &p_data->p_buffer[8],  p_fmt->video.i_frame_rate_base );
+    SetWBE( &p_data->p_buffer[10], p_fmt->video.i_frame_rate );
+    memcpy( &p_data->p_buffer[12], "brat", 4 );
+    unsigned min = j2k_profiles_rates[profile].min * 1000000;
+    unsigned max = j2k_profiles_rates[profile].max * 1000000;
+    SetDWBE(&p_data->p_buffer[16], max );
+    SetDWBE(&p_data->p_buffer[20], min );
+    memcpy( &p_data->p_buffer[24], "tcod", 4 );
+    const unsigned s = p_data->i_pts / CLOCK_FREQ;
+    const unsigned m = s / 60;
+    const unsigned h = m / 60;
+    const uint64_t l = p_fmt->video.i_frame_rate_base * CLOCK_FREQ /
+                       p_fmt->video.i_frame_rate;
+    const unsigned f = (p_data->i_pts % CLOCK_FREQ) / l;
+    p_data->p_buffer[28] = h;
+    p_data->p_buffer[29] = m % 60;
+    p_data->p_buffer[30] = s % 60;
+    p_data->p_buffer[31] = f;
+    memcpy( &p_data->p_buffer[32], "bcol", 4 );
+    p_data->p_buffer[36] = j2k_get_color_spec( p_fmt->video.primaries,
+                                               p_fmt->video.transfer,
+                                               p_fmt->video.space );
+    p_data->p_buffer[37] = 0;
+
+    return p_data;
 }
 
 /* returns true if needs more data */
@@ -1305,7 +1315,7 @@ static bool MuxStreams(sout_mux_t *p_mux )
         {
             msg_Warn( p_mux, "packet with too strange dts on pid %d (%4.4s)"
                       "(dts=%"PRId64",old=%"PRId64",pcr=%"PRId64")",
-                      p_stream->ts.i_pid, (char *) &p_stream->pes.i_codec,
+                      p_stream->ts.i_pid, (char *) &p_input->fmt.i_codec,
                       p_data->i_dts, p_stream->state.i_pes_dts,
                       p_pcr_stream->state.i_pes_dts );
             block_Release( p_data );
@@ -1372,6 +1382,17 @@ static bool MuxStreams(sout_mux_t *p_mux )
             /* EN 300 743 */
             b_data_alignment = 1;
             break;
+        }
+        else if( p_input->fmt.i_cat == VIDEO_ES )
+        {
+            if( p_input->fmt.i_codec == VLC_CODEC_JPEG2000 )
+            {
+                if( p_data->i_flags & BLOCK_FLAG_INTERLACED_MASK )
+                    msg_Warn( p_mux, "Unsupported interlaced J2K content. Expect broken result");
+                p_data = Encap_J2K( p_data, &p_input->fmt );
+                if( !p_data )
+                    return false;
+            }
         }
         else if( p_data->i_length < 0 || p_data->i_length > 2000000 )
         {

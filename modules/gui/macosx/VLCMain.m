@@ -37,7 +37,7 @@
 #include <string.h>
 #include <vlc_common.h>
 #include <vlc_atomic.h>
-#include <vlc_keys.h>
+#include <vlc_actions.h>
 #include <vlc_dialog.h>
 #include <vlc_url.h>
 #include <vlc_variables.h>
@@ -58,7 +58,7 @@
 #import "VLCTrackSynchronizationWindowController.h"
 #import "VLCExtensionsManager.h"
 #import "VLCResumeDialogController.h"
-#import "VLCDebugMessageWindowController.h"
+#import "VLCLogWindowController.h"
 #import "VLCConvertAndSaveWindowController.h"
 
 #import "VLCVideoEffectsWindowController.h"
@@ -174,7 +174,7 @@ static int ShowController(vlc_object_t *p_this, const char *psz_variable,
     VLCResumeDialogController *_resume_dialog;
     VLCInputManager *_input_manager;
     VLCPlaylist *_playlist;
-    VLCDebugMessageWindowController *_messagePanelController;
+    VLCLogWindowController *_messagePanelController;
     VLCStatusBarIcon *_statusBarIcon;
     VLCTrackSynchronizationWindowController *_trackSyncPanel;
     VLCAudioEffectsWindowController *_audioEffectsPanel;
@@ -292,7 +292,7 @@ static VLCMain *sharedInstance = nil;
 
     [_coreinteraction updateCurrentlyUsedHotkeys];
 
-    [self removeOldPreferences];
+    [self migrateOldPreferences];
 
     /* Handle sleep notification */
     [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self selector:@selector(computerWillSleep:)
@@ -498,10 +498,10 @@ static VLCMain *sharedInstance = nil;
     return _extensionsManager;
 }
 
-- (VLCDebugMessageWindowController *)debugMsgPanel
+- (VLCLogWindowController *)debugMsgPanel
 {
     if (!_messagePanelController)
-        _messagePanelController = [[VLCDebugMessageWindowController alloc] init];
+        _messagePanelController = [[VLCLogWindowController alloc] init];
 
     return _messagePanelController;
 }

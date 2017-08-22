@@ -479,7 +479,7 @@ static int Demux( demux_t *p_demux )
 
     if( p_blockv )
     {
-        es_out_Control( p_demux->out, ES_OUT_SET_PCR, p_blockv->i_pts );
+        es_out_SetPCR( p_demux->out, p_blockv->i_pts );
         es_out_Send( p_demux->out, p_sys->p_es_video, p_blockv );
     }
     return 1;
@@ -496,7 +496,6 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         /* Special for access_demux */
         case DEMUX_CAN_PAUSE:
         case DEMUX_CAN_SEEK:
-        case DEMUX_SET_PAUSE_STATE:
         case DEMUX_CAN_CONTROL_PACE:
             *va_arg( args, bool * ) = false;
             return VLC_SUCCESS;

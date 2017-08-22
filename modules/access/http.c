@@ -129,21 +129,20 @@ struct access_sys_t
     uint64_t size;
 
     bool b_reconnect;
-    bool b_continuous;
     bool b_has_size;
 };
 
 /* */
-static ssize_t Read( access_t *, void *, size_t );
-static int Seek( access_t *, uint64_t );
-static int Control( access_t *, int, va_list );
+static ssize_t Read( stream_t *, void *, size_t );
+static int Seek( stream_t *, uint64_t );
+static int Control( stream_t *, int, va_list );
 
 /* */
-static int Connect( access_t * );
-static void Disconnect( access_t * );
+static int Connect( stream_t * );
+static void Disconnect( stream_t * );
 
 
-static int AuthCheckReply( access_t *p_access, const char *psz_header,
+static int AuthCheckReply( stream_t *p_access, const char *psz_header,
                            vlc_url_t *p_url, vlc_http_auth_t *p_auth );
 
 /*****************************************************************************
@@ -151,7 +150,7 @@ static int AuthCheckReply( access_t *p_access, const char *psz_header,
  *****************************************************************************/
 static int Open( vlc_object_t *p_this )
 {
-    access_t *p_access = (access_t*)p_this;
+    stream_t *p_access = (stream_t*)p_this;
     const char *psz_url = p_access->psz_url;
     char *psz;
     int ret = VLC_EGENERIC;
@@ -281,7 +280,6 @@ static int Open( vlc_object_t *p_this )
     }
 
     p_sys->b_reconnect = var_InheritBool( p_access, "http-reconnect" );
-    p_sys->b_continuous = var_InheritBool( p_access, "http-continuous" );
 
     if( vlc_credential_get( &credential, p_access, NULL, NULL, NULL, NULL ) )
     {
@@ -383,7 +381,7 @@ error:
  *****************************************************************************/
 static void Close( vlc_object_t *p_this )
 {
-    access_t     *p_access = (access_t*)p_this;
+    stream_t     *p_access = (stream_t*)p_this;
     access_sys_t *p_sys = p_access->p_sys;
 
     vlc_UrlClean( &p_sys->url );
@@ -408,7 +406,7 @@ static void Close( vlc_object_t *p_this )
 }
 
 /* Read data from the socket */
-static int ReadData( access_t *p_access, int *pi_read,
+static int ReadData( stream_t *p_access, int *pi_read,
                      void *p_buffer, size_t i_len )
 {
     access_sys_t *p_sys = p_access->p_sys;
@@ -423,8 +421,8 @@ static int ReadData( access_t *p_access, int *pi_read,
  * Read: Read up to i_len bytes from the http connection and place in
  * p_buffer. Return the actual number of bytes read
  *****************************************************************************/
-static int ReadICYMeta( access_t *p_access );
-static ssize_t Read( access_t *p_access, void *p_buffer, size_t i_len )
+static int ReadICYMeta( stream_t *p_access );
+static ssize_t Read( stream_t *p_access, void *p_buffer, size_t i_len )
 {
     access_sys_t *p_sys = p_access->p_sys;
     int i_read;
@@ -437,15 +435,15 @@ static ssize_t Read( access_t *p_access, void *p_buffer, size_t i_len )
 
     if( p_sys->i_icy_meta > 0 && p_sys->offset - p_sys->i_icy_offset > 0 )
     {
-        int64_t i_next = p_sys->i_icy_meta -
-                                    (p_sys->offset - p_sys->i_icy_offset ) % p_sys->i_icy_meta;
+        int i_next = p_sys->i_icy_meta -
+                   (p_sys->offset - p_sys->i_icy_offset) % p_sys->i_icy_meta;
 
         if( i_next == p_sys->i_icy_meta )
         {
             if( ReadICYMeta( p_access ) )
                 return 0;
         }
-        if( i_len > i_next )
+        if( i_len > (size_t)i_next )
             i_len = i_next;
     }
 
@@ -475,7 +473,7 @@ static ssize_t Read( access_t *p_access, void *p_buffer, size_t i_len )
     return i_read;
 }
 
-static int ReadICYMeta( access_t *p_access )
+static int ReadICYMeta( stream_t *p_access )
 {
     access_sys_t *p_sys = p_access->p_sys;
 
@@ -554,7 +552,7 @@ static int ReadICYMeta( access_t *p_access )
 /*****************************************************************************
  * Seek: close and re-open a connection at the right place
  *****************************************************************************/
-static int Seek( access_t *p_access, uint64_t i_pos )
+static int Seek( stream_t *p_access, uint64_t i_pos )
 {
     (void) p_access; (void) i_pos;
     return VLC_EGENERIC;
@@ -563,7 +561,7 @@ static int Seek( access_t *p_access, uint64_t i_pos )
 /*****************************************************************************
  * Control:
  *****************************************************************************/
-static int Control( access_t *p_access, int i_query, va_list args )
+static int Control( stream_t *p_access, int i_query, va_list args )
 {
     access_sys_t *p_sys = p_access->p_sys;
     bool       *pb_bool;
@@ -630,7 +628,7 @@ static int Control( access_t *p_access, int i_query, va_list args )
 /*****************************************************************************
  * Connect:
  *****************************************************************************/
-static int Connect( access_t *p_access )
+static int Connect( stream_t *p_access )
 {
     access_sys_t   *p_sys = p_access->p_sys;
     vlc_url_t      srv = p_sys->b_proxy ? p_sys->proxy : p_sys->url;
@@ -786,7 +784,7 @@ static int Connect( access_t *p_access )
     {
         char *p, *p_trailing;
 
-        char *psz = net_Gets( p_access, p_sys->fd );
+        psz = net_Gets( p_access, p_sys->fd );
         if( psz == NULL )
         {
             msg_Err( p_access, "failed to read answer" );
@@ -982,7 +980,7 @@ error:
 /*****************************************************************************
  * Disconnect:
  *****************************************************************************/
-static void Disconnect( access_t *p_access )
+static void Disconnect( stream_t *p_access )
 {
     access_sys_t *p_sys = p_access->p_sys;
 
@@ -995,7 +993,7 @@ static void Disconnect( access_t *p_access )
  * HTTP authentication
  *****************************************************************************/
 
-static int AuthCheckReply( access_t *p_access, const char *psz_header,
+static int AuthCheckReply( stream_t *p_access, const char *psz_header,
                            vlc_url_t *p_url, vlc_http_auth_t *p_auth )
 {
     return

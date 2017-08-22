@@ -215,8 +215,6 @@ static int Open( vlc_object_t *p_this )
     if( !p_sys->f )
     {
         msg_Err( p_demux, "failed to understand the file" );
-        /* we try to seek to recover for other plugin */
-        vlc_stream_Seek( p_demux->s, 0 );
         free( p_sys->p_data );
         free( p_sys );
         return VLC_EGENERIC;
@@ -284,7 +282,7 @@ static int Demux( demux_t *p_demux )
     p_frame->i_pts = VLC_TS_0 + date_Get( &p_sys->pts );
 
     /* Set PCR */
-    es_out_Control( p_demux->out, ES_OUT_SET_PCR, p_frame->i_pts );
+    es_out_SetPCR( p_demux->out, p_frame->i_pts );
 
     /* Send data */
     es_out_Send( p_demux->out, p_sys->es, p_frame );
@@ -576,7 +574,7 @@ static int Validate( demux_t *p_demux, const char *psz_ext )
             const uint8_t *p_sample = &p_peek[20 + i*30];
 
             /* Check correct null padding */
-            const uint8_t *p = memchr( &p_sample[0], '\0', 22 );
+            p = memchr( &p_sample[0], '\0', 22 );
             if( p )
             {
                 for( ; p < &p_sample[22]; p++ )

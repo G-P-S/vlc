@@ -560,18 +560,12 @@ void vout_ControlChangeViewpoint(vout_thread_t *vout,
 static void VoutGetDisplayCfg(vout_thread_t *vout, vout_display_cfg_t *cfg, const char *title)
 {
     /* Load configuration */
+#if defined(_WIN32) || defined(__OS2__)
     cfg->is_fullscreen = var_GetBool(vout, "fullscreen")
                          || var_GetBool(vout, "video-wallpaper");
-    const vlc_viewpoint_t *p_viewpoint = var_GetAddress(vout, "viewpoint");
-    if (p_viewpoint != NULL)
-        cfg->viewpoint = *p_viewpoint;
-    else
-    {
-        cfg->viewpoint.yaw   = vout->p->original.pose.f_yaw_degrees;
-        cfg->viewpoint.pitch = vout->p->original.pose.f_pitch_degrees;
-        cfg->viewpoint.roll  = vout->p->original.pose.f_roll_degrees;
-        cfg->viewpoint.fov   = vout->p->original.pose.f_fov_degrees;
-    }
+#endif
+    cfg->viewpoint = vout->p->original.pose;
+
     cfg->display.title = title;
     const int display_width = var_GetInteger(vout, "width");
     const int display_height = var_GetInteger(vout, "height");
@@ -691,7 +685,7 @@ static picture_t *VoutVideoFilterStaticNewPicture(filter_t *filter)
     vout_thread_t *vout = filter->owner.sys;
 
     vlc_assert_locked(&vout->p->filter.lock);
-    if (filter_chain_GetLength(vout->p->filter.chain_interactive) == 0)
+    if (filter_chain_IsEmpty(vout->p->filter.chain_interactive))
         return VoutVideoFilterInteractiveNewPicture(filter);
 
     return picture_NewFromFormat(&filter->fmt_out.video);
@@ -947,7 +941,6 @@ static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
                               (vd->info.is_slow ||
                                sys->display.use_dr ||
                                do_snapshot ||
-                               !vout_IsDisplayFiltered(vd) ||
                                vd->fmt.i_width * vd->fmt.i_height <= vd->source.i_width * vd->source.i_height);
 
     const vlc_fourcc_t *subpicture_chromas;
@@ -1053,17 +1046,17 @@ static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
 
     /* Render the direct buffer */
     vout_UpdateDisplaySourceProperties(vd, &todisplay->format);
+
+    todisplay = vout_FilterDisplay(vd, todisplay);
+    if (todisplay == NULL) {
+        if (subpic != NULL)
+            subpicture_Delete(subpic);
+        return VLC_EGENERIC;
+    }
+
     if (sys->display.use_dr) {
         vout_display_Prepare(vd, todisplay, subpic);
     } else {
-        todisplay = vout_FilterDisplay(vd, todisplay);
-        if (todisplay == NULL)
-        {
-            if (subpic != NULL)
-                subpicture_Delete(subpic);
-            return VLC_EGENERIC;
-        }
-
         if (!do_dr_spu && !do_early_spu && vout->p->spu_blend && subpic)
             picture_BlendSubpicture(todisplay, vout->p->spu_blend, subpic);
         vout_display_Prepare(vd, todisplay, do_dr_spu ? subpic : NULL);
@@ -1230,6 +1223,10 @@ static void ThreadChangePause(vout_thread_t *vout, bool is_paused, mtime_t date)
     }
     vout->p->pause.is_on = is_paused;
     vout->p->pause.date  = date;
+
+    vout_window_t *window = vout->p->window;
+    if (window != NULL)
+        vout_window_SetInhibition(window, !is_paused);
 }
 
 static void ThreadFlush(vout_thread_t *vout, bool below, mtime_t date)
@@ -1278,12 +1275,18 @@ static void ThreadChangeFullscreen(vout_thread_t *vout, bool fullscreen)
 {
     vout_window_t *window = vout->p->window;
 
+#if !defined(_WIN32) && !defined(__OS2__)
+    if (window != NULL)
+        vout_window_SetFullScreen(window, fullscreen);
+#else
     bool window_fullscreen = false;
     if (window != NULL
      && vout_window_SetFullScreen(window, fullscreen) == VLC_SUCCESS)
         window_fullscreen = true;
+    /* FIXME: remove this event */
     if (vout->p->display.vd != NULL)
         vout_display_SendEventFullscreen(vout->p->display.vd, fullscreen, window_fullscreen);
+#endif
 }
 
 static void ThreadChangeWindowState(vout_thread_t *vout, unsigned state)
@@ -1334,7 +1337,8 @@ static void ThreadChangeWindowMouse(vout_thread_t *vout,
             vout_display_SendEventMouseReleased(vd, mouse->button_mask);
             break;
         case VOUT_WINDOW_MOUSE_DOUBLE_CLICK:
-            vout_display_SendEventMouseDoubleClick(vd);
+            if (mouse->button_mask == 0)
+                vout_display_SendEventMouseDoubleClick(vd);
             break;
         default: vlc_assert_unreachable();
             break;
@@ -1547,7 +1551,10 @@ static int ThreadReinit(vout_thread_t *vout,
 
     vout_ReinitInterlacingSupport(vout);
 
-    if (!state.cfg.is_fullscreen) {
+#if defined(_WIN32) || defined(__OS2__)
+    if (!state.cfg.is_fullscreen)
+#endif
+    {
         state.cfg.display.width  = 0;
         state.cfg.display.height = 0;
     }

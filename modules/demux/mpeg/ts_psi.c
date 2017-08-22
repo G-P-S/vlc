@@ -44,6 +44,7 @@
 
 #include "timestamps.h"
 
+#include "../../codec/jpeg2000.h"
 #include "../../codec/opus_header.h"
 
 #include "sections.h"
@@ -540,6 +541,10 @@ static void SetupJ2KDescriptors( demux_t *p_demux, ts_es_t *p_es, const dvbpsi_p
         p_es->fmt.video.i_height = GetDWBE(&p_dr->p_data[6]);
         p_es->fmt.video.i_frame_rate_base = GetWBE(&p_dr->p_data[18]);
         p_es->fmt.video.i_frame_rate = GetWBE(&p_dr->p_data[20]);
+        j2k_fill_color_profile( p_dr->p_data[21],
+                               &p_es->fmt.video.primaries,
+                               &p_es->fmt.video.transfer,
+                               &p_es->fmt.video.space );
         p_es->b_interlaced = p_dr->p_data[23] & 0x40;
         if( p_dr->i_length > 24 )
         {
@@ -915,6 +920,28 @@ static void OpusSetup(demux_t *demux, uint8_t *p, size_t len, es_format_t *p_fmt
 
 explicit_config_too_short:
     msg_Err(demux, "Opus descriptor too short");
+}
+
+static void PMTSetupEs0x02( ts_es_t *p_es,
+                            const dvbpsi_pmt_es_t *p_dvbpsies )
+{
+    /* MPEG2_stereoscopic_video_format_descriptor */
+    dvbpsi_descriptor_t *p_dr = PMTEsFindDescriptor( p_dvbpsies, 0x34 );
+    if( p_dr && p_dr->i_length > 0 && (p_dr->p_data[0] & 0x80) )
+    {
+        video_multiview_mode_t mode;
+        switch( p_dr->p_data[0] & 0x7F )
+        {
+            case 0x03:
+                mode = MULTIVIEW_STEREO_SBS; break;
+            case 0x04:
+                mode = MULTIVIEW_STEREO_TB; break;
+            case 0x08:
+            default:
+                mode = MULTIVIEW_2D; break;
+        }
+        p_es->fmt.video.multiview_mode = mode;
+    }
 }
 
 static void PMTSetupEs0x05PrivateData( demux_t *p_demux, ts_es_t *p_es,
@@ -1422,6 +1449,9 @@ static void FillPESFromDvbpsiES( demux_t *p_demux,
 
         switch( p_dvbpsies->i_type )
         {
+        case 0x02:
+            PMTSetupEs0x02( p_pes->p_es, p_dvbpsies );
+            break;
         case 0x05: /* Private data in sections */
             p_pes->transport = TS_TRANSPORT_SECTIONS;
             PMTSetupEs0x05PrivateData( p_demux, p_pes->p_es, p_dvbpsies );
@@ -1616,9 +1646,17 @@ static void PMTCallBack( void *data, dvbpsi_pmt_t *p_dvbpsipmt )
                 break;
             case TS_PMT_REGISTRATION_ATSC:
                 TsChangeStandard( p_sys, TS_STANDARD_ATSC );
+                break;
             default:
-                /* Probe using ES */
-                p_sys->standard = ProbePMTStandard( p_dvbpsipmt );
+                if(SEEN(GetPID(p_sys, ATSC_BASE_PID)))
+                {
+                    TsChangeStandard( p_sys, TS_STANDARD_ATSC );
+                }
+                else
+                {
+                    /* Probe using ES */
+                    p_sys->standard = ProbePMTStandard( p_dvbpsipmt );
+                }
                 break;
         }
     }

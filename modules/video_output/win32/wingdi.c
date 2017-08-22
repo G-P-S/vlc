@@ -91,6 +91,9 @@ static int Open(vlc_object_t *object)
     vout_display_t *vd = (vout_display_t *)object;
     vout_display_sys_t *sys;
 
+    if ( !vd->obj.force && vd->source.projection_mode != PROJECTION_MODE_RECTANGULAR)
+        return VLC_EGENERIC; /* let a module who can handle it do it */
+
     vd->sys = sys = calloc(1, sizeof(*sys));
     if (!sys)
         return VLC_ENOMEM;
@@ -106,7 +109,6 @@ static int Open(vlc_object_t *object)
     vout_display_info_t info = vd->info;
     info.is_slow              = false;
     info.has_double_click     = true;
-    info.has_hide_mouse       = false;
     info.has_pictures_invalid = true;
 
     /* */
@@ -314,7 +316,7 @@ static int Init(vout_display_t *vd,
     else
         sys->sys.pool = NULL;
 
-    UpdateRects(vd, NULL, NULL, true);
+    UpdateRects(vd, NULL, true);
 
     return VLC_SUCCESS;
 }

@@ -51,6 +51,7 @@ struct filter_sys_t
     DXVA2_VideoProcessorCaps       decoder_caps;
 
     struct deinterlace_ctx         context;
+    picture_t *                    (*buffer_new)( filter_t * );
 };
 
 struct filter_mode_t
@@ -101,6 +102,20 @@ static void FillSample( DXVA2_VideoSample *p_sample,
     p_sample->PlanarAlpha    = DXVA2_Fixed32OpaqueAlpha();
 }
 
+static void FillBlitParams( DXVA2_VideoProcessBltParams *params, const RECT *area,
+                            const DXVA2_VideoSample *samples, int order )
+{
+    memset(params, 0, sizeof(*params));
+    params->TargetFrame = (samples->End - samples->Start) * order / 2;
+    params->TargetRect  = *area;
+    params->DestData    = 0;
+    params->Alpha       = DXVA2_Fixed32OpaqueAlpha();
+    params->DestFormat.SampleFormat = DXVA2_SampleProgressiveFrame;
+    params->BackgroundColor.Alpha = 0xFFFF;
+    params->ConstrictionSize.cx = params->TargetRect.right;
+    params->ConstrictionSize.cy = params->TargetRect.bottom;
+}
+
 static int RenderPic( filter_t *filter, picture_t *p_outpic, picture_t *src,
                       int order, int i_field )
 {
@@ -108,7 +123,7 @@ static int RenderPic( filter_t *filter, picture_t *p_outpic, picture_t *src,
     const int i_samples = sys->decoder_caps.NumBackwardRefSamples + 1 +
                           sys->decoder_caps.NumForwardRefSamples;
     HRESULT hr;
-    DXVA2_VideoProcessBltParams params = {0};
+    DXVA2_VideoProcessBltParams params;
     DXVA2_VideoSample samples[i_samples];
     picture_t         *pictures[i_samples];
     D3DSURFACE_DESC srcDesc, dstDesc;
@@ -156,12 +171,7 @@ static int RenderPic( filter_t *filter, picture_t *p_outpic, picture_t *src,
         }
     }
 
-    params.TargetFrame = (samples[0].End - samples[0].Start) * order / 2;
-    params.TargetRect  = area;
-    params.DestData    = 0;
-    params.Alpha       = DXVA2_Fixed32OpaqueAlpha();
-    params.DestFormat.SampleFormat = DXVA2_SampleProgressiveFrame;
-    params.BackgroundColor.Alpha = 0xFFFF;
+    FillBlitParams( &params, &area, samples, order );
 
     hr = IDirectXVideoProcessor_VideoProcessBlt( sys->processor,
                                                  sys->hw_surface,
@@ -205,6 +215,46 @@ static const struct filter_mode_t *GetFilterMode(const char *mode)
     return NULL;
 }
 
+static void d3d9_pic_context_destroy(struct picture_context_t *ctx)
+{
+    struct va_pic_context *pic_ctx = (struct va_pic_context*)ctx;
+    ReleasePictureSys(&pic_ctx->picsys);
+    free(pic_ctx);
+}
+
+static struct picture_context_t *d3d9_pic_context_copy(struct picture_context_t *ctx)
+{
+    struct va_pic_context *src_ctx = (struct va_pic_context*)ctx;
+    struct va_pic_context *pic_ctx = calloc(1, sizeof(*pic_ctx));
+    if (unlikely(pic_ctx==NULL))
+        return NULL;
+    pic_ctx->s.destroy = d3d9_pic_context_destroy;
+    pic_ctx->s.copy    = d3d9_pic_context_copy;
+    pic_ctx->picsys = src_ctx->picsys;
+    AcquirePictureSys(&pic_ctx->picsys);
+    return &pic_ctx->s;
+}
+
+static picture_t *NewOutputPicture( filter_t *p_filter )
+{
+    picture_t *pic = p_filter->p_sys->buffer_new( p_filter );
+    if ( !pic->context )
+    {
+        /* the picture might be duplicated for snapshots so it needs a context */
+        assert( pic->p_sys != NULL ); /* this opaque picture is wrong */
+        struct va_pic_context *pic_ctx = calloc(1, sizeof(*pic_ctx));
+        if (likely(pic_ctx!=NULL))
+        {
+            pic_ctx->s.destroy = d3d9_pic_context_destroy;
+            pic_ctx->s.copy    = d3d9_pic_context_copy;
+            pic_ctx->picsys = *pic->p_sys;
+            AcquirePictureSys( &pic_ctx->picsys );
+            pic->context = &pic_ctx->s;
+        }
+    }
+    return pic;
+}
+
 static int Open(vlc_object_t *obj)
 {
     filter_t *filter = (filter_t *)obj;
@@ -237,7 +287,7 @@ static int Open(vlc_object_t *obj)
 
     if (!dst->p_sys)
     {
-        msg_Dbg(filter, "D3D11 opaque without a texture");
+        msg_Dbg(filter, "D3D9 opaque without a texture");
         goto error;
     }
 
@@ -301,6 +351,8 @@ static int Open(vlc_object_t *obj)
         msg_Dbg(filter, "unknown mode %s, trying blend", psz_mode);
         p_mode = GetFilterMode("blend");
     }
+    if (strcmp(p_mode->psz_mode, psz_mode))
+        msg_Dbg(filter, "using %s deinterlacing mode", p_mode->psz_mode);
 
     DXVA2_VideoProcessorCaps caps, best_caps;
     unsigned best_score = 0;
@@ -349,10 +401,6 @@ static int Open(vlc_object_t *obj)
     if (FAILED(hr))
         goto error;
 
-    CoTaskMemFree(processorGUIDs);
-    picture_Release(dst);
-    IDirectXVideoProcessorService_Release(processor);
-
     sys->hdecoder_dll = hdecoder_dll;
     sys->d3d9_dll     = d3d9_dll;
     sys->decoder_caps = best_caps;
@@ -362,7 +410,8 @@ static int Open(vlc_object_t *obj)
     sys->context.settings = p_mode->settings;
     sys->context.settings.b_use_frame_history = best_caps.NumBackwardRefSamples != 0 ||
                                        best_caps.NumForwardRefSamples  != 0;
-    assert(sys->context.settings.b_use_frame_history == p_mode->settings.b_use_frame_history);
+    if (sys->context.settings.b_use_frame_history != p_mode->settings.b_use_frame_history)
+        msg_Dbg( filter, "deinterlacing not using frame history as requested");
     if (sys->context.settings.b_double_rate)
         sys->context.pf_render_ordered = RenderPic;
     else
@@ -376,6 +425,12 @@ static int Open(vlc_object_t *obj)
        goto error;
     }
 
+    CoTaskMemFree(processorGUIDs);
+    IDirectXVideoProcessorService_Release(processor);
+    picture_Release(dst);
+
+    sys->buffer_new = filter->owner.video.buffer_new;
+    filter->owner.video.buffer_new = NewOutputPicture;
     filter->fmt_out.video   = out_fmt;
     filter->pf_video_filter = Deinterlace;
     filter->pf_flush        = Flush;

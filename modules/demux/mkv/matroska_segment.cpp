@@ -30,6 +30,7 @@
 #include "Ebml_dispatcher.hpp"
 
 #include <new>
+#include <iterator>
 
 matroska_segment_c::matroska_segment_c( demux_sys_t & demuxer, EbmlStream & estream )
     :segment(NULL)
@@ -65,16 +66,6 @@ matroska_segment_c::matroska_segment_c( demux_sys_t & demuxer, EbmlStream & estr
 
 matroska_segment_c::~matroska_segment_c()
 {
-    for( tracks_map_t::iterator it = tracks.begin(); it != tracks.end(); ++it)
-    {
-        tracks_map_t::mapped_type& track = it->second;
-
-        es_format_Clean( &track.fmt );
-        delete track.p_compression_data;
-        delete track.p_sys;
-        free( track.p_extra_data );
-    }
-
     free( psz_writing_application );
     free( psz_muxing_application );
     free( psz_segment_filename );
@@ -178,15 +169,15 @@ void matroska_segment_c::LoadCues( KaxCues *cues )
 #if LIBMATROSKA_VERSION >= 0x010401
                             else if( MKV_IS_ID( el, KaxCueRelativePosition ) )
                             {
-                                b_invalid_cue = true; // since we do not support this type of cue: IGNORE
+                                // IGNORE
                             }
                             else if( MKV_IS_ID( el, KaxCueBlockNumber ) )
                             {
-                                b_invalid_cue = true; // since we do not support this type of cue: IGNORE
+                                // IGNORE
                             }
                             else if( MKV_IS_ID( el, KaxCueReference ) )
                             {
-                                b_invalid_cue = true; // since we do not support this type of cue: IGNORE
+                                // IGNORE
                             }
                             else if( MKV_IS_ID( el, KaxCueDuration ) )
                             {
@@ -219,14 +210,15 @@ void matroska_segment_c::LoadCues( KaxCues *cues )
 
                 if( tracks.find( track_id ) != tracks.end() )
                 {
-                    int level = SegmentSeeker::Seekpoint::DISABLED;
+                    SegmentSeeker::Seekpoint::TrustLevel level = SegmentSeeker::Seekpoint::DISABLED;
 
                     if( ! b_invalid_cue )
                     {
                         level = SegmentSeeker::Seekpoint::QUESTIONABLE; // TODO: var_InheritBool( ..., "mkv-trust-cues" );
                     }
 
-                    _seeker.add_seekpoint( track_id, level, cue_position, cue_mk_time );
+                    _seeker.add_seekpoint( track_id,
+                        SegmentSeeker::Seekpoint( cue_position, cue_mk_time, level ) );
                 }
                 else
                     msg_Warn( &sys.demuxer, "Found cue with invalid track id = %u", track_id );
@@ -647,8 +639,8 @@ bool matroska_segment_c::Preload( )
             for( tracks_map_t::const_iterator it = tracks.begin();
                  it != tracks.end(); ++it )
             {
-                _seeker.add_seekpoint( it->first, SegmentSeeker::Seekpoint::TRUSTED,
-                  cluster->GetElementPosition(), 0 );
+                _seeker.add_seekpoint( it->first,
+                    SegmentSeeker::Seekpoint( cluster->GetElementPosition(), 0 ) );
             }
 
             ep->Down();
@@ -796,9 +788,9 @@ bool matroska_segment_c::LoadSeekHeadItem( const EbmlCallbacks & ClassInfos, int
     return true;
 }
 
-bool matroska_segment_c::FastSeek( mtime_t i_mk_date, mtime_t i_mk_time_offset )
+bool matroska_segment_c::FastSeek( demux_t &demuxer, mtime_t i_mk_date, mtime_t i_mk_time_offset )
 {
-    if( Seek( i_mk_date, i_mk_time_offset ) )
+    if( Seek( demuxer, i_mk_date, i_mk_time_offset ) )
     {
         sys.i_start_pts = sys.i_pts;
         es_out_Control( sys.demuxer.out, ES_OUT_SET_NEXT_DISPLAY_TIME, sys.i_start_pts );
@@ -807,30 +799,51 @@ bool matroska_segment_c::FastSeek( mtime_t i_mk_date, mtime_t i_mk_time_offset )
     return false;
 }
 
-bool matroska_segment_c::Seek( mtime_t i_absolute_mk_date, mtime_t i_mk_time_offset )
+bool matroska_segment_c::Seek( demux_t &demuxer, mtime_t i_absolute_mk_date, mtime_t i_mk_time_offset )
 {
     SegmentSeeker::tracks_seekpoint_t seekpoints;
 
-    uint64_t i_seek_position = -1;
-    mtime_t i_mk_seek_time   = -1;
+    SegmentSeeker::fptr_t i_seek_position = std::numeric_limits<SegmentSeeker::fptr_t>::max();
+    mtime_t i_mk_seek_time = -1;
     mtime_t i_mk_date = i_absolute_mk_date - i_mk_time_offset;
+    SegmentSeeker::track_ids_t selected_tracks;
+    SegmentSeeker::track_ids_t priority;
 
     // reset information for all tracks //
 
     for( tracks_map_t::iterator it = tracks.begin(); it != tracks.end(); ++it )
     {
-        mkv_track_t& track = it->second;
+        mkv_track_t &track = *it->second;
 
         track.i_skip_until_fpos = -1;
         if( track.i_last_dts > VLC_TS_INVALID )
             track.b_discontinuity = true;
         track.i_last_dts        = VLC_TS_INVALID;
+
+        bool selected;
+        es_out_Control( demuxer.out, ES_OUT_GET_ES_STATE, track.p_es, &selected );
+        if ( selected )
+            selected_tracks.push_back( track.i_number );
+    }
+
+    if ( selected_tracks.empty() )
+    {
+        selected_tracks = priority_tracks;
+        priority = priority_tracks;
+    }
+    else
+    {
+        std::set_intersection(priority_tracks.begin(),priority_tracks.end(),
+                              selected_tracks.begin(),selected_tracks.end(),
+                              std::back_inserter(priority));
+        if (priority.empty()) // no video selected ?
+            priority = selected_tracks;
     }
 
     // find appropriate seekpoints //
 
     try {
-        seekpoints = _seeker.get_seekpoints( *this, i_mk_date, priority_tracks );
+        seekpoints = _seeker.get_seekpoints( *this, i_mk_date, priority, selected_tracks );
     }
     catch( std::exception const& e )
     {
@@ -842,14 +855,18 @@ bool matroska_segment_c::Seek( mtime_t i_absolute_mk_date, mtime_t i_mk_time_off
 
     for( SegmentSeeker::tracks_seekpoint_t::const_iterator it = seekpoints.begin(); it != seekpoints.end(); ++it )
     {
+        tracks_map_t::iterator trackit = tracks.find( it->first );
+        if ( trackit == tracks.end() )
+            continue; // there were blocks with unknown tracks
+
         if( i_seek_position > it->second.fpos )
         {
             i_seek_position = it->second.fpos;
             i_mk_seek_time  = it->second.pts;
         }
 
-        tracks.at( it->first ).i_skip_until_fpos = it->second.fpos;
-        tracks.at( it->first ).i_last_dts        = it->second.pts;
+        trackit->second->i_skip_until_fpos = it->second.fpos;
+        trackit->second->i_last_dts        = it->second.pts;
 
         msg_Dbg( &sys.demuxer, "seek: preroll{ track: %u, pts: %" PRId64 ", fpos: %" PRIu64 " } ",
           it->first, it->second.pts, it->second.fpos );
@@ -876,24 +893,22 @@ bool matroska_segment_c::Seek( mtime_t i_absolute_mk_date, mtime_t i_mk_time_off
 }
 
 
-int matroska_segment_c::FindTrackByBlock(tracks_map_t::iterator* p_track_it,
+mkv_track_t * matroska_segment_c::FindTrackByBlock(
                                              const KaxBlock *p_block, const KaxSimpleBlock *p_simpleblock )
 {
-    *p_track_it = tracks.end();
-
-    if( p_block == NULL && p_simpleblock == NULL )
-        return VLC_EGENERIC;
+    tracks_map_t::iterator track_it;
 
     if (p_block != NULL)
-    {
-        *p_track_it = tracks.find( p_block->TrackNum() );
-    }
+        track_it = tracks.find( p_block->TrackNum() );
     else if( p_simpleblock != NULL)
-    {
-        *p_track_it = tracks.find( p_simpleblock->TrackNum() );
-    }
+        track_it = tracks.find( p_simpleblock->TrackNum() );
+    else
+        track_it = tracks.end();
 
-    return *p_track_it != tracks.end() ? VLC_SUCCESS : VLC_EGENERIC;
+    if (track_it == tracks.end())
+        return NULL;
+
+    return track_it->second.get();
 }
 
 void matroska_segment_c::ComputeTrackPriority()
@@ -904,7 +919,7 @@ void matroska_segment_c::ComputeTrackPriority()
     for( tracks_map_t::const_iterator it = tracks.begin(); it != tracks.end();
          ++it )
     {
-        const tracks_map_t::mapped_type& track = it->second;
+        mkv_track_t &track = *it->second;
 
         bool flag = track.b_enabled && ( track.b_default || track.b_forced );
 
@@ -918,8 +933,8 @@ void matroska_segment_c::ComputeTrackPriority()
 
     for( tracks_map_t::iterator it = tracks.begin(); it != tracks.end(); ++it )
     {
-        tracks_map_t::key_type     track_id = it->first;
-        tracks_map_t::mapped_type& track    = it->second;
+        tracks_map_t::key_type track_id = it->first;
+        mkv_track_t          & track    = *it->second;
 
         if( unlikely( track.fmt.i_cat == UNKNOWN_ES || track.codec.empty() ) )
         {
@@ -960,7 +975,7 @@ void matroska_segment_c::ComputeTrackPriority()
         {
             int track_score = -1;
 
-            switch( it->second.fmt.i_cat )
+            switch( it->second->fmt.i_cat )
             {
                 case VIDEO_ES: ++track_score;
                 case AUDIO_ES: ++track_score;
@@ -968,7 +983,7 @@ void matroska_segment_c::ComputeTrackPriority()
                 default:
                   if( score < track_score )
                   {
-                      es_type = it->second.fmt.i_cat;
+                      es_type = it->second->fmt.i_cat;
                       score   = track_score;
                   }
             }
@@ -976,7 +991,7 @@ void matroska_segment_c::ComputeTrackPriority()
 
         for( tracks_map_t::const_iterator it = this->tracks.begin(); it != this->tracks.end(); ++it )
         {
-            if( it->second.fmt.i_cat == es_type )
+            if( it->second->fmt.i_cat == es_type )
                 priority_tracks.push_back( it->first );
         }
     }
@@ -1085,8 +1100,8 @@ bool matroska_segment_c::ESCreate()
 
     for( tracks_map_t::iterator it = tracks.begin(); it != tracks.end(); ++it )
     {
-        tracks_map_t::key_type     track_id = it->first;
-        tracks_map_t::mapped_type& track    = it->second;
+        tracks_map_t::key_type   track_id = it->first;
+        mkv_track_t            & track    = *it->second;
 
         if( unlikely( track.fmt.i_cat == UNKNOWN_ES || track.codec.empty() ) )
         {
@@ -1118,7 +1133,7 @@ void matroska_segment_c::ESDestroy( )
 
     for( tracks_map_t::iterator it = tracks.begin(); it != tracks.end(); ++it )
     {
-        tracks_map_t::mapped_type& track = it->second;
+        mkv_track_t & track = *it->second;
 
         if( track.p_es != NULL )
         {
@@ -1130,8 +1145,6 @@ void matroska_segment_c::ESDestroy( )
 
 int matroska_segment_c::BlockGet( KaxBlock * & pp_block, KaxSimpleBlock * & pp_simpleblock, bool *pb_key_picture, bool *pb_discardable_picture, int64_t *pi_duration )
 {
-    tracks_map_t::iterator track_it;
-
     pp_simpleblock = NULL;
     pp_block = NULL;
 
@@ -1214,7 +1227,10 @@ int matroska_segment_c::BlockGet( KaxBlock * & pp_block, KaxSimpleBlock * & pp_s
 
             if( ksblock.IsKeyframe() )
             {
-                vars.obj->_seeker.add_seekpoint( ksblock.TrackNum(), SegmentSeeker::Seekpoint::TRUSTED, ksblock.GetElementPosition(), ksblock.GlobalTimecode() / 1000 );
+                bool const b_valid_track = vars.obj->FindTrackByBlock( NULL, &ksblock ) != NULL;
+                if (b_valid_track)
+                    vars.obj->_seeker.add_seekpoint( ksblock.TrackNum(),
+                        SegmentSeeker::Seekpoint( ksblock.GetElementPosition(), ksblock.GlobalTimecode() / 1000 ) );
             }
         }
     };
@@ -1229,9 +1245,11 @@ int matroska_segment_c::BlockGet( KaxBlock * & pp_block, KaxSimpleBlock * & pp_s
             vars.block->ReadData( vars.obj->es.I_O() );
             vars.block->SetParent( *vars.obj->cluster );
 
-            if( vars.obj->tracks.at( kblock.TrackNum() ).fmt.i_cat == SPU_ES )
+            const mkv_track_t *p_track = vars.obj->FindTrackByBlock( &kblock, NULL );
+            if( p_track != NULL && p_track->fmt.i_cat == SPU_ES )
             {
-                vars.obj->_seeker.add_seekpoint( kblock.TrackNum(), SegmentSeeker::Seekpoint::TRUSTED, kblock.GetElementPosition(), kblock.GlobalTimecode() / 1000 );
+                vars.obj->_seeker.add_seekpoint( kblock.TrackNum(),
+                    SegmentSeeker::Seekpoint( kblock.GetElementPosition(), kblock.GlobalTimecode() / 1000 ) );
             }
 
             vars.obj->ep->Keep ();
@@ -1293,7 +1311,8 @@ int matroska_segment_c::BlockGet( KaxBlock * & pp_block, KaxSimpleBlock * & pp_s
         if( pp_simpleblock != NULL || ((el = ep->Get()) == NULL && pp_block != NULL) )
         {
             /* Check blocks validity to protect againts broken files */
-            if( FindTrackByBlock( &track_it, pp_block , pp_simpleblock ) )
+            const mkv_track_t *p_track = FindTrackByBlock( pp_block , pp_simpleblock );
+            if( p_track == NULL )
             {
                 ep->Unkeep();
                 pp_simpleblock = NULL;
@@ -1308,7 +1327,7 @@ int matroska_segment_c::BlockGet( KaxBlock * & pp_block, KaxSimpleBlock * & pp_s
             /* We have block group let's check if the picture is a keyframe */
             else if( *pb_key_picture )
             {
-                if( track_it->second.fmt.i_codec == VLC_CODEC_THEORA )
+                if( p_track->fmt.i_codec == VLC_CODEC_THEORA )
                 {
                     DataBuffer *    p_data = &pp_block->GetBuffer(0);
                     const uint8_t * p_buff = p_data->Buffer();

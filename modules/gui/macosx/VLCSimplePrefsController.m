@@ -27,7 +27,7 @@
 #import "CompatibilityFixes.h"
 #import "VLCSimplePrefsController.h"
 #import "prefs.h"
-#import <vlc_keys.h>
+#import <vlc_actions.h>
 #import <vlc_interface.h>
 #import <vlc_dialog.h>
 #import <vlc_modules.h>
@@ -44,133 +44,73 @@
 #import <Sparkle/Sparkle.h>                        //for o_intf_last_updateLabel
 #endif
 
-static const char *const ppsz_language[] =
-{
-    "auto",
-    "en",
-    "ar",
-    "bn",
-    "pt_BR",
-    "en_GB",
-    "el",
-    "bg",
-    "ca",
-    "zh_TW",
-    "cs",
-    "cy",
-    "da",
-    "nl",
-    "fi",
-    "et",
-    "eu",
-    "fr",
-    "ga",
-    "gd",
-    "gl",
-    "ka",
-    "de",
-    "he",
-    "hr",
-    "hu",
-    "hy",
-    "is",
-    "id",
-    "it",
-    "ja",
-    "ko",
-    "lt",
-    "mn",
-    "ms",
-    "nb",
-    "nn",
-    "kk",
-    "km",
-    "ne",
-    "oc",
-    "fa",
-    "pl",
-    "pt_PT",
-    "pa",
-    "ro",
-    "ru",
-    "zh_CN",
-    "si",
-    "sr",
-    "sk",
-    "sl",
-    "ckb",
-    "es",
-    "sv",
-    "te",
-    "tr",
-    "uk",
-    "vi",
-    "wa",
-    NULL,
-};
 
-static const char *const ppsz_language_text[] =
-{
-    N_("Auto"),
-    "American English",
-    "عربي",
-    "বাংলা",
-    "Português Brasileiro",
-    "British English",
-    "Νέα Ελληνικά",
-    "български език",
-    "Català",
-    "正體中文",
-    "Čeština",
-    "Cymraeg",
-    "Dansk",
-    "Nederlands",
-    "Suomi",
-    "eesti keel",
-    "Euskara",
-    "Français",
-    "Gaeilge",
-    "Gàidhlig",
-    "Galego",
-    "ქართული",
-    "Deutsch",
-    "עברית",
-    "hrvatski",
-    "Magyar",
-    "հայերեն",
-    "íslenska",
-    "Bahasa Indonesia",
-    "Italiano",
-    "日本語",
-    "한국어",
-    "lietuvių",
-    "Монгол хэл",
-    "Melayu",
-    "Bokmål",
-    "Nynorsk",
-    "Қазақ тілі",
-    "ភាសាខ្មែរ",
-    "नेपाली",
-    "Occitan",
-    "فارسی",
-    "Polski",
-    "Português",
-    "ਪੰਜਾਬੀ",
-    "Română",
-    "Русский",
-    "简体中文",
-    "සිංහල",
-    "српски",
-    "Slovensky",
-    "slovenščina",
-    "کوردیی سۆرانی",
-    "Español",
-    "Svenska",
-    "తెలుగు",
-    "Türkçe",
-    "украї́нська мо́ва",
-    "tiếng Việt",
-    "Walon",
+static struct {
+    const char iso[6];
+    const char name[34];
+    BOOL isRightToLeft;
+
+} const language_map[] = {
+    { "auto",  N_("Auto"),              NO },
+    { "en",    "American English",      NO },
+    { "ar",    "عربي",                  YES },
+    { "bn",    "বাংলা",                  NO },
+    { "pt_BR", "Português Brasileiro",  NO },
+    { "en_GB", "British English",       NO },
+    { "el",    "Νέα Ελληνικά",          NO },
+    { "bg",    "български език",        NO },
+    { "ca",    "Català",                NO },
+    { "zh_TW", "正體中文",               NO },
+    { "cs",    "Čeština",               NO },
+    { "cy",    "Cymraeg",               NO },
+    { "da",    "Dansk",                 NO },
+    { "nl",    "Nederlands",            NO },
+    { "fi",    "Suomi",                 NO },
+    { "et",    "eesti keel",            NO },
+    { "eu",    "Euskara",               NO },
+    { "fr",    "Français",              NO },
+    { "ga",    "Gaeilge",               NO },
+    { "gd",    "Gàidhlig",              NO },
+    { "gl",    "Galego",                NO },
+    { "ka",    "ქართული",               NO },
+    { "de",    "Deutsch",               NO },
+    { "he",    "עברית",                  YES },
+    { "hr",    "hrvatski",              NO },
+    { "hu",    "Magyar",                NO },
+    { "hy",    "հայերեն",                NO },
+    { "is",    "íslenska",              NO },
+    { "id",    "Bahasa Indonesia",      NO },
+    { "it",    "Italiano",              NO },
+    { "ja",    "日本語",                 NO },
+    { "ko",    "한국어",                  NO },
+    { "lt",    "lietuvių",              NO },
+    { "mn",    "Монгол хэл",            NO },
+    { "ms",    "Melayu",                NO },
+    { "nb",    "Bokmål",                NO },
+    { "nn",    "Nynorsk",               NO },
+    { "kk",    "Қазақ тілі",            NO },
+    { "km",    "ភាសាខ្មែរ",                NO },
+    { "ne",    "नेपाली",                  NO },
+    { "oc",    "Occitan",               NO },
+    { "fa",    "فارسی",                 YES },
+    { "pl",    "Polski",                NO },
+    { "pt_PT", "Português",             NO },
+    { "pa",    "ਪੰਜਾਬੀ",                  NO },
+    { "ro",    "Română",                NO },
+    { "ru",    "Русский",               NO },
+    { "zh_CN", "简体中文",               NO },
+    { "si",    "සිංහල",                NO },
+    { "sr",    "српски",                NO },
+    { "sk",    "Slovensky",             NO },
+    { "sl",    "slovenščina",           NO },
+    { "ckb",   "کوردیی سۆرانی",         YES },
+    { "es",    "Español",               NO },
+    { "sv",    "Svenska",               NO },
+    { "te",    "తెలుగు",                 NO },
+    { "tr",    "Türkçe",                NO },
+    { "uk",    "украї́нська мо́ва",       NO },
+    { "vi",    "tiếng Việt",            NO },
+    { "wa",    "Walon",                 NO }
 };
 
 static NSString* VLCSPrefsToolbarIdentifier = @"Our Simple Preferences Toolbar Identifier";
@@ -438,9 +378,7 @@ create_toolbar_item(NSString *itemIdent, NSString *name, NSString *desc, NSStrin
 #define config_GetLabel(a,b) __config_GetLabel(VLC_OBJECT(a),b)
 static inline const char * __config_GetLabel(vlc_object_t *p_this, const char *psz_name)
 {
-    module_config_t *p_config;
-
-    p_config = config_FindConfig(p_this, psz_name);
+    module_config_t *p_config = config_FindConfig(psz_name);
 
     /* sanity checks */
     if (!p_config) {
@@ -466,7 +404,7 @@ static inline const char * __config_GetLabel(vlc_object_t *p_this, const char *p
     module_config_t *p_item;
 
     [object removeAllItems];
-    p_item = config_FindConfig(VLC_OBJECT(p_intf), name);
+    p_item = config_FindConfig(name);
     /* serious problem, if no item found */
     assert(p_item);
 
@@ -514,7 +452,7 @@ static inline const char * __config_GetLabel(vlc_object_t *p_this, const char *p
     module_config_t *p_item;
 
     [object removeAllItems];
-    p_item = config_FindConfig(VLC_OBJECT(p_intf), name);
+    p_item = config_FindConfig(name);
 
     /* serious problem, if no item found */
     assert(p_item);
@@ -564,10 +502,10 @@ static inline const char * __config_GetLabel(vlc_object_t *p_this, const char *p
     NSUInteger sel = 0;
     const char *pref = NULL;
     pref = [[[NSUserDefaults standardUserDefaults] objectForKey:@"language"] UTF8String];
-    for (int x = 0; ppsz_language[x] != NULL; x++) {
-        [_intf_languagePopup addItemWithTitle:toNSStr(ppsz_language_text[x])];
+    for (int x = 0; x < ARRAY_SIZE(language_map); x++) {
+        [_intf_languagePopup addItemWithTitle:toNSStr(language_map[x].name)];
         if (pref) {
-            if (!strcmp(ppsz_language[x], pref))
+            if (!strcmp(language_map[x].iso, pref))
                 sel = x;
         }
     }
@@ -767,7 +705,6 @@ static inline const char * __config_GetLabel(vlc_object_t *p_this, const char *p
     /********************
      * hotkeys settings *
      ********************/
-    const struct hotkey *p_hotkeys = p_intf->obj.libvlc->p_hotkeys;
     _hotkeySettings = [[NSMutableArray alloc] init];
     NSMutableArray *tempArray_desc = [[NSMutableArray alloc] init];
     NSMutableArray *tempArray_names = [[NSMutableArray alloc] init];
@@ -898,6 +835,28 @@ static inline void save_string_list(intf_thread_t * p_intf, id object, const cha
     }
 }
 
++ (BOOL)updateRightToLeftSettings
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *isoCode = [defaults stringForKey:@"language"];
+
+    if (!isoCode || [isoCode isEqualToString:@"auto"]) {
+        // Automatic handling of right to left
+        [defaults removeObjectForKey:@"NSForceRightToLeftWritingDirection"];
+        [defaults removeObjectForKey:@"AppleTextDirection"];
+    } else {
+        for(int i = 0; i < ARRAY_SIZE(language_map); i++) {
+            if (!strcmp(language_map[i].iso, [isoCode UTF8String])) {
+                [defaults setBool:language_map[i].isRightToLeft forKey:@"NSForceRightToLeftWritingDirection"];
+                [defaults setBool:language_map[i].isRightToLeft forKey:@"AppleTextDirection"];
+                return YES;
+            }
+        }
+    }
+
+    return NO;
+}
+
 - (void)saveChangedSettings
 {
     NSString *tmpString;
@@ -916,7 +875,8 @@ static inline void save_string_list(intf_thread_t * p_intf, id object, const cha
     if (_intfSettingChanged) {
         NSUInteger index = [_intf_languagePopup indexOfSelectedItem];
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        [defaults setObject:toNSStr(ppsz_language[index]) forKey:@"language"];
+        [defaults setObject:toNSStr(language_map[index].iso) forKey:@"language"];
+        [VLCSimplePrefsController updateRightToLeftSettings];
         [defaults synchronize];
 
         config_PutInt(p_intf, "metadata-network-access", [_intf_artCheckbox state]);
@@ -1076,7 +1036,7 @@ static inline void save_string_list(intf_thread_t * p_intf, id object, const cha
         _hotkeyChanged = NO;
     }
 
-    [[VLCCoreInteraction sharedInstance] fixPreferences];
+    [[VLCCoreInteraction sharedInstance] fixIntfSettings];
 
     /* okay, let's save our changes to vlcrc */
     config_SaveConfigFile(p_intf);

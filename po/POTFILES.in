@@ -1,5 +1,6 @@
 # main sources
 include/vlc_access.h
+include/vlc_actions.h
 include/vlc_aout.h
 include/vlc_arrays.h
 include/vlc_bits.h
@@ -26,7 +27,6 @@ include/vlc_image.h
 include/vlc_input.h
 include/vlc_intf_strings.h
 include/vlc_iso_lang.h
-include/vlc_keys.h
 include/vlc/libvlc_events.h
 include/vlc/libvlc.h
 include/vlc/libvlc_media_list.h
@@ -70,7 +70,6 @@ src/config/core.c
 src/config/file.c
 src/config/help.c
 src/config/intf.c
-src/config/keys.c
 src/darwin/error.c
 src/extras/libc.c
 src/extras/tdestroy.c
@@ -100,6 +99,7 @@ src/interface/interface.c
 src/libvlc.c
 src/libvlc.h
 src/libvlc-module.c
+src/misc/actions.c
 src/misc/block.c
 src/misc/cpu.c
 src/misc/error.c
@@ -271,6 +271,7 @@ modules/audio_filter/channel_mixer/headphone.c
 modules/audio_filter/channel_mixer/mono.c
 modules/audio_filter/channel_mixer/remap.c
 modules/audio_filter/channel_mixer/simple.c
+modules/audio_filter/channel_mixer/spatialaudio.cpp
 modules/audio_filter/channel_mixer/trivial.c
 modules/audio_filter/chorus_flanger.c
 modules/audio_filter/compressor.c
@@ -580,6 +581,8 @@ modules/gui/macosx/prefs_widgets.h
 modules/gui/macosx/prefs_widgets.m
 modules/gui/macosx/VLCResumeDialogController.h
 modules/gui/macosx/VLCResumeDialogController.m
+modules/gui/macosx/VLCRendererMenuController.h
+modules/gui/macosx/VLCRendererMenuController.m
 modules/gui/macosx/VLCSimplePrefsController.h
 modules/gui/macosx/VLCSimplePrefsController.m
 modules/gui/macosx/VLCStringUtility.h
@@ -1122,7 +1125,6 @@ modules/video_output/android/window.c
 modules/video_output/caca.c
 modules/video_output/caopengllayer.m
 modules/video_output/decklink.cpp
-modules/video_output/directfb.c
 modules/video_output/drawable.c
 modules/video_output/evas.c
 modules/video_output/fb.c
@@ -1138,7 +1140,6 @@ modules/video_output/win32/directdraw.c
 modules/video_output/win32/events.c
 modules/video_output/win32/glwin32.c
 modules/video_output/win32/wingdi.c
-modules/video_output/sdl.c
 modules/video_output/vdummy.c
 modules/video_output/vmem.c
 modules/video_output/wayland/shell.c

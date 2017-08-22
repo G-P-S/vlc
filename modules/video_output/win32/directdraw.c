@@ -199,6 +199,9 @@ static int Open(vlc_object_t *object)
     vout_display_t *vd = (vout_display_t *)object;
     vout_display_sys_t *sys;
 
+    if ( !vd->obj.force && vd->source.projection_mode != PROJECTION_MODE_RECTANGULAR)
+        return VLC_EGENERIC; /* let a module who can handle it do it */
+
     /* Allocate structure */
     vd->sys = sys = calloc(1, sizeof(*sys));
     if (!sys)
@@ -233,7 +236,6 @@ static int Open(vlc_object_t *object)
     vout_display_info_t info = vd->info;
     info.is_slow = true;
     info.has_double_click = true;
-    info.has_hide_mouse = false;
     info.has_pictures_invalid = true;
 
     /* Interaction TODO support starting with wallpaper mode */
@@ -441,7 +443,7 @@ static int DirectXOpen(vout_display_t *vd, video_format_t *fmt)
         msg_Err(vd, "cannot initialize DirectX DirectDraw");
         return VLC_EGENERIC;
     }
-    UpdateRects(vd, NULL, NULL, true);
+    UpdateRects(vd, NULL, true);
 
     /* Create the picture pool */
     if (DirectXCreatePool(vd, &sys->sys.use_overlay, fmt)) {

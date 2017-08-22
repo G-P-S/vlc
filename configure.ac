@@ -1619,19 +1619,6 @@ AM_CONDITIONAL(BUILD_LUA, [test "${have_lua}" = "yes"])
 
 
 dnl
-dnl HTTP daemon
-dnl
-AC_ARG_ENABLE(httpd,
-  [AS_HELP_STRING([--disable-httpd],
-    [disable the built-in HTTP server (default enabled)])])
-if test "${enable_httpd}" != "no"
-then
-  AC_DEFINE(ENABLE_HTTPD, 1, Define if you want the HTTP daemon support)
-fi
-AM_CONDITIONAL(BUILD_HTTPD, [test "${enable_httpd}" != "no"])
-
-
-dnl
 dnl VideoLAN manager
 dnl
 AC_ARG_ENABLE(vlm,
@@ -2308,7 +2295,7 @@ AS_IF([test "${enable_avcodec}" != "no"], [
   case "${avfork}" in
     libav) av_codec_ver="57.16.0" ;;
     ffmpeg) av_codec_ver="57.37.100" ;;
-    *) AC_MSG_ERROR([Missing libav or FFmpeg])
+    *) AC_MSG_ERROR([Missing libav or FFmpeg. Pass --disable-avcodec to ignore this error.])
   esac
   PKG_CHECK_MODULES(AVCODEC,[libavcodec >= ${av_codec_ver} libavutil >= 52.0.0], [
     VLC_SAVE_FLAGS
@@ -3131,31 +3118,17 @@ AM_CONDITIONAL([HAVE_WAYLAND_EGL], [test "${have_wayland_egl}" = "yes"])
 
 
 dnl
-dnl  SDL module
+dnl  SDL image decoder module
 dnl
-AC_ARG_ENABLE(sdl,
-  [  --enable-sdl            SDL support (default enabled)])
 AC_ARG_ENABLE(sdl-image,
   [  --enable-sdl-image      SDL image support (default enabled)])
-if test "${enable_sdl}" != "no"
-then
-   PKG_CHECK_MODULES(SDL, [sdl >= 1.2.10], [
-      # SDL on Darwin is heavily patched and can only run SDL_image
-      if test "${SYS}" != "darwin"; then
-        VLC_ADD_PLUGIN([vout_sdl])
-      fi
-
-      # SDL_image
-      AS_IF([ test "${enable_sdl_image}" != "no"],[
-        PKG_CHECK_MODULES(SDL_IMAGE, [SDL_image >= 1.2.10], [
-          VLC_ADD_PLUGIN([sdl_image])],
-          [ AC_MSG_WARN([${SDL_IMAGE_PKG_ERRORS}. You should install it alongside your SDL package.])
-          ])
-      ])
-   ],[
-     AC_MSG_WARN([${SDL_PKG_ERRORS}.])
-   ])
-fi
+AS_IF([test "${enable_sdl_image}" != "no"],[
+  PKG_CHECK_MODULES(SDL_IMAGE, [SDL_image >= 1.2.10], [
+    VLC_ADD_PLUGIN([sdl_image])
+  ], [
+    AC_MSG_WARN([${SDL_IMAGE_PKG_ERRORS}. You should install it alongside your SDL package.])
+  ])
+])
 
 dnl
 dnl  freetype module
@@ -3323,70 +3296,6 @@ AC_CHECK_HEADER([linux/fb.h], [
 
 
 dnl
-dnl  DirectFB module
-dnl  try to find using: 1 - given location; 2 - directfb-config; 3 - pkg-config
-dnl  TODO: support for static linking
-dnl
-AC_ARG_ENABLE(directfb,
-  [  --enable-directfb       DirectFB support (default disabled)])
-AC_ARG_WITH(directfb,
-  [  --with-directfb=PATH    path to DirectFB headers and libraries])
-
-if test "${enable_directfb}" = "yes"; then
-    have_directfb="false"
-    CPPFLAGS_mydirectfb=
-    LIBS_mydirectfb=
-    if test "${with_directfb}" != "no" -a -n "${with_directfb}"; then
-        dnl Trying the given location
-        VLC_SAVE_FLAGS
-
-        CPPFLAGS_new="-I${with_directfb}/include -D_REENTRANT -D_GNU_SOURCE"
-        LIBS_new="-L${with_directfb}/lib/fusion/.libs/ -L${with_directfb}/lib/direct/.libs/ -L${with_directfb}/src/.libs/"
-
-        CPPFLAGS="${CPPFLAGS} ${CPPFLAGS_new}"
-        LIBS="${LIBS} ${LIBS_new}"
-
-        dnl FIXME: too obscure
-        AC_CHECK_HEADER([directfb.h], [
-            AC_CHECK_LIB([direct],[direct_initialize], [
-                AC_CHECK_LIB([fusion], [fusion_enter], [
-                    AC_CHECK_LIB([directfb], [DirectFBInit], have_directfb="true", have_directfb="false")
-                ], have_directfb="false")
-            ], have_directfb="false")
-        ], have_directfb="false")
-
-        VLC_RESTORE_FLAGS
-
-        if test "${have_directfb}" = "true"; then
-            LIBS_mydirectfb="${LIBS_new} -lz $LIBDL -ldirectfb -lfusion -ldirect -lpthread"
-            CPPFLAGS_mydirectfb="${CPPFLAGS_new}"
-        fi
-    else
-        dnl Look for directfb-config
-        AC_CHECK_PROG(DIRECTFB_CONFIG, [directfb-config], [false])
-        AS_IF(["${DIRECTFB_CONFIG}" != "false"], [
-            CPPFLAGS_mydirectfb="`${DIRECTFB_CONFIG} --cflags`"
-            LIBS_mydirectfb="`${DIRECTFB_CONFIG} --libs`"
-            have_directfb="true"
-        ], [
-            dnl Trying with pkg-config
-            PKG_CHECK_MODULES(DIRECTFB, directfb, [
-                CPPFLAGS_mydirectfb="${DIRECTFB_CFLAGS}"
-                LIBS_mydirectfb="${DIRECTFB_LIBS}"
-                have_directfb="true"
-                ], [have_directfb="false"])
-        ])
-    fi
-    if test "${have_directfb}" = "true"; then
-        VLC_ADD_PLUGIN([directfb])
-        VLC_ADD_CPPFLAGS([directfb],[${CPPFLAGS_mydirectfb}])
-        VLC_ADD_LIBS([directfb],[${LIBS_mydirectfb}])
-    else
-        AC_MSG_ERROR([${DIRECTFB_PKG_ERRORS}.])
-    fi
-fi
-
-dnl
 dnl  AA plugin
 dnl
 AC_ARG_ENABLE(aa,
@@ -3516,7 +3425,7 @@ AS_IF([test "${enable_alsa}" != "no"], [
     have_alsa="yes"
   ], [
     AS_IF([test "x${enable_alsa}" != "x"], [
-      AC_MSG_ERROR([$ALSA_PKG_ERRORS. alsa-lib 1.0.24 or later required.])
+      AC_MSG_ERROR([$ALSA_PKG_ERRORS. alsa-lib 1.0.24 or later required. Pass --disable-alsa to ignore this error.])
     ])
   ])
 ])

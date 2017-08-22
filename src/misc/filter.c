@@ -81,7 +81,10 @@ void filter_DelProxyCallbacks( vlc_object_t *obj, filter_t *filter,
     {
         char *name = *pname;
         if (!(var_Type(obj, name) & VLC_VAR_ISCOMMAND))
+        {
+            free(name);
             continue;
+        }
         int filter_var_type = var_Type(filter, name);
 
         if (filter_var_type & VLC_VAR_ISCOMMAND)
@@ -107,7 +110,7 @@ filter_t *filter_NewBlend( vlc_object_t *p_this,
 
     es_format_Init( &p_blend->fmt_out, VIDEO_ES, 0 );
 
-    p_blend->fmt_out.i_codec        = 
+    p_blend->fmt_out.i_codec        =
     p_blend->fmt_out.video.i_chroma = p_dst_chroma->i_chroma;
     p_blend->fmt_out.video.i_rmask  = p_dst_chroma->i_rmask;
     p_blend->fmt_out.video.i_gmask  = p_dst_chroma->i_gmask;

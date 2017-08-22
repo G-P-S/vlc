@@ -178,7 +178,7 @@ static void InitLevel(filter_t *filter, struct filter_level *range, const char *
 {
     int level;
 
-    module_config_t *cfg = config_FindConfig( VLC_OBJECT(filter), p_name);
+    module_config_t *cfg = config_FindConfig(p_name);
     range->min = cfg->min.f;
     range->max = cfg->max.f;
     range->default_val = def;
@@ -248,7 +248,7 @@ static int Open(vlc_object_t *obj)
 
     if (!dst->p_sys)
     {
-        msg_Dbg(filter, "D3D11 opaque without a texture");
+        msg_Dbg(filter, "D3D9 opaque without a texture");
         goto error;
     }
 
@@ -439,7 +439,7 @@ static void Close(vlc_object_t *obj)
 }
 
 vlc_module_begin()
-    set_description(N_("Direct3D9 deinterlacing filter"))
+    set_description(N_("Direct3D9 adjust filter"))
     set_capability("video filter", 0)
     set_category(CAT_VIDEO)
     set_subcategory(SUBCAT_VIDEO_VFILTER)

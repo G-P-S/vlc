@@ -209,6 +209,8 @@ audio_output_t *aout_New (vlc_object_t *parent)
     vlc_mutex_init (&owner->req.lock);
     vlc_mutex_init (&owner->dev.lock);
     vlc_mutex_init (&owner->vp.lock);
+    vlc_viewpoint_init (&owner->vp.value);
+    atomic_init (&owner->vp.update, false);
     owner->req.device = (char *)unset_str;
     owner->req.volume = -1.f;
     owner->req.mute = -1;
@@ -310,7 +312,7 @@ audio_output_t *aout_New (vlc_object_t *parent)
     text.psz_string = _("Audio filters");
     var_Change (aout, "audio-filter", VLC_VAR_SETTEXT, &text, NULL);
 
-    var_Create (aout, "viewpoint", VLC_VAR_ADDRESS  | VLC_VAR_DOINHERIT);
+    var_Create (aout, "viewpoint", VLC_VAR_ADDRESS );
     var_AddCallback (aout, "viewpoint", ViewpointCallback, NULL);
 
     var_Create (aout, "audio-visual", VLC_VAR_STRING | VLC_VAR_DOINHERIT);
@@ -322,7 +324,7 @@ audio_output_t *aout_New (vlc_object_t *parent)
                 VLC_VAR_STRING | VLC_VAR_DOINHERIT );
     text.psz_string = _("Replay gain");
     var_Change (aout, "audio-replay-gain-mode", VLC_VAR_SETTEXT, &text, NULL);
-    cfg = config_FindConfig (VLC_OBJECT(aout), "audio-replay-gain-mode");
+    cfg = config_FindConfig("audio-replay-gain-mode");
     if (likely(cfg != NULL))
         for (unsigned i = 0; i < cfg->list_count; i++)
         {
@@ -544,6 +546,7 @@ int aout_OutputNew (audio_output_t *aout, audio_sample_format_t *restrict fmt,
         }
 
         aout_FormatPrepare (fmt);
+        assert (aout_FormatNbChannels(fmt) > 0);
     }
 
     aout->current_sink_info.headphones = false;
@@ -558,7 +561,6 @@ int aout_OutputNew (audio_output_t *aout, audio_sample_format_t *restrict fmt,
                             i_nb_input_channels, i_forced_stereo_mode);
 
     aout_FormatPrepare (fmt);
-    assert (aout_FormatNbChannels(fmt) > 0);
     assert (fmt->i_bytes_per_frame > 0 && fmt->i_frame_length > 0);
     aout_FormatPrint (aout, "output", fmt);
     return 0;

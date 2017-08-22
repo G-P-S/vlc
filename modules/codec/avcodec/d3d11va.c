@@ -62,7 +62,7 @@ static void Close(vlc_va_t *, void **);
 
 vlc_module_begin()
     set_description(N_("Direct3D11 Video Acceleration"))
-    set_capability("hw decoder", 0)
+    set_capability("hw decoder", 110)
     set_category(CAT_INPUT)
     set_subcategory(SUBCAT_INPUT_VCODEC)
     set_callbacks(Open, Close)
@@ -110,6 +110,8 @@ struct vlc_va_sys_t
 {
     directx_sys_t                dx_sys;
     UINT                         totalTextureSlices;
+    unsigned                     textureWidth;
+    unsigned                     textureHeight;
 
 #if !defined(NDEBUG) && defined(HAVE_DXGIDEBUG_H)
     HINSTANCE                    dxgidebug_dll;
@@ -207,6 +209,11 @@ static struct va_pic_context *CreatePicContext(
         goto done;
     pic_ctx->s.destroy = d3d11_pic_context_destroy;
     pic_ctx->s.copy    = d3d11_pic_context_copy;
+
+    D3D11_TEXTURE2D_DESC txDesc;
+    ID3D11Texture2D_GetDesc((ID3D11Texture2D*)p_resource, &txDesc);
+
+    pic_ctx->picsys.formatTexture = txDesc.Format;
     pic_ctx->picsys.context = context;
     pic_ctx->picsys.slice_index = slice;
     pic_ctx->picsys.decoder = decoderSurface;
@@ -373,6 +380,8 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
             D3D11_TEXTURE2D_DESC dstDesc;
             ID3D11Texture2D_GetDesc( p_sys->texture[KNOWN_DXGI_INDEX], &dstDesc);
             sys->render = dstDesc.Format;
+            va->sys->textureWidth = dstDesc.Width;
+            va->sys->textureHeight = dstDesc.Height;
             va->sys->totalTextureSlices = dstDesc.ArraySize;
         }
     }
@@ -698,6 +707,23 @@ static int DxSetupOutput(vlc_va_t *va, const GUID *input, const video_format_t *
     return VLC_EGENERIC;
 }
 
+static bool CanUseDecoderPadding(directx_sys_t *dx_sys)
+{
+    IDXGIAdapter *pAdapter = D3D11DeviceAdapter(dx_sys->d3ddev);
+    if (!pAdapter)
+        return false;
+
+    DXGI_ADAPTER_DESC adapterDesc;
+    HRESULT hr = IDXGIAdapter_GetDesc(pAdapter, &adapterDesc);
+    IDXGIAdapter_Release(pAdapter);
+    if (FAILED(hr))
+        return false;
+
+    /* Qualcomm hardware has issues with textures and pixels that should not be
+    * part of the decoded area */
+    return adapterDesc.VendorId != 0x4D4F4351;
+}
+
 /**
  * It creates a Direct3D11 decoder using the given video format
  */
@@ -719,13 +745,20 @@ static int DxCreateDecoderSurfaces(vlc_va_t *va, int codec_id,
     /* On the Xbox 1/S, any decoding of H264 with one dimension over 2304
      * crashes totally the device */
     if (codec_id == AV_CODEC_ID_H264 &&
-        (dx_sys->va_pool.surface_width > 2304 || dx_sys->va_pool.surface_height > 2304) &&
+        (fmt->i_width > 2304 || fmt->i_height > 2304) &&
         isXboxHardware(dx_sys->d3ddev))
     {
-        msg_Warn(va, "%dx%d resolution not supported by your hardware", dx_sys->va_pool.surface_width, dx_sys->va_pool.surface_height);
+        msg_Warn(va, "%dx%d resolution not supported by your hardware", fmt->i_width, fmt->i_height);
         return VLC_EGENERIC;
     }
 #endif
+    if ((sys->textureWidth != fmt->i_width || sys->textureHeight != fmt->i_height) &&
+        !CanUseDecoderPadding(dx_sys))
+    {
+        msg_Dbg(va, "mismatching external pool sizes use the internal one %dx%d vs %dx%d",
+                sys->textureWidth, sys->textureHeight, fmt->i_width, fmt->i_height);
+        dx_sys->can_extern_pool = false;
+    }
 
     D3D11_VIDEO_DECODER_OUTPUT_VIEW_DESC viewDesc;
     ZeroMemory(&viewDesc, sizeof(viewDesc));

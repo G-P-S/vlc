@@ -759,7 +759,6 @@ static int OpenCommon(vout_display_t *vd)
     vd->prepare = Prepare;
     vd->display = Display;
     vd->control = Control;
-    vd->manage  = NULL;
     vd->info.is_slow = !sys->p_window->b_opaque;
 
     return VLC_SUCCESS;
@@ -1178,20 +1177,16 @@ static int Control(vout_display_t *vd, int query, va_list args)
     vout_display_sys_t *sys = vd->sys;
 
     switch (query) {
-    case VOUT_DISPLAY_HIDE_MOUSE:
-    case VOUT_DISPLAY_CHANGE_FULLSCREEN:
-        return VLC_SUCCESS;
     case VOUT_DISPLAY_CHANGE_SOURCE_CROP:
     case VOUT_DISPLAY_CHANGE_SOURCE_ASPECT:
     {
         msg_Dbg(vd, "change source crop/aspect");
-        const video_format_t *source = va_arg(args, const video_format_t *);
 
         if (query == VOUT_DISPLAY_CHANGE_SOURCE_CROP) {
-            video_format_CopyCrop(&sys->p_window->fmt, source);
+            video_format_CopyCrop(&sys->p_window->fmt, &vd->source);
             AndroidWindow_UpdateCrop(sys, sys->p_window);
         } else
-            CopySourceAspect(&sys->p_window->fmt, source);
+            CopySourceAspect(&sys->p_window->fmt, &vd->source);
 
         UpdateVideoSize(sys, &sys->p_window->fmt, sys->p_window->b_use_priv);
         FixSubtitleFormat(sys);

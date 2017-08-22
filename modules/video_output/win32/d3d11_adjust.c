@@ -180,7 +180,7 @@ static void InitLevel(filter_t *filter, struct filter_level *range, const char *
 {
     int level = 0;
 
-    module_config_t *cfg = config_FindConfig( VLC_OBJECT(filter), p_name);
+    module_config_t *cfg = config_FindConfig(p_name);
     if (unlikely(cfg == NULL))
     {
         range->min         = 0.;
@@ -318,6 +318,7 @@ static int Open(vlc_object_t *obj)
     if (!dst->p_sys)
     {
         msg_Dbg(filter, "D3D11 opaque without a texture");
+        picture_Release(dst);
         return VLC_EGENERIC;
     }
 

@@ -60,8 +60,8 @@
 /*****************************************************************************
  * Access: local prototypes
  *****************************************************************************/
-static block_t *ReadCompressed( access_t *, bool * );
-static int AccessControl ( access_t *, int, va_list );
+static block_t *ReadCompressed( stream_t *, bool * );
+static int AccessControl ( stream_t *, int, va_list );
 
 static int Demux       ( demux_t * );
 static int DemuxControl( demux_t *, int, va_list );
@@ -781,7 +781,7 @@ static int DemuxOpen( vlc_object_t *p_this )
  *****************************************************************************/
 static int AccessOpen( vlc_object_t *p_this )
 {
-    access_t     *p_access = (access_t*)p_this;
+    stream_t     *p_access = (stream_t*)p_this;
     access_sys_t *p_sys;
 
     p_access->p_sys = p_sys = (access_sys_t*)calloc( 1, sizeof( access_sys_t ) );
@@ -839,7 +839,7 @@ static void CommonClose( vlc_object_t *p_this, access_sys_t *p_sys )
  *****************************************************************************/
 static void AccessClose( vlc_object_t *p_this )
 {
-    access_t     *p_access = (access_t *)p_this;
+    stream_t     *p_access = (stream_t *)p_this;
     access_sys_t *p_sys    = (access_sys_t *)p_access->p_sys;
 
     ComContext ctx( COINIT_MULTITHREADED );
@@ -1759,7 +1759,7 @@ static size_t EnumDeviceCaps( vlc_object_t *p_this, IBaseFilter *p_filter,
 /*****************************************************************************
  * ReadCompressed: reads compressed (MPEG/DV) data from the device.
  *****************************************************************************/
-static block_t *ReadCompressed( access_t *p_access, bool *eof )
+static block_t *ReadCompressed( stream_t *p_access, bool *eof )
 {
     ComContext ctx( COINIT_MULTITHREADED );
 
@@ -1895,7 +1895,7 @@ static int Demux( demux_t *p_demux )
             p_block->i_pts = p_block->i_dts = i_pts;
 
             if( i_pts > VLC_TS_INVALID )
-                es_out_Control( p_demux->out, ES_OUT_SET_PCR, i_pts );
+                es_out_SetPCR( p_demux->out, i_pts );
             es_out_Send( p_demux->out, p_stream->p_es, p_block );
 
             i_samples--;
@@ -1908,7 +1908,7 @@ static int Demux( demux_t *p_demux )
 /*****************************************************************************
  * AccessControl:
  *****************************************************************************/
-static int AccessControl( access_t *p_access, int i_query, va_list args )
+static int AccessControl( stream_t *p_access, int i_query, va_list args )
 {
     access_sys_t *sys = (access_sys_t *)p_access->p_sys;
     bool    *pb_bool;

@@ -36,10 +36,10 @@
 #include <vlc_interface.h>
 #include <vlc_input.h>
 #include <vlc_aout.h>
-#include <vlc_vout.h>
+#include <vlc_viewpoint.h>
 #include <vlc_vout_osd.h>
 #include <vlc_playlist.h>
-#include <vlc_keys.h>
+#include <vlc_actions.h>
 #include "math.h"
 
 #include <assert.h>
@@ -133,6 +133,20 @@ static int MovedEvent( vlc_object_t *p_this, char const *psz_var,
     return VLC_SUCCESS;
 }
 
+static int ViewpointMovedEvent( vlc_object_t *p_this, char const *psz_var,
+                                vlc_value_t oldval, vlc_value_t newval,
+                                void *p_data )
+{
+    intf_thread_t *p_intf = (intf_thread_t *)p_data;
+    intf_sys_t    *p_sys = p_intf->p_sys;
+
+    (void) p_this; (void) psz_var; (void) oldval;
+
+    input_UpdateViewpoint( p_sys->p_input, newval.p_address, false );
+
+    return VLC_SUCCESS;
+}
+
 static int ButtonEvent( vlc_object_t *p_this, char const *psz_var,
                         vlc_value_t oldval, vlc_value_t newval, void *p_data )
 {
@@ -189,6 +203,8 @@ static void ChangeVout( intf_thread_t *p_intf, vout_thread_t *p_vout )
                              p_intf );
             var_DelCallback( p_old_vout, "mouse-button-down", ButtonEvent,
                              p_intf );
+            var_DelCallback( p_old_vout, "viewpoint-moved", ViewpointMovedEvent,
+                             p_intf );
         }
         vlc_object_release( p_old_vout );
     }
@@ -199,6 +215,8 @@ static void ChangeVout( intf_thread_t *p_intf, vout_thread_t *p_vout )
         var_AddCallback( p_sys->p_vout, "mouse-moved", MovedEvent,
                          p_intf );
         var_AddCallback( p_sys->p_vout, "mouse-button-down", ButtonEvent,
+                         p_intf );
+        var_AddCallback( p_sys->p_vout, "viewpoint-moved", ViewpointMovedEvent,
                          p_intf );
     }
 }
@@ -237,6 +255,8 @@ static void ChangeInput( intf_thread_t *p_intf, input_thread_t *p_input )
             var_DelCallback( p_old_vout, "mouse-moved", MovedEvent,
                              p_intf );
             var_DelCallback( p_old_vout, "mouse-button-down", ButtonEvent,
+                             p_intf );
+            var_DelCallback( p_old_vout, "viewpoint-moved", ViewpointMovedEvent,
                              p_intf );
         }
     }
@@ -448,11 +468,8 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
             SetBookmark( p_intf, i_action - ACTIONID_SET_BOOKMARK1 + 1 );
             break;
         case ACTIONID_PLAY_CLEAR:
-        {
-            playlist_t *p_playlist = pl_Get( p_intf );
             playlist_Clear( p_playlist, pl_Unlocked );
             break;
-        }
         case ACTIONID_VOL_UP:
         {
             float vol;
@@ -902,21 +919,25 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
             {
                 case ACTIONID_JUMP_BACKWARD_EXTRASHORT:
                     sign = -1;
+                    /* fall through */
                 case ACTIONID_JUMP_FORWARD_EXTRASHORT:
                     varname = "extrashort-jump-size";
                     break;
                 case ACTIONID_JUMP_BACKWARD_SHORT:
                     sign = -1;
+                    /* fall through */
                 case ACTIONID_JUMP_FORWARD_SHORT:
                     varname = "short-jump-size";
                     break;
                 case ACTIONID_JUMP_BACKWARD_MEDIUM:
                     sign = -1;
+                    /* fall through */
                 case ACTIONID_JUMP_FORWARD_MEDIUM:
                     varname = "medium-jump-size";
                     break;
                 case ACTIONID_JUMP_BACKWARD_LONG:
                     sign = -1;
+                    /* fall through */
                 case ACTIONID_JUMP_FORWARD_LONG:
                     varname = "long-jump-size";
                     break;
@@ -1333,7 +1354,6 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
         case ACTIONID_SUBTITLE_TEXT_SCALE_DOWN:
         case ACTIONID_SUBTITLE_TEXT_SCALE_UP:
         case ACTIONID_SUBTITLE_TEXT_SCALE_NORMAL:
-        {
             if( p_vout )
             {
                 int i_scale;
@@ -1350,7 +1370,7 @@ static int PutAction( intf_thread_t *p_intf, input_thread_t *p_input,
                 var_SetInteger( p_playlist, "sub-text-scale", i_scale );
                 DisplayMessage( p_vout, _( "Subtitle text scale %d%%" ), i_scale );
             }
-        }
+            break;
 
         /* Input + video output */
         case ACTIONID_POSITION:

@@ -284,10 +284,10 @@ void config_ChainParse( vlc_object_t *p_this, const char *psz_prefix,
         char name[plen + strlen( optname )];
         snprintf( name, sizeof (name), "%s%s", psz_prefix, optname );
         if( var_Create( p_this, name,
-                        config_GetType( p_this, name ) | VLC_VAR_DOINHERIT ) )
+                        config_GetType( name ) | VLC_VAR_DOINHERIT ) )
             return /* VLC_xxx */;
 
-        module_config_t* p_conf = config_FindConfig( p_this, name );
+        module_config_t* p_conf = config_FindConfig( name );
         if( p_conf )
         {
             switch( CONFIG_CLASS( p_conf->i_type ) )
@@ -356,7 +356,7 @@ void config_ChainParse( vlc_object_t *p_this, const char *psz_prefix,
                   b_once ? (ppsz_options[i] + 1) : ppsz_options[i] );
 
         /* Check if the option is deprecated */
-        p_conf = config_FindConfig( p_this, name );
+        p_conf = config_FindConfig( name );
 
         /* This is basically cut and paste from src/misc/configuration.c
          * with slight changes */
@@ -375,7 +375,7 @@ void config_ChainParse( vlc_object_t *p_this, const char *psz_prefix,
         /* </Check if the option is deprecated> */
 
         /* get the type of the variable */
-        i_type = config_GetType( p_this, psz_name );
+        i_type = config_GetType( psz_name );
         if( !i_type )
         {
             msg_Warn( p_this, "unknown option %s (value=%s)",

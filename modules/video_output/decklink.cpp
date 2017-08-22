@@ -1066,12 +1066,10 @@ static int OpenVideo(vlc_object_t *p_this)
     video_format_Clean( &vd->fmt );
     video_format_Copy( &vd->fmt, &sys->video.currentfmt );
 
-    vd->info.has_hide_mouse = true;
     vd->pool    = PoolVideo;
     vd->prepare = PrepareVideo;
     vd->display = DisplayVideo;
     vd->control = ControlVideo;
-    vd->manage  = NULL;
 
     return VLC_SUCCESS;
 }

@@ -228,6 +228,9 @@ static int Open(vlc_object_t *object)
     vout_display_t *vd = (vout_display_t *)object;
     vout_display_sys_t *sys;
 
+    if ( !vd->obj.force && vd->source.projection_mode != PROJECTION_MODE_RECTANGULAR)
+        return VLC_EGENERIC; /* let a module who can handle it do it */
+
     OSVERSIONINFO winVer;
     winVer.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
     if(GetVersionEx(&winVer) && winVer.dwMajorVersion < 6 && !object->obj.force)
@@ -271,7 +274,6 @@ static int Open(vlc_object_t *object)
     vout_display_info_t info = vd->info;
     info.is_slow = !is_d3d9_opaque(fmt.i_chroma);
     info.has_double_click = true;
-    info.has_hide_mouse = false;
     info.has_pictures_invalid = !is_d3d9_opaque(fmt.i_chroma);
     if (var_InheritBool(vd, "direct3d9-hw-blending") &&
         sys->d3dregion_format != D3DFMT_UNKNOWN &&
@@ -937,7 +939,7 @@ static int Direct3D9Open(vout_display_t *vd, video_format_t *fmt)
        return VLC_EGENERIC;
     }
 
-    UpdateRects(vd, NULL, NULL, true);
+    UpdateRects(vd, NULL, true);
 
     if (Direct3D9CreateResources(vd, fmt)) {
         msg_Err(vd, "Failed to allocate resources");
@@ -993,7 +995,7 @@ static int Direct3D9Reset(vout_display_t *vd)
         return VLC_EGENERIC;
     }
 
-    UpdateRects(vd, NULL, NULL, true);
+    UpdateRects(vd, NULL, true);
 
     /* re-create them */
     if (Direct3D9CreateResources(vd, &vd->fmt)) {

@@ -186,7 +186,7 @@ static int Demux( demux_t *p_demux )
 
     i_frames = p_block->i_buffer / p_sys->i_frame_size;
     p_block->i_dts = p_block->i_pts = date_Get( &p_sys->pts );
-    es_out_Control( p_demux->out, ES_OUT_SET_PCR, p_block->i_pts );
+    es_out_SetPCR( p_demux->out, p_block->i_pts );
     es_out_Send( p_demux->out, p_sys->p_es, p_block );
 
     date_Increment( &p_sys->pts, i_frames * FRAME_LENGTH );
@@ -212,8 +212,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
     demux_sys_t *p_sys  = p_demux->p_sys;
 
     return demux_vaControlHelper( p_demux->s, HEADER_LENGTH,
-                                  p_sys->i_data_size
-                                  ? HEADER_LENGTH + p_sys->i_data_size : -1,
+        p_sys->i_data_size ? (int64_t)HEADER_LENGTH + p_sys->i_data_size : -1,
                                   p_sys->i_bitrate, p_sys->i_frame_size,
                                   i_query, args );
 }

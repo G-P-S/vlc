@@ -36,6 +36,7 @@
     BOOL _isRTL;
     BOOL _isFlipped;
     double _defaultValue;
+    double _normalizedDefaultValue;
     NSColor *_defaultTickMarkColor;
 }
 @end
@@ -76,6 +77,7 @@
         _snapsToDefault = NO;
     }
     _defaultValue = value;
+    _normalizedDefaultValue = (value == DBL_MAX) ? DBL_MAX : [self normalizedValue:_defaultValue];
     [[self controlView] setNeedsDisplay:YES];
 }
 
@@ -108,51 +110,45 @@
 - (void)setupSelf
 {
     _defaultValue = DBL_MAX;
+    _normalizedDefaultValue = DBL_MAX;
     _isRTL = ([self userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft);
     _isFlipped = [[self controlView] isFlipped];
     _defaultTickMarkColor = [NSColor grayColor];
 }
 
 /*
- * Adapted from GNUstep NSSliderCell
- * - (NSRect)knobRectFlipped:(BOOL)flipped
- *
  * Calculates the knobRect for a given position
  * This is later used to draw the default tick mark in the center of
  * where the knob would be, when it is at the default value.
  */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpartial-availability"
+
 - (NSRect)knobRectFlipped:(BOOL)flipped forValue:(double)doubleValue
-{
-    NSRect superRect = [super knobRectFlipped:flipped];
-    NSPoint	origin = _trackRect.origin;
-    NSSize size = superRect.size;
+ {
+     NSRect resultRect;
+     double val = [self normalizedValue:doubleValue] / 100;
 
-    if ([self isVertical] && flipped) {
-        doubleValue = _maxValue + _minValue - doubleValue;
-    }
+     if (self.isVertical) {
+         resultRect.origin.x = -1;
+         resultRect.origin.y = (NSHeight(_trackRect) - self.knobThickness) * val;
+         if (_isRTL)
+             resultRect.origin.y = (NSHeight(_trackRect) - self.knobThickness) - resultRect.origin.y;
+     } else {
+         resultRect.origin.x = (NSWidth(_trackRect) - self.knobThickness) * val;
+         resultRect.origin.y = -1;
+         if (_isRTL)
+             resultRect.origin.x = (NSWidth(_trackRect) - self.knobThickness) - resultRect.origin.x;
+     }
 
-    doubleValue = (doubleValue - _minValue) / (_maxValue - _minValue);
+     resultRect.size.height = self.knobThickness;
+     resultRect.size.width = self.knobThickness;
 
-    if ([self isVertical] == YES) {
-        origin.x = superRect.origin.x;
-        origin.y += (_trackRect.size.height - size.height) * doubleValue;
-    } else {
-        origin.x += ((_trackRect.size.width - size.width) * doubleValue);
-        origin.y = superRect.origin.y;
-    }
-
-    return NSMakeRect(origin.x, origin.y, size.width, size.height);
-}
+     return [self.controlView backingAlignedRect:resultRect options:NSAlignAllEdgesNearest];
+ }
 
 #pragma mark -
 #pragma mark Overwritten super methods
-
-- (NSRect)knobRectFlipped:(BOOL)flipped
-{
-    return [self knobRectFlipped:flipped forValue:[self doubleValue]];
-}
 
 - (void)drawWithFrame:(NSRect)cellFrame inView:(NSView *)controlView
 {
@@ -206,11 +202,22 @@
 }
 #pragma clang diagnostic pop
 
+- (double)normalizedValue:(double)value
+{
+    double min = [self minValue];
+    double max = [self maxValue];
+
+    max -= min;
+    value -= min;
+
+    return (value / max) * 100;
+}
+
 - (BOOL)continueTracking:(NSPoint)lastPoint at:(NSPoint)currentPoint inView:(NSView *)controlView
 {
-    double oldValue = [self doubleValue];
+    double oldValue = [self normalizedValue:self.doubleValue];
     BOOL result = [super continueTracking:lastPoint at:currentPoint inView:controlView];
-    double newValue = [self doubleValue];
+    double newValue = [self normalizedValue:self.doubleValue];
 
     // If no change, nothing to do.
     if (newValue == oldValue)
@@ -219,15 +226,14 @@
     // Determine in which direction slider is moving
     BOOL sliderMovingForward = (oldValue > newValue) ? NO : YES;
 
-    // Calculate snap-threshhold
-    double range = self.maxValue - self.minValue;
-    double thresh = (range * 0.01) * 7;
+    // Claculate snap-threshhold
+    double thresh = 100 * (self.knobThickness/3) / _trackRect.size.width;
 
     // Snap to default value
-    if (ABS(newValue - _defaultValue) < thresh && _snapsToDefault) {
-        if (sliderMovingForward && newValue > _defaultValue) {
+    if (_snapsToDefault && ABS(newValue - _normalizedDefaultValue) < thresh) {
+        if (sliderMovingForward && newValue > _normalizedDefaultValue) {
             [self setDoubleValue:_defaultValue];
-        } else if (!sliderMovingForward && newValue < _defaultValue) {
+        } else if (!sliderMovingForward && newValue < _normalizedDefaultValue) {
             [self setDoubleValue:_defaultValue];
         }
     }

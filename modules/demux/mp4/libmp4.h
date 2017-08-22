@@ -1579,6 +1579,11 @@ typedef struct
 typedef struct
 {
     uint32_t i_projection_mode;
+    enum {
+        XML360_MONOSCOPIC = 0,
+        XML360_STEREOSCOPIC_TOP_BOTTOM = 1,
+        XML360_STEREOSCOPIC_LEFT_RIGHT = 2,
+    } e_stereo_mode;
 } MP4_Box_data_360_t;
 
 
@@ -1895,6 +1900,11 @@ static const UUID_t TfxdBoxUUID = {
 static const UUID_t XML360BoxUUID = {
                 { 0xff, 0xcc, 0x82, 0x63, 0xf8, 0x55, 0x4a, 0x93,
                   0x88, 0x14, 0x58, 0x7a, 0x02, 0x52, 0x1f, 0xdd } };
+
+/* PS3 3D by HMMP video encoder */
+static const UUID_t PS3DDSBoxUUID = {
+                { 0x33, 0x44, 0x44, 0x53, 0x21, 0xd2, 0x4f, 0xce,
+                  0xbb, 0x88, 0x69, 0x5c, 0xfa, 0xc9, 0xc7, 0x40 } };
 
 /*****************************************************************************
  * MP4_Seek : non seekable stream safe seek

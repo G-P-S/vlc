@@ -71,7 +71,7 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/VLCAudioEffectsWindowController.h gui/macosx/VLCAudioEffectsWindowController.m \
 	gui/macosx/VLCBookmarksWindowController.h gui/macosx/VLCBookmarksWindowController.m \
 	gui/macosx/VLCCoreDialogProvider.h gui/macosx/VLCCoreDialogProvider.m \
-	gui/macosx/VLCDebugMessageWindowController.h gui/macosx/VLCDebugMessageWindowController.m \
+	gui/macosx/VLCLogWindowController.h gui/macosx/VLCLogWindowController.m \
 	gui/macosx/VLCHUDSliderCell.h gui/macosx/VLCHUDSliderCell.m \
 	gui/macosx/VLCHUDButtonCell.h gui/macosx/VLCHUDButtonCell.m \
 	gui/macosx/VLCHUDCheckboxCell.h gui/macosx/VLCHUDCheckboxCell.m \
@@ -100,7 +100,10 @@ libmacosx_plugin_la_SOURCES = \
 	gui/macosx/VLCTimeField.h gui/macosx/VLCTimeField.m \
 	gui/macosx/VLCHexNumberFormatter.h gui/macosx/VLCHexNumberFormatter.m \
 	gui/macosx/VLCSlider.h gui/macosx/VLCSlider.m \
-	gui/macosx/VLCSliderCell.h gui/macosx/VLCSliderCell.m
+	gui/macosx/VLCSliderCell.h gui/macosx/VLCSliderCell.m \
+	gui/macosx/VLCVolumeSlider.h gui/macosx/VLCVolumeSlider.m \
+	gui/macosx/VLCVolumeSliderCell.h gui/macosx/VLCVolumeSliderCell.m \
+	gui/macosx/VLCBottomBarView.h gui/macosx/VLCBottomBarView.m
 
 # User interface compilation
 
@@ -131,7 +134,6 @@ nodist_libmacosx_plugin_la_SOURCES = \
 	gui/macosx/UI/TimeSelectionPanel.nib \
 	gui/macosx/UI/VideoEffects.nib \
 	gui/macosx/UI/VLCFullScreenPanel.nib \
-	gui/macosx/UI/VLCRendererDialog.nib \
 	gui/macosx/UI/VLCStatusBarIconMainMenu.nib
 
 EXTRA_DIST += \
@@ -161,7 +163,6 @@ EXTRA_DIST += \
 	gui/macosx/UI/TimeSelectionPanel.xib \
 	gui/macosx/UI/VideoEffects.xib \
 	gui/macosx/UI/VLCFullScreenPanel.xib \
-	gui/macosx/UI/VLCRendererDialog.xib \
 	gui/macosx/UI/VLCStatusBarIconMainMenu.xib
 
 xib_verbose = $(xib_verbose_$(V))
@@ -213,8 +214,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow/backward-6btns-pressed@2x.png \
 	gui/macosx/Resources/mainwindow/backward-6btns.png \
 	gui/macosx/Resources/mainwindow/backward-6btns@2x.png \
-	gui/macosx/Resources/mainwindow/bottom-background.png \
-	gui/macosx/Resources/mainwindow/bottom-background@2x.png \
 	gui/macosx/Resources/mainwindow/dropzone-background.png \
 	gui/macosx/Resources/mainwindow/dropzone.png \
 	gui/macosx/Resources/mainwindow/dropzone@2x.png \
@@ -266,20 +265,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow/previous-6btns-pressed@2x.png \
 	gui/macosx/Resources/mainwindow/previous-6btns.png \
 	gui/macosx/Resources/mainwindow/previous-6btns@2x.png \
-	gui/macosx/Resources/mainwindow/progression-fill-left.png \
-	gui/macosx/Resources/mainwindow/progression-fill-left@2x.png \
-	gui/macosx/Resources/mainwindow/progression-fill-middle.png \
-	gui/macosx/Resources/mainwindow/progression-fill-middle@2x.png \
-	gui/macosx/Resources/mainwindow/progression-fill-right.png \
-	gui/macosx/Resources/mainwindow/progression-fill-right@2x.png \
-	gui/macosx/Resources/mainwindow/progression-knob.png \
-	gui/macosx/Resources/mainwindow/progression-knob@2x.png \
-	gui/macosx/Resources/mainwindow/progression-track-wrapper-left.png \
-	gui/macosx/Resources/mainwindow/progression-track-wrapper-left@2x.png \
-	gui/macosx/Resources/mainwindow/progression-track-wrapper-middle.png \
-	gui/macosx/Resources/mainwindow/progression-track-wrapper-middle@2x.png \
-	gui/macosx/Resources/mainwindow/progression-track-wrapper-right.png \
-	gui/macosx/Resources/mainwindow/progression-track-wrapper-right@2x.png \
 	gui/macosx/Resources/mainwindow/repeat-all-pressed.png \
 	gui/macosx/Resources/mainwindow/repeat-all-pressed@2x.png \
 	gui/macosx/Resources/mainwindow/repeat-all.png \
@@ -309,10 +294,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow/volume-high@2x.png \
 	gui/macosx/Resources/mainwindow/volume-low.png \
 	gui/macosx/Resources/mainwindow/volume-low@2x.png \
-	gui/macosx/Resources/mainwindow/volume-slider-knob.png \
-	gui/macosx/Resources/mainwindow/volume-slider-knob@2x.png \
-	gui/macosx/Resources/mainwindow/volume-slider-track.png \
-	gui/macosx/Resources/mainwindow/volume-slider-track@2x.png \
 	gui/macosx/Resources/mainwindow_dark/backward-3btns-dark-pressed.png \
 	gui/macosx/Resources/mainwindow_dark/backward-3btns-dark-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_dark/backward-3btns-dark.png \
@@ -321,12 +302,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_dark/backward-6btns-dark-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_dark/backward-6btns-dark.png \
 	gui/macosx/Resources/mainwindow_dark/backward-6btns-dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/bottom-background_dark.png \
-	gui/macosx/Resources/mainwindow_dark/bottom-background_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/bottomdark-left.png \
-	gui/macosx/Resources/mainwindow_dark/bottomdark-left@2x.png \
-	gui/macosx/Resources/mainwindow_dark/bottomdark-right.png \
-	gui/macosx/Resources/mainwindow_dark/bottomdark-right@2x.png \
 	gui/macosx/Resources/mainwindow_dark/effects-double-buttons-pressed_dark.png \
 	gui/macosx/Resources/mainwindow_dark/effects-double-buttons-pressed_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark/effects-double-buttons_dark.png \
@@ -375,20 +350,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_dark/previous-6btns-dark-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_dark/previous-6btns-dark.png \
 	gui/macosx/Resources/mainwindow_dark/previous-6btns-dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progressbar-fill-left_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progressbar-fill-left_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progressbar-fill-middle_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progressbar-fill-middle_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progressbar-fill-right_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progressbar-fill-right_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progression-knob_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progression-knob_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progression-track-wrapper-left_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progression-track-wrapper-left_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progression-track-wrapper-middle_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progression-track-wrapper-middle_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/progression-track-wrapper-right_dark.png \
-	gui/macosx/Resources/mainwindow_dark/progression-track-wrapper-right_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark/repeat-all-blue-pressed_dark.png \
 	gui/macosx/Resources/mainwindow_dark/repeat-all-blue-pressed_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark/repeat-all-blue_dark.png \
@@ -513,10 +474,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_dark/volume-high_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark/volume-low_dark.png \
 	gui/macosx/Resources/mainwindow_dark/volume-low_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/volume-slider-knob_dark.png \
-	gui/macosx/Resources/mainwindow_dark/volume-slider-knob_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark/volume-slider-track_dark.png \
-	gui/macosx/Resources/mainwindow_dark/volume-slider-track_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark/window-resize.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-backward-3btns-dark-pressed.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-backward-3btns-dark-pressed@2x.png \
@@ -526,12 +483,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-backward-6btns-dark-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-backward-6btns-dark.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-backward-6btns-dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-bottom-background_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-bottom-background_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-bottomdark-left.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-bottomdark-left@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-bottomdark-right.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-bottomdark-right@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-effects-double-buttons-pressed_dark.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-effects-double-buttons-pressed_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-effects-double-buttons_dark.png \
@@ -614,10 +565,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-high_dark@2x.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-low_dark.png \
 	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-low_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-slider-knob_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-slider-knob_dark@2x.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-slider-track_dark.png \
-	gui/macosx/Resources/mainwindow_dark_yosemite/ys-volume-slider-track_dark@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-backward-3btns-pressed.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-backward-3btns-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-backward-3btns.png \
@@ -626,8 +573,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_yosemite/ys-backward-6btns-pressed@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-backward-6btns.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-backward-6btns@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-bottom-background.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-bottom-background@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-dropzone.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-dropzone@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-effects-double-buttons-pressed.png \
@@ -706,10 +651,6 @@ libmacosx_plugin_la_RES = \
 	gui/macosx/Resources/mainwindow_yosemite/ys-volume-high@2x.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-volume-low.png \
 	gui/macosx/Resources/mainwindow_yosemite/ys-volume-low@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-volume-slider-knob.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-volume-slider-knob@2x.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-volume-slider-track.png \
-	gui/macosx/Resources/mainwindow_yosemite/ys-volume-slider-track@2x.png \
 	gui/macosx/Resources/noart.png \
 	gui/macosx/Resources/Pref-Icons/VLCAudioCone.png \
 	gui/macosx/Resources/Pref-Icons/VLCHotkeysCone.png \

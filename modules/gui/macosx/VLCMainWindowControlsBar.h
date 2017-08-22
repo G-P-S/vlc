@@ -25,6 +25,7 @@
 #import <Cocoa/Cocoa.h>
 #import "misc.h"
 #import "VLCControlsBarCommon.h"
+#import "VLCVolumeSlider.h"
 
 /*****************************************************************************
  * VLCMainWindowControlsBar
@@ -48,8 +49,7 @@
 @property (readwrite, strong) IBOutlet NSButton *shuffleButton;
 @property (readwrite, strong) IBOutlet NSLayoutConstraint *shuffleButtonWidthConstraint;
 
-@property (readwrite, strong) IBOutlet VLCVolumeSliderCommon * volumeSlider;
-@property (readwrite, strong) IBOutlet NSImageView *volumeTrackImageView;
+@property (readwrite, strong) IBOutlet VLCVolumeSlider *volumeSlider;
 @property (readwrite, strong) IBOutlet NSButton *volumeDownButton;
 @property (readwrite, strong) IBOutlet NSButton *volumeUpButton;
 

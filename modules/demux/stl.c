@@ -183,7 +183,7 @@ static int Demux(demux_t *demux)
 
         if (!sys->b_slave && sys->b_first_time)
         {
-            es_out_Control(demux->out, ES_OUT_SET_PCR, VLC_TS_0 + i_barrier);
+            es_out_SetPCR(demux->out, VLC_TS_0 + i_barrier);
             sys->b_first_time = false;
         }
 
@@ -213,7 +213,7 @@ static int Demux(demux_t *demux)
 
     if (!sys->b_slave)
     {
-        es_out_Control(demux->out, ES_OUT_SET_PCR, VLC_TS_0 + i_barrier);
+        es_out_SetPCR(demux->out, VLC_TS_0 + i_barrier);
         sys->next_date += CLOCK_FREQ / 8;
     }
 
@@ -292,6 +292,7 @@ static int Open(vlc_object_t *object)
             s->count = 0;
     }
 
+    demux->p_sys = sys;
     if (sys->count == 0 ||
         vlc_stream_Seek(demux->s, 1024 + 128LL * sys->index[0].blocknumber) != VLC_SUCCESS)
     {

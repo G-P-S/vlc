@@ -46,7 +46,7 @@
 #import "VLCMainWindowControlsBar.h"
 #import "VLCExtensionsManager.h"
 #import "VLCConvertAndSaveWindowController.h"
-#import "VLCDebugMessageWindowController.h"
+#import "VLCLogWindowController.h"
 #import "VLCAddonsWindowController.h"
 #import "VLCTimeSelectionPanelController.h"
 #import "NSScreen+VLCAdditions.h"
@@ -296,7 +296,7 @@
     module_config_t *p_item;
 
     [menu removeAllItems];
-    p_item = config_FindConfig(VLC_OBJECT(getIntf()), psz_name);
+    p_item = config_FindConfig(psz_name);
 
     if (!p_item) {
         msg_Err(getIntf(), "couldn't create menu int list for item '%s' as it does not exist", psz_name);

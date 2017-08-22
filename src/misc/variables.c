@@ -316,7 +316,7 @@ int var_Create( vlc_object_t *p_this, const char *psz_name, int i_type )
     p_var->choices_text.p_values = NULL;
 
     p_var->b_incallback = false;
-    p_var->value_callbacks = (callback_table_t){ 0 };
+    p_var->value_callbacks = (callback_table_t){ 0, NULL };
 
     /* Always initialize the variable, even if it is a list variable; this
      * will lead to errors if the variable is not initialized, but it will
@@ -1054,7 +1054,7 @@ void var_OptionParse( vlc_object_t *p_obj, const char *psz_option,
     if( psz_value != NULL )
         *psz_value++ = '\0';
 
-    i_type = config_GetType( p_obj, psz_name );
+    i_type = config_GetType( psz_name );
     if( !i_type && !psz_value )
     {
         /* check for "no-foo" or "nofoo" */
@@ -1069,7 +1069,7 @@ void var_OptionParse( vlc_object_t *p_obj, const char *psz_option,
         else goto cleanup;           /* Option doesn't exist */
 
         b_isno = true;
-        i_type = config_GetType( p_obj, psz_name );
+        i_type = config_GetType( psz_name );
     }
     if( !i_type ) goto cleanup; /* Option doesn't exist */
 

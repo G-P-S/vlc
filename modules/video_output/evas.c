@@ -744,15 +744,12 @@ Control( vout_display_t *vd, int i_query, va_list ap )
     {
     case VOUT_DISPLAY_CHANGE_SOURCE_ASPECT:
     {
-        const video_format_t *p_source;
         vout_display_place_t place;
         video_format_t fmt;
 
         msg_Dbg( vd, "VOUT_DISPLAY_CHANGE_SOURCE_ASPECT" );
 
-        p_source = va_arg( ap, const video_format_t * );
-
-        video_format_ApplyRotation( &fmt, p_source );
+        video_format_ApplyRotation( &fmt, &vd->source );
         vout_display_PlacePicture( &place, &fmt, vd->cfg, false );
 
         if( place.width != (unsigned) sys->i_width
@@ -768,8 +765,6 @@ Control( vout_display_t *vd, int i_query, va_list ap )
         }
         return VLC_SUCCESS;
     }
-    case VOUT_DISPLAY_CHANGE_FULLSCREEN:
-        return VLC_SUCCESS;
     case VOUT_DISPLAY_RESET_PICTURES:
         msg_Dbg( vd, "VOUT_DISPLAY_RESET_PICTURES" );
 
@@ -787,7 +782,6 @@ Control( vout_display_t *vd, int i_query, va_list ap )
     case VOUT_DISPLAY_CHANGE_SOURCE_CROP:
     case VOUT_DISPLAY_CHANGE_DISPLAY_SIZE:
     case VOUT_DISPLAY_CHANGE_DISPLAY_FILLED:
-    case VOUT_DISPLAY_HIDE_MOUSE:
         return VLC_EGENERIC;
     default:
         msg_Warn( vd, "Unknown request in evas_output" );

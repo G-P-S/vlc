@@ -109,10 +109,10 @@ vlc_module_end ()
 /*****************************************************************************
  * Local prototypes
  *****************************************************************************/
-static ssize_t Read( access_t *, void *, size_t );
-static int Seek( access_t *, uint64_t );
-static int Control( access_t *, int, va_list );
-static int DirRead( access_t *, input_item_node_t * );
+static ssize_t Read( stream_t *, void *, size_t );
+static int Seek( stream_t *, uint64_t );
+static int Control( stream_t *, int, va_list );
+static int DirRead( stream_t *, input_item_node_t * );
 #ifdef ENABLE_SOUT
 static int OutSeek( sout_access_out_t *, off_t );
 static ssize_t Write( sout_access_out_t *, block_t * );
@@ -437,7 +437,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
 
     vlc_url_t url;
     vlc_credential credential;
-    vlc_UrlParse( &url, ((access_t *)p_access)->psz_url );
+    vlc_UrlParse( &url, ((stream_t *)p_access)->psz_url );
     vlc_credential_init( &credential, &url );
     bool b_logged = false;
 
@@ -663,7 +663,7 @@ static int parseURL( vlc_url_t *url, const char *path, enum tls_mode_e mode )
  ****************************************************************************/
 static int InOpen( vlc_object_t *p_this )
 {
-    access_t     *p_access = (access_t*)p_this;
+    stream_t     *p_access = (stream_t*)p_this;
     access_sys_t *p_sys;
     char         *psz_arg;
     bool          b_directory;
@@ -824,7 +824,7 @@ static void Close( vlc_object_t *p_access, access_sys_t *p_sys )
 
 static void InClose( vlc_object_t *p_this )
 {
-    Close( p_this, ((access_t *)p_this)->p_sys);
+    Close( p_this, ((stream_t *)p_this)->p_sys);
 }
 
 #ifdef ENABLE_SOUT
@@ -838,22 +838,23 @@ static void OutClose( vlc_object_t *p_this )
 /*****************************************************************************
  * Seek: try to go at the right place
  *****************************************************************************/
-static int _Seek( vlc_object_t *p_access, access_sys_t *p_sys, uint64_t i_pos )
+static int SeekCommon( vlc_object_t *p_access, access_sys_t *p_sys,
+                       uint64_t i_pos )
 {
     msg_Dbg( p_access, "seeking to %"PRIu64, i_pos );
 
-    ftp_StopStream( (vlc_object_t *)p_access, p_sys );
-    if( ftp_StartStream( (vlc_object_t *)p_access, p_sys, i_pos, false ) < 0 )
-        return VLC_EGENERIC;
+    ftp_StopStream( p_access, p_sys );
 
+    if( ftp_StartStream( p_access, p_sys, i_pos, false ) < 0 )
+        return VLC_EGENERIC;
     return VLC_SUCCESS;
 }
 
-static int Seek( access_t *p_access, uint64_t i_pos )
+static int Seek( stream_t *p_access, uint64_t i_pos )
 {
     access_sys_t *p_sys = p_access->p_sys;
 
-    int val = _Seek( (vlc_object_t *)p_access, p_sys, i_pos );
+    int val = SeekCommon( (vlc_object_t *)p_access, p_sys, i_pos );
     if( val )
         return val;
 
@@ -865,14 +866,14 @@ static int Seek( access_t *p_access, uint64_t i_pos )
 #ifdef ENABLE_SOUT
 static int OutSeek( sout_access_out_t *p_access, off_t i_pos )
 {
-    return _Seek( (vlc_object_t *)p_access, GET_OUT_SYS( p_access ), i_pos);
+    return SeekCommon((vlc_object_t *)p_access, GET_OUT_SYS(p_access), i_pos);
 }
 #endif
 
 /*****************************************************************************
  * Read:
  *****************************************************************************/
-static ssize_t Read( access_t *p_access, void *p_buffer, size_t i_len )
+static ssize_t Read( stream_t *p_access, void *p_buffer, size_t i_len )
 {
     access_sys_t *p_sys = p_access->p_sys;
 
@@ -894,7 +895,7 @@ static ssize_t Read( access_t *p_access, void *p_buffer, size_t i_len )
 /*****************************************************************************
  * DirRead:
  *****************************************************************************/
-static int DirRead (access_t *p_access, input_item_node_t *p_current_node)
+static int DirRead (stream_t *p_access, input_item_node_t *p_current_node)
 {
     access_sys_t *p_sys = p_access->p_sys;
     int i_ret = VLC_SUCCESS;
@@ -988,7 +989,7 @@ static ssize_t Write( sout_access_out_t *p_access, block_t *p_buffer )
 /*****************************************************************************
  * Control:
  *****************************************************************************/
-static int Control( access_t *p_access, int i_query, va_list args )
+static int Control( stream_t *p_access, int i_query, va_list args )
 {
     access_sys_t *sys = p_access->p_sys;
     bool    *pb_bool;

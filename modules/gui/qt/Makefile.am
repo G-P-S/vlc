@@ -317,6 +317,12 @@ libqt_plugin_la_RES = \
 	gui/qt/pixmaps/go-next.png \
 	gui/qt/pixmaps/addons/addon.png \
 	gui/qt/pixmaps/addons/addon_broken.png \
+	gui/qt/pixmaps/addons/addon_blue.png \
+	gui/qt/pixmaps/addons/addon_cyan.png \
+	gui/qt/pixmaps/addons/addon_green.png \
+	gui/qt/pixmaps/addons/addon_magenta.png \
+	gui/qt/pixmaps/addons/addon_red.png \
+	gui/qt/pixmaps/addons/addon_yellow.png \
 	gui/qt/pixmaps/addons/score.png \
 	gui/qt/pixmaps/menus/exit_16px.png \
 	gui/qt/pixmaps/menus/help_16px.png \
@@ -327,13 +333,10 @@ libqt_plugin_la_RES = \
 	gui/qt/pixmaps/menus/settings_16px.png \
 	gui/qt/pixmaps/menus/stream_16px.png \
 	gui/qt/pixmaps/next.png \
-	gui/qt/pixmaps/next_16px.png \
 	gui/qt/pixmaps/noart-64.png \
 	gui/qt/pixmaps/noart.png \
 	gui/qt/pixmaps/pause.png \
-	gui/qt/pixmaps/pause_16px.png \
 	gui/qt/pixmaps/play.png \
-	gui/qt/pixmaps/play_16px.png \
 	gui/qt/pixmaps/playlist/add.png \
 	gui/qt/pixmaps/playlist/playlist.png \
 	gui/qt/pixmaps/playlist/remove.png \
@@ -375,7 +378,6 @@ libqt_plugin_la_RES = \
 	gui/qt/pixmaps/prefs/spref_cone_Subtitles_64.png \
 	gui/qt/pixmaps/prefs/spref_cone_Video_64.png \
 	gui/qt/pixmaps/previous.png \
-	gui/qt/pixmaps/previous_16px.png \
 	gui/qt/pixmaps/profile_new.png \
 	gui/qt/pixmaps/sample_complete.png \
 	gui/qt/pixmaps/sample_minimal.png \
@@ -384,7 +386,6 @@ libqt_plugin_la_RES = \
 	gui/qt/pixmaps/slower2.png \
 	gui/qt/pixmaps/space.png \
 	gui/qt/pixmaps/stop.png \
-	gui/qt/pixmaps/stop_16px.png \
 	gui/qt/pixmaps/toolbar/arrows.png \
 	gui/qt/pixmaps/toolbar/aspect-ratio.png \
 	gui/qt/pixmaps/toolbar/atob.png \

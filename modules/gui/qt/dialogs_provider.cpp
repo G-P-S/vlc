@@ -95,6 +95,9 @@ DialogsProvider::~DialogsProvider()
     MediaInfoDialog::killInstance();
     MessagesDialog::killInstance();
     BookmarksDialog::killInstance();
+#ifdef ENABLE_VLM
+    VLMDialog::killInstance();
+#endif
     HelpDialog::killInstance();
 #ifdef UPDATE_CHECK
     UpdateDialog::killInstance();
@@ -111,7 +114,7 @@ DialogsProvider::~DialogsProvider()
     delete miscPopupMenu;
 }
 
-QStringList DialogsProvider::getOpenURL( intf_thread_t* p_intf, QWidget *parent,
+QStringList DialogsProvider::getOpenURL( QWidget *parent,
                                          const QString &caption,
                                          const QString &dir,
                                          const QString &filter,
@@ -395,9 +398,8 @@ void DialogsProvider::openFileGenericDialog( intf_dialog_args_t *p_arg )
     }
     else /* non-save mode */
     {
-        QStringList urls = getOpenURL( p_intf, NULL,
-                qfu( p_arg->psz_title ), p_intf->p_sys->filepath,
-                extensions );
+        QStringList urls = getOpenURL( NULL, qfu( p_arg->psz_title ),
+                                       p_intf->p_sys->filepath, extensions );
         p_arg->i_results = urls.count();
         p_arg->psz_results = (char **)malloc( p_arg->i_results * sizeof( char * ) );
         i = 0;
@@ -494,7 +496,7 @@ QStringList DialogsProvider::showSimpleOpen( const QString& help,
     ADD_EXT_FILTER( fileTypes, EXTENSIONS_ALL );
     fileTypes.replace( ";*", " *");
 
-    QStringList urls = getOpenURL( p_intf, NULL,
+    QStringList urls = getOpenURL( NULL,
         help.isEmpty() ? qtr(I_OP_SEL_FILES ) : help,
         path.isEmpty() ? p_intf->p_sys->filepath : path,
         fileTypes );

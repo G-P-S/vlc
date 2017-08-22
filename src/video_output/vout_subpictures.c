@@ -744,12 +744,16 @@ static void SpuRenderRegion(spu_t *spu,
     if (force_palette) {
         video_palette_t *old_palette = region->fmt.p_palette;
         video_palette_t new_palette;
+        bool b_opaque = false;
 
         /* We suppose DVD palette here */
         new_palette.i_entries = 4;
         for (int i = 0; i < 4; i++)
+        {
             for (int j = 0; j < 4; j++)
                 new_palette.palette[i][j] = sys->palette[i][j];
+            b_opaque |= (new_palette.palette[i][3] > 0x00);
+        }
 
         if (old_palette->i_entries == new_palette.i_entries) {
             for (int i = 0; i < old_palette->i_entries; i++)
@@ -758,7 +762,12 @@ static void SpuRenderRegion(spu_t *spu,
         } else {
             changed_palette = true;
         }
-        *old_palette = new_palette;
+
+        /* Reject fully transparent broken palette for cropping */
+        changed_palette &= b_opaque;
+
+        if( changed_palette )
+            *old_palette = new_palette;
     }
 
     /* */
@@ -1434,13 +1443,13 @@ void spu_PutSubpicture(spu_t *spu, subpicture_t *subpic)
                                      SubFilterAddProxyCallbacks,
                                      sys->vout);
         }
-        else if (filter_chain_GetLength(spu->p->filter_chain) > 0)
+        else
             filter_chain_Reset(sys->filter_chain, NULL, NULL);
 
         /* "sub-source"  was formerly "sub-filter", so now the "sub-filter"
         configuration may contain sub-filters or sub-sources configurations.
         if the filters chain was left empty it may indicate that it's a sub-source configuration */
-        is_left_empty = (filter_chain_GetLength(spu->p->filter_chain) == 0);
+        is_left_empty = filter_chain_IsEmpty(spu->p->filter_chain);
     }
     vlc_mutex_unlock(&sys->filter_chain_lock);
 

@@ -431,7 +431,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                 const matroska_segment_c *p_segment = p_sys->p_current_vsegment->CurrentSegment();
                 for( tracks_map_t::const_iterator it = p_segment->tracks.begin(); it != p_segment->tracks.end(); ++it )
                 {
-                    tracks_map_t::mapped_type const& track = it->second;
+                    const mkv_track_t &track = *it->second;
 
                     if( track.fmt.i_cat == VIDEO_ES && track.fmt.video.i_frame_rate_base > 0 )
                     {
@@ -496,22 +496,19 @@ void BlockDecode( demux_t *p_demux, KaxBlock *block, KaxSimpleBlock *simpleblock
                   mtime_t i_pts, mtime_t i_duration, bool b_key_picture,
                   bool b_discardable_picture )
 {
-    typedef matroska_segment_c::tracks_map_t tracks_map_t;
-
     demux_sys_t        *p_sys = p_demux->p_sys;
     matroska_segment_c *p_segment = p_sys->p_current_vsegment->CurrentSegment();
 
     if( !p_segment ) return;
 
-    tracks_map_t::iterator track_it;
-
-    if( p_segment->FindTrackByBlock( &track_it, block, simpleblock ) )
+    mkv_track_t *p_track = p_segment->FindTrackByBlock( block, simpleblock );
+    if( p_track == NULL )
     {
         msg_Err( p_demux, "invalid track number" );
         return;
     }
 
-    tracks_map_t::mapped_type& track = track_it->second;
+    mkv_track_t &track = *p_track;
 
     if( track.fmt.i_cat != NAV_ES && track.p_es == NULL )
     {
@@ -528,25 +525,11 @@ void BlockDecode( demux_t *p_demux, KaxBlock *block, KaxSimpleBlock *simpleblock
 
         if( !b )
         {
-            track.b_inited = false;
             if( track.fmt.i_cat == VIDEO_ES || track.fmt.i_cat == AUDIO_ES )
                 track.i_last_dts = VLC_TS_INVALID;
             return;
         }
     }
-
-
-    /* First send init data */
-    if( !track.b_inited && track.i_data_init > 0 )
-    {
-        block_t *p_init;
-
-        msg_Dbg( p_demux, "sending header (%d bytes)", track.i_data_init );
-        p_init = MemToBlock( track.p_data_init, track.i_data_init, 0 );
-        if( p_init ) send_Block( p_demux, &track, p_init, 1, 0 );
-    }
-    track.b_inited = true;
-
 
     size_t frame_size = 0;
     size_t block_size = 0;
@@ -583,7 +566,7 @@ void BlockDecode( demux_t *p_demux, KaxBlock *block, KaxSimpleBlock *simpleblock
             track.i_encoding_scope & MATROSKA_ENCODING_SCOPE_ALL_FRAMES )
             p_block = MemToBlock( data->Buffer(), data->Size(), track.p_compression_data->GetSize() );
         else if( unlikely( track.fmt.i_codec == VLC_CODEC_WAVPACK ) )
-            p_block = packetize_wavpack( &track, data->Buffer(), data->Size() );
+            p_block = packetize_wavpack( track, data->Buffer(), data->Size() );
         else
             p_block = MemToBlock( data->Buffer(), data->Size(), 0 );
 
@@ -731,16 +714,16 @@ static int Demux( demux_t *p_demux)
     }
 
     {
-        matroska_segment_c::tracks_map_t::iterator track_it;
+        mkv_track_t *p_track = p_segment->FindTrackByBlock( block, simpleblock );
 
-        if( p_segment->FindTrackByBlock( &track_it, block, simpleblock ) )
+        if( p_track == NULL )
         {
             msg_Err( p_demux, "invalid track number" );
             delete block;
             return 0;
         }
 
-        matroska_segment_c::tracks_map_t::mapped_type& track = track_it->second;
+        mkv_track_t &track = *p_track;
 
 
         if( track.i_skip_until_fpos != std::numeric_limits<uint64_t>::max() ) {
@@ -766,9 +749,9 @@ static int Demux( demux_t *p_demux)
 
         typedef matroska_segment_c::tracks_map_t tracks_map_t;
 
-        for( tracks_map_t::iterator it = p_segment->tracks.begin(); it != p_segment->tracks.end(); ++it )
+        for( tracks_map_t::const_iterator it = p_segment->tracks.begin(); it != p_segment->tracks.end(); ++it )
         {
-            tracks_map_t::mapped_type& track = it->second;
+            mkv_track_t &track = *it->second;
 
             if( track.i_last_dts == VLC_TS_INVALID )
                 continue;
@@ -784,7 +767,7 @@ static int Demux( demux_t *p_demux)
 
         if( i_pcr > VLC_TS_INVALID && i_pcr > p_sys->i_pcr )
         {
-            if( es_out_Control( p_demux->out, ES_OUT_SET_PCR, i_pcr ) )
+            if( es_out_SetPCR( p_demux->out, i_pcr ) )
             {
                 msg_Err( p_demux, "ES_OUT_SET_PCR failed, aborting." );
                 return 0;
@@ -816,4 +799,61 @@ static int Demux( demux_t *p_demux)
     delete block;
 
     return 1;
+}
+
+mkv_track_t::mkv_track_t(enum es_format_category_e es_cat) :
+    b_default(true)
+  ,b_enabled(true)
+  ,b_forced(false)
+  ,i_number(0)
+  ,i_extra_data(0)
+  ,p_extra_data(NULL)
+  ,b_dts_only(false)
+  ,b_pts_only(false)
+  ,b_no_duration(false)
+  ,i_default_duration(0)
+  ,f_timecodescale(1.0)
+  ,i_last_dts(0)
+  ,i_skip_until_fpos(-1)
+  ,f_fps(0)
+  ,p_es(NULL)
+  ,i_original_rate(0)
+  ,i_chans_to_reorder(0)
+  ,p_sys(NULL)
+  ,b_discontinuity(false)
+  ,i_compression_type(MATROSKA_COMPRESSION_NONE)
+  ,i_encoding_scope(MATROSKA_ENCODING_SCOPE_ALL_FRAMES)
+  ,p_compression_data(NULL)
+  ,i_seek_preroll(0)
+  ,i_codec_delay(0)
+{
+    std::memset( &pi_chan_table, 0, sizeof( pi_chan_table ) );
+
+    es_format_Init(&fmt, es_cat, 0);
+
+    switch( es_cat )
+    {
+        case AUDIO_ES:
+            fmt.audio.i_channels = 1;
+            fmt.audio.i_rate = 8000;
+            /* fall through */
+        case VIDEO_ES:
+        case SPU_ES:
+            fmt.psz_language = strdup("English");
+            break;
+        default:
+            // no language needed
+            break;
+    }
+}
+
+mkv_track_t::~mkv_track_t()
+{
+    es_format_Clean( &fmt );
+    assert(p_es == NULL); // did we leak an ES ?
+
+    free(p_extra_data);
+
+    delete p_compression_data;
+    delete p_sys;
 }

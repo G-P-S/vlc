@@ -56,7 +56,7 @@ demux_LTLIBRARIES += libaiff_plugin.la
 libmjpeg_plugin_la_SOURCES = demux/mjpeg.c demux/mxpeg_helper.h
 demux_LTLIBRARIES += libmjpeg_plugin.la
 
-libsubtitle_plugin_la_SOURCES = demux/subtitle.c demux/subtitle_helper.h
+libsubtitle_plugin_la_SOURCES = demux/subtitle.c
 libsubtitle_plugin_la_LIBADD = $(LIBM)
 demux_LTLIBRARIES += libsubtitle_plugin.la
 
@@ -263,7 +263,7 @@ libts_plugin_la_SOURCES = demux/mpeg/ts.c demux/mpeg/ts.h \
         mux/mpeg/tables.c mux/mpeg/tables.h \
 	mux/mpeg/tsutil.c mux/mpeg/tsutil.h \
         access/dtv/en50221_capmt.h \
-        codec/scte18.h \
+        codec/jpeg2000.h codec/scte18.h \
         codec/atsc_a65.c codec/atsc_a65.h \
 	codec/opus_header.c
 libts_plugin_la_CFLAGS = $(AM_CFLAGS) $(DVBPSI_CFLAGS)

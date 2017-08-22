@@ -95,7 +95,7 @@ struct module_config_t
  * Prototypes - these methods are used to get, set or manipulate configuration
  * data.
  *****************************************************************************/
-VLC_API int config_GetType(vlc_object_t *, const char *) VLC_USED;
+VLC_API int config_GetType(const char *) VLC_USED;
 VLC_API int64_t config_GetInt(vlc_object_t *, const char *) VLC_USED;
 VLC_API void config_PutInt(vlc_object_t *, const char *, int64_t);
 VLC_API float config_GetFloat(vlc_object_t *, const char *) VLC_USED;
@@ -113,7 +113,7 @@ VLC_API int config_SaveConfigFile( vlc_object_t * );
 VLC_API void config_ResetAll( vlc_object_t * );
 #define config_ResetAll(a) config_ResetAll(VLC_OBJECT(a))
 
-VLC_API module_config_t * config_FindConfig( vlc_object_t *, const char * ) VLC_USED;
+VLC_API module_config_t * config_FindConfig(const char *) VLC_USED;
 VLC_API char * config_GetDataDir(void) VLC_USED VLC_MALLOC;
 VLC_API char *config_GetLibDir(void) VLC_USED;
 
@@ -140,7 +140,6 @@ VLC_API void config_AddIntf( vlc_object_t *, const char * );
 VLC_API void config_RemoveIntf( vlc_object_t *, const char * );
 VLC_API bool config_ExistIntf( vlc_object_t *, const char * ) VLC_USED;
 
-#define config_GetType(a,b) config_GetType(VLC_OBJECT(a),b)
 #define config_GetInt(a,b) config_GetInt(VLC_OBJECT(a),b)
 #define config_PutInt(a,b,c) config_PutInt(VLC_OBJECT(a),b,c)
 #define config_GetFloat(a,b) config_GetFloat(VLC_OBJECT(a),b)

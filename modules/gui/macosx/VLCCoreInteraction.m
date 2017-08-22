@@ -28,7 +28,7 @@
 #import <math.h>
 #import <vlc_playlist.h>
 #import <vlc_input.h>
-#import <vlc_keys.h>
+#import <vlc_actions.h>
 #import <vlc_vout.h>
 #import <vlc_vout_osd.h>
 #import <vlc/vlc.h>
@@ -674,7 +674,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
 
 #pragma mark - uncommon stuff
 
-- (BOOL)fixPreferences
+- (BOOL)fixIntfSettings
 {
     NSMutableString * o_workString;
     NSRange returnedRange;
@@ -816,7 +816,7 @@ static int BossCallback(vlc_object_t *p_this, const char *psz_var,
         b_is_command = i_type & VLC_VAR_ISCOMMAND;
     }
     if (!i_type)
-        i_type = config_GetType(p_intf, psz_property);
+        i_type = config_GetType(psz_property);
 
     i_type &= VLC_VAR_CLASS;
     if (i_type == VLC_VAR_BOOL)

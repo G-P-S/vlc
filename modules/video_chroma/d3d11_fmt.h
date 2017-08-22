@@ -45,8 +45,8 @@ struct picture_sys_t
     ID3D11VideoProcessorInputView  *processorInput;  /* when used as processor input */
     ID3D11VideoProcessorOutputView *processorOutput; /* when used as processor output */
     ID3D11ShaderResourceView      *resourceView[D3D11_MAX_SHADER_VIEW];
-    DXGI_FORMAT                   decoderFormat;
     DXGI_FORMAT                   formatTexture;
+    bool                          mapped;
 };
 
 #include "../codec/avcodec/va_surface.h"

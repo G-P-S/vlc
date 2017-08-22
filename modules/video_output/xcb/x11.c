@@ -304,7 +304,6 @@ found_format:;
     vd->prepare = NULL;
     vd->display = Display;
     vd->control = Control;
-    vd->manage = NULL;
 
     return VLC_SUCCESS;
 
@@ -504,9 +503,6 @@ static int Control (vout_display_t *vd, int query, va_list ap)
         vd->fmt.i_y_offset = src.i_y_offset * place.height / src.i_visible_height;
         return VLC_SUCCESS;
     }
-
-    case VOUT_DISPLAY_HIDE_MOUSE:
-        return VLC_EGENERIC;
 
     default:
         msg_Err (vd, "Unknown request in XCB vout display");

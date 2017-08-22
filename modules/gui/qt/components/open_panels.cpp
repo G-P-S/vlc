@@ -249,12 +249,18 @@ void FileOpenPanel::removeFile()
 /* Show a fileBrowser to select a subtitle */
 void FileOpenPanel::browseFileSub()
 {
-    // TODO Handle selection of more than one subtitles file
     QStringList urls = THEDP->showSimpleOpen( qtr("Open subtitle file"),
                            EXT_FILTER_SUBTITLE, p_intf->p_sys->filepath );
 
     if( urls.isEmpty() ) return;
-    ui.subInput->setText( urls.join(" ") );
+
+    // TODO Handle selection of more than one subtitles file
+    char *path = vlc_uri2path( qtu(urls[0]) );
+    if( path == NULL )
+        return;
+
+    ui.subInput->setText( qfu(path) );
+    free( path );
     updateMRL();
 }
 
@@ -776,14 +782,13 @@ void CaptureOpenPanel::initialize()
 
     /* dshow Main */
     int line = 0;
-    module_config_t *p_config =
-        config_FindConfig( VLC_OBJECT(p_intf), "dshow-vdev" );
+    module_config_t *p_config = config_FindConfig( "dshow-vdev" );
     vdevDshowW = new StringListConfigControl(
         VLC_OBJECT(p_intf), p_config, this );
     vdevDshowW->insertIntoExistingGrid( dshowDevLayout, line );
     line++;
 
-    p_config = config_FindConfig( VLC_OBJECT(p_intf), "dshow-adev" );
+    p_config = config_FindConfig( "dshow-adev" );
     adevDshowW = new StringListConfigControl(
         VLC_OBJECT(p_intf), p_config, this );
     adevDshowW->insertIntoExistingGrid( dshowDevLayout, line );

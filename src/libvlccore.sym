@@ -108,7 +108,7 @@ filter_chain_AppendFromString
 filter_chain_Delete
 filter_chain_DeleteFilter
 filter_chain_GetFmtOut
-filter_chain_GetLength
+filter_chain_IsEmpty
 filter_chain_MouseFilter
 filter_chain_MouseEvent
 filter_chain_NewVideo
@@ -510,8 +510,9 @@ video_format_GetTransform
 video_format_IsSimilar
 video_format_Setup
 video_format_Print
-video_splitter_Delete
-video_splitter_New
+vlc_actions_get_id
+vlc_actions_get_key_names
+vlc_actions_get_keycodes
 vlc_b64_decode
 vlc_b64_decode_binary
 vlc_b64_decode_binary_to_buffer
@@ -563,6 +564,7 @@ vlc_CPU
 vlc_error
 vlc_event_attach
 vlc_event_detach
+vlc_filenamecmp
 vlc_fourcc_GetCodec
 vlc_fourcc_GetCodecAudio
 vlc_fourcc_GetCodecFromString
@@ -572,7 +574,6 @@ vlc_fourcc_IsYUV
 vlc_fourcc_GetRGBFallback
 vlc_fourcc_GetYUVFallback
 vlc_fourcc_AreUVPlanesSwapped
-vlc_GetActionId
 vlc_getaddrinfo
 vlc_getaddrinfo_i11e
 vlc_getnameinfo

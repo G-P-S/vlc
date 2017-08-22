@@ -146,7 +146,6 @@ static int Open(vlc_object_t *object)
     vd->prepare = NULL;
     vd->display = Display;
     vd->control = Control;
-    vd->manage  = NULL;
 
     vout_display_DeleteWindow(vd, NULL);
 
@@ -238,12 +237,7 @@ static int Control(vout_display_t *vd, int query, va_list args)
     case VOUT_DISPLAY_CHANGE_ZOOM:
     case VOUT_DISPLAY_CHANGE_DISPLAY_FILLED:
     case VOUT_DISPLAY_CHANGE_SOURCE_ASPECT:
-    case VOUT_DISPLAY_CHANGE_FULLSCREEN:
         return VLC_EGENERIC;
-
-    case VOUT_DISPLAY_HIDE_MOUSE:
-        /* not really working */
-        return VLC_SUCCESS;
 
     default:
         msg_Err(vd, "Unsupported query in vout display flaschen");

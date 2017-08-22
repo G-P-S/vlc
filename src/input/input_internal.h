@@ -29,7 +29,7 @@
 #include <vlc_access.h>
 #include <vlc_demux.h>
 #include <vlc_input.h>
-#include <vlc_vout.h>
+#include <vlc_viewpoint.h>
 #include <libvlc.h>
 #include "input_interface.h"
 #include "misc/interrupt.h"
@@ -111,6 +111,7 @@ typedef struct input_thread_private_t
     es_out_t        *p_es_out;
     es_out_t        *p_es_out_display;
     vlc_viewpoint_t viewpoint;
+    bool            viewpoint_changed;
 
     /* Title infos FIXME multi-input (not easy) ? */
     int          i_title;
@@ -218,6 +219,7 @@ enum input_control_e
     INPUT_CONTROL_RESTART_ES,
 
     INPUT_CONTROL_SET_VIEWPOINT,    // new absolute viewpoint
+    INPUT_CONTROL_SET_INITIAL_VIEWPOINT, // set initial viewpoint (generally from video)
     INPUT_CONTROL_UPDATE_VIEWPOINT, // update viewpoint relative to current
 
     INPUT_CONTROL_SET_AUDIO_DELAY,

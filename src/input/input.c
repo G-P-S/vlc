@@ -33,7 +33,6 @@
 
 #include <limits.h>
 #include <assert.h>
-#include <math.h>
 #include <sys/stat.h>
 
 #include "input_internal.h"
@@ -322,8 +321,10 @@ static input_thread_t *Create( vlc_object_t *p_parent, input_item_t *p_item,
     priv->p_sout   = NULL;
     priv->b_out_pace_control = false;
 
+    priv->viewpoint_changed = false;
+    /* Fetch the viewpoint from the mediaplayer or the playlist if any */
     vlc_viewpoint_t *p_viewpoint = var_InheritAddress( p_input, "viewpoint" );
-    if (likely(p_viewpoint != NULL))
+    if (p_viewpoint != NULL)
         priv->viewpoint = *p_viewpoint;
     else
         vlc_viewpoint_init( &priv->viewpoint );
@@ -1679,6 +1680,7 @@ static void ControlRelease( int i_type, vlc_value_t val )
             input_item_slave_Delete( val.p_address );
         break;
     case INPUT_CONTROL_SET_VIEWPOINT:
+    case INPUT_CONTROL_SET_INITIAL_VIEWPOINT:
     case INPUT_CONTROL_UPDATE_VIEWPOINT:
         free( val.p_address );
         break;
@@ -1946,26 +1948,36 @@ static bool Control( input_thread_t *p_input,
             break;
 
         case INPUT_CONTROL_SET_VIEWPOINT:
+        case INPUT_CONTROL_SET_INITIAL_VIEWPOINT:
         case INPUT_CONTROL_UPDATE_VIEWPOINT:
         {
             input_thread_private_t *priv = input_priv(p_input);
             const vlc_viewpoint_t *p_vp = val.p_address;
-            if ( i_type == INPUT_CONTROL_SET_VIEWPOINT)
+
+            if ( i_type == INPUT_CONTROL_SET_INITIAL_VIEWPOINT )
+            {
+
+                /* Set the initial viewpoint if it had not been changed by the
+                 * user. */
+                if( !priv->viewpoint_changed )
+                    priv->viewpoint = *p_vp;
+                /* Update viewpoints of aout and every vouts in all cases. */
+            }
+            else if ( i_type == INPUT_CONTROL_SET_VIEWPOINT)
+            {
+                priv->viewpoint_changed = true;
                 priv->viewpoint = *p_vp;
+            }
             else
             {
+                priv->viewpoint_changed = true;
                 priv->viewpoint.yaw   += p_vp->yaw;
                 priv->viewpoint.pitch += p_vp->pitch;
                 priv->viewpoint.roll  += p_vp->roll;
                 priv->viewpoint.fov   += p_vp->fov;
             }
 
-            priv->viewpoint.yaw = fmodf( priv->viewpoint.yaw, 360.f );
-            priv->viewpoint.pitch = fmodf( priv->viewpoint.pitch, 360.f );
-            priv->viewpoint.roll = fmodf( priv->viewpoint.roll, 360.f );
-            priv->viewpoint.fov = VLC_CLIP( priv->viewpoint.fov,
-                                            FIELD_OF_VIEW_DEGREES_MIN,
-                                            FIELD_OF_VIEW_DEGREES_MAX );
+            vlc_viewpoint_clip( &priv->viewpoint );
 
             vout_thread_t **pp_vout;
             size_t i_vout;
@@ -1974,6 +1986,9 @@ static bool Control( input_thread_t *p_input,
             for( size_t i = 0; i < i_vout; ++i )
             {
                 var_SetAddress( pp_vout[i], "viewpoint", &priv->viewpoint );
+                /* This variable can only be read from callbacks */
+                var_Change( pp_vout[i], "viewpoint", VLC_VAR_SETVALUE,
+                            &(vlc_value_t) { .p_address = NULL }, NULL );
                 vlc_object_release( pp_vout[i] );
             }
             free( pp_vout );
@@ -1983,6 +1998,9 @@ static bool Control( input_thread_t *p_input,
             {
 
                 var_SetAddress( p_aout, "viewpoint", &priv->viewpoint );
+                /* This variable can only be read from callbacks */
+                var_Change( p_aout, "viewpoint", VLC_VAR_SETVALUE,
+                            &(vlc_value_t) { .p_address = NULL }, NULL );
                 vlc_object_release( p_aout );
             }
             break;
@@ -2331,8 +2349,6 @@ static demux_t *InputDemuxNew( input_thread_t *p_input, input_source_t *p_source
 
     if( p_stream == NULL )
         goto error;
-
-    p_stream = stream_FilterAutoNew( p_stream );
 
     /* attach explicit stream filters to stream */
     if( psz_filters )

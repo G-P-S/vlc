@@ -82,22 +82,6 @@ struct vout_thread_t {
 #define VOUT_ALIGN_BOTTOM       0x0008
 #define VOUT_ALIGN_VMASK        0x000C
 
-/**
- * Viewpoints
- */
-struct vlc_viewpoint_t {
-    float yaw;   /* yaw in degrees */
-    float pitch; /* pitch in degrees */
-    float roll;  /* roll in degrees */
-    float fov;   /* field of view in degrees */
-};
-
-static inline void vlc_viewpoint_init( vlc_viewpoint_t *p_vp )
-{
-    p_vp->yaw = p_vp->pitch = p_vp->roll = 0.0f;
-    p_vp->fov = FIELD_OF_VIEW_DEGREES_DEFAULT;
-}
-
 /*****************************************************************************
  * Prototypes
  *****************************************************************************/
@@ -148,6 +132,9 @@ static inline void vout_CloseAndRelease( vout_thread_t *p_vout )
  * set with returned value in case of success.
  *
  * pp_image will hold an encoded picture in psz_format format.
+ *
+ * p_fmt can be NULL otherwise it will be set with the format used for the
+ * picture before encoding.
  *
  * i_timeout specifies the time the function will wait for a snapshot to be
  * available.

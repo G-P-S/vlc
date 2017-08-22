@@ -35,7 +35,7 @@
 #include <vlc_input.h>
 #include <vlc_vout.h>
 #include <vlc_aout.h>
-#include <vlc_keys.h>
+#include <vlc_actions.h>
 
 #include "libvlc_internal.h"
 #include "media_internal.h" // libvlc_media_set_state()
@@ -663,7 +663,7 @@ libvlc_media_player_new( libvlc_instance_t *instance )
     var_Create (mp, "deinterlace-mode", VLC_VAR_STRING | VLC_VAR_DOINHERIT);
 
     var_Create (mp, "vbi-page", VLC_VAR_INTEGER);
-    var_SetInteger (mp, "vbi-page", 0);
+    var_SetInteger (mp, "vbi-page", 100);
 
     var_Create (mp, "video-filter", VLC_VAR_STRING | VLC_VAR_DOINHERIT);
     var_Create (mp, "sub-source", VLC_VAR_STRING | VLC_VAR_DOINHERIT);
@@ -1756,7 +1756,7 @@ int libvlc_media_player_is_seekable( libvlc_media_player_t *p_mi )
 void libvlc_media_player_navigate( libvlc_media_player_t* p_mi,
                                    unsigned navigate )
 {
-    static const enum input_query_e map[] =
+    static const vlc_action_id_t map[] =
     {
         INPUT_NAV_ACTIVATE, INPUT_NAV_UP, INPUT_NAV_DOWN,
         INPUT_NAV_LEFT, INPUT_NAV_RIGHT, INPUT_NAV_POPUP,

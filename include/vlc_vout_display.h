@@ -28,10 +28,11 @@
 #include <vlc_picture.h>
 #include <vlc_picture_pool.h>
 #include <vlc_subpicture.h>
-#include <vlc_keys.h>
+#include <vlc_actions.h>
 #include <vlc_mouse.h>
 #include <vlc_vout.h>
 #include <vlc_vout_window.h>
+#include <vlc_viewpoint.h>
 
 /**
  * \defgroup video_display Video output display
@@ -80,7 +81,9 @@ enum {
  * Initial/Current configuration for a vout_display_t
  */
 typedef struct {
-    bool is_fullscreen;  /* Is the display fullscreen */
+#if defined(_WIN32) || defined(__OS2__)
+    bool is_fullscreen VLC_DEPRECATED;  /* Is the display fullscreen */
+#endif
 
     /* Display properties */
     struct {
@@ -125,9 +128,8 @@ typedef struct {
 typedef struct {
     bool is_slow;                           /* The picture memory has slow read/write */
     bool has_double_click;                  /* Is double-click generated */
-    bool has_hide_mouse;                    /* Is mouse automatically hidden */
+    bool needs_hide_mouse;                  /* Needs VOUT_DISPLAY_HIDE_MOUSE */
     bool has_pictures_invalid;              /* Will VOUT_DISPLAY_EVENT_PICTURES_INVALID be used */
-    bool needs_event_thread VLC_DEPRECATED; /* Will events (key at least) be emitted using an independent thread */
     const vlc_fourcc_t *subpicture_chromas; /* List of supported chromas for subpicture rendering. */
 } vout_display_info_t;
 
@@ -136,21 +138,21 @@ typedef struct {
  */
 enum {
     /* Hide the mouse. It will be sent when
-     * vout_display_t::info.b_hide_mouse is false */
-    VOUT_DISPLAY_HIDE_MOUSE,
+     * vout_display_t::info.needs_hide_mouse is true */
+    VOUT_DISPLAY_HIDE_MOUSE VLC_DEPRECATED_ENUM,
 
     /* Ask to reset the internal buffers after a VOUT_DISPLAY_EVENT_PICTURES_INVALID
      * request.
      */
     VOUT_DISPLAY_RESET_PICTURES,
 
+#if defined(_WIN32) || defined(__OS2__)
     /* Ask the module to acknowledge/refuse the fullscreen state change after
      * being requested (externally or by VOUT_DISPLAY_EVENT_FULLSCREEN */
-    VOUT_DISPLAY_CHANGE_FULLSCREEN,     /* bool fs */
-#if defined(_WIN32) || defined(__OS2__)
+    VOUT_DISPLAY_CHANGE_FULLSCREEN VLC_DEPRECATED_ENUM,     /* bool fs */
     /* Ask the module to acknowledge/refuse the window management state change
      * after being requested externally or by VOUT_DISPLAY_WINDOW_STATE */
-    VOUT_DISPLAY_CHANGE_WINDOW_STATE,         /* unsigned state */
+    VOUT_DISPLAY_CHANGE_WINDOW_STATE VLC_DEPRECATED_ENUM,   /* unsigned state */
 #endif
     /* Ask the module to acknowledge/refuse the display size change requested
      * (externally or by VOUT_DISPLAY_EVENT_DISPLAY_SIZE) */
@@ -166,13 +168,13 @@ enum {
 
     /* Ask the module to acknowledge/refuse source aspect ratio after being
      * requested externally */
-    VOUT_DISPLAY_CHANGE_SOURCE_ASPECT, /* const video_format_t *p_source */
+    VOUT_DISPLAY_CHANGE_SOURCE_ASPECT,
 
     /* Ask the module to acknowledge/refuse source crop change after being
      * requested externally.
      * The cropping requested is stored by video_format_t::i_x/y_offset and
      * video_format_t::i_visible_width/height */
-    VOUT_DISPLAY_CHANGE_SOURCE_CROP,   /* const video_format_t *p_source */
+    VOUT_DISPLAY_CHANGE_SOURCE_CROP,
 
     /* Ask the module to acknowledge/refuse VR/360° viewing direction after
      * being requested externally */
@@ -192,8 +194,8 @@ enum {
     /* */
     VOUT_DISPLAY_EVENT_PICTURES_INVALID,    /* The buffer are now invalid and need to be changed */
 
-    VOUT_DISPLAY_EVENT_FULLSCREEN,
 #if defined(_WIN32) || defined(__OS2__)
+    VOUT_DISPLAY_EVENT_FULLSCREEN,
     VOUT_DISPLAY_EVENT_WINDOW_STATE,
 #endif
 
@@ -214,6 +216,9 @@ enum {
     VOUT_DISPLAY_EVENT_MOUSE_PRESSED,
     VOUT_DISPLAY_EVENT_MOUSE_RELEASED,
     VOUT_DISPLAY_EVENT_MOUSE_DOUBLE_CLICK,
+
+    /* VR navigation */
+    VOUT_DISPLAY_EVENT_VIEWPOINT_MOVED,
 };
 
 /**
@@ -323,7 +328,7 @@ struct vout_display_t {
     int        (*control)(vout_display_t *, int, va_list);
 
     /* Manage pending event (optional) */
-    void       (*manage)(vout_display_t *);
+    void       (*manage)(vout_display_t *) VLC_DEPRECATED;
 
     /* Private place holder for the vout_display_t module (optional)
      *
@@ -362,12 +367,12 @@ static inline void vout_display_SendEventKey(vout_display_t *vd, int key)
 {
     vout_display_SendEvent(vd, VOUT_DISPLAY_EVENT_KEY, key);
 }
+#if defined(_WIN32) || defined(__OS2__)
 static inline void vout_display_SendEventFullscreen(vout_display_t *vd, bool is_fullscreen,
                                                     bool is_window_fullscreen)
 {
     vout_display_SendEvent(vd, VOUT_DISPLAY_EVENT_FULLSCREEN, is_fullscreen, is_window_fullscreen);
 }
-#if defined(_WIN32) || defined(__OS2__)
 static inline void vout_display_SendWindowState(vout_display_t *vd, unsigned state)
 {
     vout_display_SendEvent(vd, VOUT_DISPLAY_EVENT_WINDOW_STATE, state);
@@ -393,6 +398,11 @@ static inline void vout_display_SendEventMouseReleased(vout_display_t *vd, int b
 static inline void vout_display_SendEventMouseDoubleClick(vout_display_t *vd)
 {
     vout_display_SendEvent(vd, VOUT_DISPLAY_EVENT_MOUSE_DOUBLE_CLICK);
+}
+static inline void vout_display_SendEventViewpointMoved(vout_display_t *vd,
+                                                        const vlc_viewpoint_t *vp)
+{
+    vout_display_SendEvent(vd, VOUT_DISPLAY_EVENT_VIEWPOINT_MOVED, vp);
 }
 
 /**

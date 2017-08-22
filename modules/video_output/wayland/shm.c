@@ -259,10 +259,6 @@ static int Control(vout_display_t *vd, int query, va_list ap)
 
     switch (query)
     {
-        case VOUT_DISPLAY_HIDE_MOUSE:
-            /* TODO */
-            return VLC_EGENERIC;
-
         case VOUT_DISPLAY_RESET_PICTURES:
         {
             vout_display_place_t place;
@@ -294,17 +290,14 @@ static int Control(vout_display_t *vd, int query, va_list ap)
         case VOUT_DISPLAY_CHANGE_SOURCE_CROP:
         {
             const vout_display_cfg_t *cfg;
-            const video_format_t *src;
 
             if (query == VOUT_DISPLAY_CHANGE_SOURCE_ASPECT
              || query == VOUT_DISPLAY_CHANGE_SOURCE_CROP)
             {
-                src = va_arg(ap, const video_format_t *);
                 cfg = vd->cfg;
             }
             else
             {
-                src = &vd->source;
                 cfg = va_arg(ap, const vout_display_cfg_t *);
             }
 
@@ -314,7 +307,7 @@ static int Control(vout_display_t *vd, int query, va_list ap)
             sys->x += place.width / 2;
             sys->y += place.height / 2;
 
-            vout_display_PlacePicture(&place, src, cfg, false);
+            vout_display_PlacePicture(&place, &vd->source, cfg, false);
             sys->x -= place.width / 2;
             sys->y -= place.height / 2;
 
@@ -322,7 +315,7 @@ static int Control(vout_display_t *vd, int query, va_list ap)
             {
                 video_format_t fmt;
 
-                video_format_ApplyRotation(&fmt, src);
+                video_format_ApplyRotation(&fmt, &vd->source);
                 wp_viewport_set_source(sys->viewport,
                                 wl_fixed_from_int(fmt.i_x_offset),
                                 wl_fixed_from_int(fmt.i_y_offset),
@@ -475,7 +468,6 @@ static int Open(vlc_object_t *obj)
     vd->prepare = Prepare;
     vd->display = Display;
     vd->control = Control;
-    vd->manage = NULL;
 
     return VLC_SUCCESS;
 

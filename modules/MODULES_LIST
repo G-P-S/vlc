@@ -112,7 +112,6 @@ $Id$
  * direct3d9_adjust: adjust filter for Direct3D9 video decoding
  * direct3d9_deinterlace: deinterlacer for Direct3D9/DxVA video decoding
  * directdraw: video output module using the DirectDraw API
- * directfb: Direct Framebuffer video output
  * directsound: audio output module using the DirectSound API
  * dmo: a DirectMediaObject decoder that uses DirectMedia to decode video (WMV3)
  * dolby_surround_decoder: simple decoder for dolby surround encoded streams
@@ -448,7 +447,6 @@ $Id$
  * vorbis: a vorbis audio decoder/packetizer using the libvorbis library
  * vout_ios: iOS video provider using OpenGL ES 2
  * vout_macosx: Mac OS X OpenGL provider
- * vout_sdl: video output module using the SDL library
  * vpx: WebM encoder and decoder (VP8/VP9)
  * vsxu: audio visualization using Vovoid VSXu
  * wall: image wall filter

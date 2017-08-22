@@ -208,18 +208,12 @@ static int Open(vlc_object_t *object)
     }
 
     /* */
-    vout_display_info_t info = vd->info;
-    info.has_hide_mouse = true;
-
-    /* */
     vd->sys     = sys;
     vd->fmt     = fmt;
-    vd->info    = info;
     vd->pool    = Pool;
     vd->prepare = Prepare;
     vd->display = Display;
     vd->control = Control;
-    vd->manage  = NULL;
 
     /* */
     vout_display_SendEventDisplaySize(vd, fmt.i_width, fmt.i_height);
