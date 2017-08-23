@@ -157,6 +157,8 @@ struct vout_display_opengl_t {
     float f_z;    /* Position of the camera on the shpere radius vector */
     float f_z_min;
     float f_sar;
+
+    GLuint fboId;
 };
 
 static const GLfloat identity[] = {
@@ -254,7 +256,7 @@ static void getViewpointMatrixes(vout_display_opengl_t *vgl,
                                  video_projection_mode_t projection_mode,
                                  struct prgm *prgm)
 {
-    if (projection_mode == PROJECTION_MODE_EQUIRECTANGULAR
+    /*if (projection_mode == PROJECTION_MODE_EQUIRECTANGULAR
         || projection_mode == PROJECTION_MODE_CUBEMAP_LAYOUT_STANDARD)
     {
         float sar = (float) vgl->f_sar;
@@ -264,7 +266,7 @@ static void getViewpointMatrixes(vout_display_opengl_t *vgl,
         getZRotMatrix(vgl->f_roll, prgm->var.ZRotMatrix);
         getZoomMatrix(vgl->f_z, prgm->var.ZoomMatrix);
     }
-    else
+    else*/
     {
         memcpy(prgm->var.ProjectionMatrix, identity, sizeof(identity));
         memcpy(prgm->var.ZRotMatrix, identity, sizeof(identity));
@@ -832,13 +834,13 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
     vgl->region = NULL;
     vgl->pool = NULL;
 
-    if (vgl->fmt.projection_mode != PROJECTION_MODE_RECTANGULAR
+/*    if (vgl->fmt.projection_mode != PROJECTION_MODE_RECTANGULAR
      && vout_display_opengl_SetViewpoint(vgl, viewpoint) != VLC_SUCCESS)
     {
         vout_display_opengl_Delete(vgl);
         return NULL;
     }
-
+*/
     *fmt = vgl->fmt;
     if (subpicture_chromas) {
         *subpicture_chromas = gl_subpicture_chromas;
@@ -997,7 +999,7 @@ int vout_display_opengl_Prepare(vout_display_opengl_t *vgl,
 {
     opengl_tex_converter_t *tc = &vgl->prgm->tc;
 
-    /* Update the texture */
+    /* Update the texture , interop IOSurfaceRef<=>OpenGL : picture<=>vgl->texture*/
     int ret = tc->pf_update(tc, vgl->texture, vgl->tex_width, vgl->tex_height,
                             picture, NULL);
     if (ret != VLC_SUCCESS)
@@ -1357,12 +1359,14 @@ static int SetupCoords(vout_display_opengl_t *vgl,
     int i_ret;
     switch (vgl->fmt.projection_mode)
     {
+    default:
     case PROJECTION_MODE_RECTANGULAR:
         i_ret = BuildRectangle(vgl->prgm->tc.tex_count,
                                &vertexCoord, &textureCoord, &nbVertices,
                                &indices, &nbIndices,
                                left, top, right, bottom);
         break;
+        /*
     case PROJECTION_MODE_EQUIRECTANGULAR:
         i_ret = BuildSphere(vgl->prgm->tc.tex_count,
                             &vertexCoord, &textureCoord, &nbVertices,
@@ -1380,6 +1384,7 @@ static int SetupCoords(vout_display_opengl_t *vgl,
     default:
         i_ret = VLC_EGENERIC;
         break;
+        */
     }
 
     if (i_ret != VLC_SUCCESS)
@@ -1446,7 +1451,20 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
     vgl->api.UniformMatrix4fv(prgm->uloc.ZoomMatrix, 1, GL_FALSE,
                               prgm->var.ZoomMatrix);
 
+#ifdef __APPLE__
+    // bind FBO with shared texture
+    glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, vgl->fboId);
+    glViewport(0, 0, vgl->fmt.i_width, vgl->fmt.i_height);
     glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
+    glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
+#else
+    glDrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
+#endif
+}
+
+void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id)
+{
+    vgl->fboId = id;
 }
 
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,

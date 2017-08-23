@@ -634,6 +634,11 @@ libvlc_media_player_new( libvlc_instance_t *instance )
     var_Create (mp, "vmem-width", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-height", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-pitch", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+    var_Create (mp, "vmem-openglcontext", VLC_VAR_ADDRESS);
+    var_Create (mp, "vmem-gpuopen", VLC_VAR_ADDRESS);
+    var_Create (mp, "vmem-gpuclose", VLC_VAR_ADDRESS);
+    var_Create (mp, "vmem-gpunewframe", VLC_VAR_ADDRESS);
+    var_Create (mp, "vmem-opaque", VLC_VAR_ADDRESS);
     var_Create (mp, "avcodec-hw", VLC_VAR_STRING);
     var_Create (mp, "drawable-xid", VLC_VAR_INTEGER);
 #if defined (_WIN32) || defined (__OS2__)
@@ -1112,6 +1117,18 @@ void libvlc_video_set_format( libvlc_media_player_t *mp, const char *chroma,
     var_SetInteger( mp, "vmem-width", width );
     var_SetInteger( mp, "vmem-height", height );
     var_SetInteger( mp, "vmem-pitch", pitch );
+}
+
+void libvlc_video_set_gpu_callbacks( libvlc_media_player_t *mp,
+                                     libvlc_video_gpu_open_cb gpuopen,
+                                     libvlc_video_gpu_close_cb gpuclose,
+                                     libvlc_video_gpu_newframe_cb gpunewframe,
+                                     void *opaque )
+{
+    var_SetAddress( mp, "vmem-gpuopen", gpuopen );
+    var_SetAddress( mp, "vmem-gpuclose", gpuclose );
+    var_SetAddress( mp, "vmem-gpunewframe", gpunewframe );
+    var_SetAddress( mp, "vmem-opaque", opaque );
 }
 
 /**************************************************************************

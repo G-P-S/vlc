@@ -22,7 +22,6 @@ OPTIONS="
         --enable-faad
         --enable-flac
         --enable-theora
-        --enable-shout
         --enable-ncurses
         --enable-twolame
         --enable-realrtsp

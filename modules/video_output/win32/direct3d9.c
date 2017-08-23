@@ -156,6 +156,12 @@ struct vout_display_sys_t
     bool                    lost_not_ready;
     bool                    clear_scene;
 
+    // gpu callbacks
+    void (*gpuopen)(void *opaque, void *pDXDevice, unsigned *width, unsigned *height);
+    void (*gpuclose)(void *opaque);
+    void (*gpunewframe)(void *opaque, void *source, void *sourceRect);
+    void* opaque;
+
     /* It protects the following variables */
     vlc_mutex_t    lock;
     bool           ch_desktop;
@@ -307,6 +313,15 @@ static int Open(vlc_object_t *object)
     vd->control = Control;
     vd->manage  = Manage;
 
+    // get gpu callbacks
+    sys->gpuopen            = var_InheritAddress(vd, "vmem-gpuopen");
+    sys->gpuclose           = var_InheritAddress(vd, "vmem-gpuclose");
+    sys->gpunewframe        = var_InheritAddress(vd, "vmem-gpunewframe");
+    sys->opaque             = var_InheritAddress(vd, "vmem-opaque");
+
+    // call gpu open callback
+    if (sys->gpuopen != NULL) sys->gpuopen(sys->opaque, sys->d3ddev, &vd->fmt.i_width, &vd->fmt.i_height);
+
     /* Fix state in case of desktop mode */
     if (sys->sys.use_desktop && vd->cfg->is_fullscreen)
         vout_display_SendEventFullscreen(vd, false, false);
@@ -326,6 +341,9 @@ error:
 static void Close(vlc_object_t *object)
 {
     vout_display_t * vd = (vout_display_t *)object;
+
+    // call gpu close callback
+    if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(vd->sys->opaque);
 
     var_DelCallback(vd, "video-wallpaper", DesktopCallback, NULL);
     vlc_mutex_destroy(&vd->sys->lock);
@@ -502,22 +520,30 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         return;
     }
 
-    d3d_region_t picture_region;
-    if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
-        picture_region.width = picture->format.i_visible_width;
-        picture_region.height = picture->format.i_visible_height;
-        int subpicture_region_count     = 0;
-        d3d_region_t *subpicture_region = NULL;
-        if (subpicture)
-            Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
-                                     subpicture);
+    // call gpu newframe callback if exists, else do common rendering in window
+    if (sys->gpunewframe != NULL)
+    {
+        sys->gpunewframe(sys->opaque, surface, &sys->sys.rect_src);
+    }
+    else
+    {
+        d3d_region_t picture_region;
+        if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
+            picture_region.width = picture->format.i_visible_width;
+            picture_region.height = picture->format.i_visible_height;
+            int subpicture_region_count     = 0;
+            d3d_region_t *subpicture_region = NULL;
+            if (subpicture)
+                Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
+                                         subpicture);
 
-        Direct3D9RenderScene(vd, &picture_region,
-                            subpicture_region_count, subpicture_region);
+            Direct3D9RenderScene(vd, &picture_region,
+                                subpicture_region_count, subpicture_region);
 
-        Direct3D9DeleteRegions(sys->d3dregion_count, sys->d3dregion);
-        sys->d3dregion_count = subpicture_region_count;
-        sys->d3dregion       = subpicture_region;
+            Direct3D9DeleteRegions(sys->d3dregion_count, sys->d3dregion);
+            sys->d3dregion_count = subpicture_region_count;
+            sys->d3dregion       = subpicture_region;
+        }
     }
 }
 
