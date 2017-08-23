@@ -521,7 +521,7 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     {
         sys->gpunewframe(sys->opaque, surface, &sys->sys.rect_src);
     }
-    else
+//    else
     {
         d3d_region_t picture_region;
         if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
