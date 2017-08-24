@@ -27,4 +27,7 @@ OPTIONS="
       --enable-zvbi --disable-telx
       --enable-nls"
 
+CFLAGS="${CFLAGS} -m64 –march=native –mtune=native –march=skylake –mtune=skylake"
+export CFLAGS
+
 sh "$(dirname $0)"/../../../configure ${OPTIONS}  "$@"
