@@ -757,6 +757,7 @@ static int Direct3D9Create(vout_display_t *vd)
         (void *)GetProcAddress(sys->hd3d9_dll, "Direct3DCreate9Ex");
 
     /* Create the D3D object. */
+#ifndef COMPILE_VC2013
     if (OurDirect3DCreate9Ex) {
         LPDIRECT3D9EX d3d9exobj;
         HRESULT hr = OurDirect3DCreate9Ex(D3D_SDK_VERSION, &d3d9exobj);
@@ -766,6 +767,7 @@ static int Direct3D9Create(vout_display_t *vd)
             sys->use_d3d9ex = true;
         }
     }
+#endif
 
     if (!sys->d3dobj)
     {
