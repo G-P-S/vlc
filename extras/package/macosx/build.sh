@@ -181,6 +181,10 @@ if [ ! -e "../$TRIPLET" ]; then
     make prebuilt > $out
 fi
 fi
+
+# force to build spatial audio
+make .spatialaudio
+
 spopd
 
 unset CFLAGS
