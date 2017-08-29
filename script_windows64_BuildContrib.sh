@@ -1,7 +1,7 @@
 mkdir -p contrib/win32
 cd contrib/win32
 ../bootstrap --host=x86_64-w64-mingw32
-make fetch
+make prebuilt
 sed -ie 's:/usr/include/wine/windows/:/usr/include/wine-development/windows/:g' ../src/d3d9/rules.mak && sed -ie 's:/usr/include/wine/windows/:/usr/include/wine-development/windows/:g' ../src/d3d11/rules.mak
 make
 wget -P $HOME/Downloads https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v5.0.0.tar.bz2
