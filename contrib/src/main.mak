@@ -25,8 +25,14 @@ GNU ?= http://ftp.gnu.org/gnu
 SF := https://netcologne.dl.sourceforge.net/
 VIDEOLAN := http://downloads.videolan.org/pub/videolan
 CONTRIB_VIDEOLAN := http://downloads.videolan.org/pub/contrib
+
+##########################################################################################
+# WARNING if you change these urls you will have to clean your repo to be sure to download contribs from the new url
+#   => on buildbot, manually delete the slave directory to ensure no errors (first build should be more longer than usual because it download all contribs one time)
 CONTRIB_VIDEOLAN_20170829_WIN := https://nightlies.videolan.org/build/win64/vlc-3.0.0-20170829-0457/vlc-contrib-x86_64-w64-mingw32-20170829.tar.bz2
-CONTRIB_VIDEOLAN_20170827_MAC := hhttps://nightlies.videolan.org/build/macosx-intel/vlc-3.0.0-20170827-0449/vlc-contrib-x86_64-apple-darwin15-20170827.tar.bz2
+CONTRIB_VIDEOLAN_20170827_MAC := https://nightlies.videolan.org/build/macosx-intel/vlc-3.0.0-20170827-0449/vlc-contrib-x86_64-apple-darwin15-20170827.tar.bz2
+##########################################################################################
+
 GITHUB := https://github.com/
 
 #
