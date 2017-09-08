@@ -51,6 +51,10 @@
 #include <vlc_dialog.h>
 #include "opengl/vout_helper.h"
 
+#define GLHW_TEXT N_("GL/GLES hw converter")
+#define GLHW_LONGTEXT N_( \
+    "Force an \"gl hw converter\" module.")
+
 /**
  * Forward declarations
  */
@@ -79,6 +83,8 @@ vlc_module_begin ()
     set_subcategory (SUBCAT_VIDEO_VOUT)
     set_capability ("vout display", 300)
     set_callbacks (Open, Close)
+    add_module ("glhw", NULL, NULL,
+                GLHW_TEXT, GLHW_LONGTEXT, true)
 
     add_shortcut ("macosx", "vout_macosx")
 vlc_module_end ()
@@ -546,6 +552,8 @@ static int Control (vout_display_t *vd, int query, va_list ap)
                     sys->place = place;
                 }
 
+                if (vlc_gl_MakeCurrent (sys->gl) != VLC_SUCCESS)
+                    return VLC_EGENERIC;
                 vout_display_opengl_SetWindowAspectRatio(sys->vgl, (float)place.width / place.height);
 
                 /* For resize, we call glViewport in reshape and not here.
@@ -553,6 +561,7 @@ static int Control (vout_display_t *vd, int query, va_list ap)
                 if (query != VOUT_DISPLAY_CHANGE_DISPLAY_SIZE)
                     // x / y are top left corner, but we need the lower left one
                     glViewport (place.x, cfg_tmp.display.height - (place.y + place.height), place.width, place.height);
+                vlc_gl_ReleaseCurrent (sys->gl);
 
                 return VLC_SUCCESS;
             }

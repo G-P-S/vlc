@@ -129,10 +129,12 @@ int OpenAvio(vlc_object_t *object)
     }
     free(url);
 
-    int64_t size = avio_size(sys->context);
+    sys->size = avio_size(sys->context);
+
     bool seekable;
     seekable = sys->context->seekable;
-    msg_Dbg(access, "%sseekable, size=%"PRIi64, seekable ? "" : "not ", size);
+    msg_Dbg(access, "%sseekable, size=%"PRIi64, seekable ? "" : "not ",
+            sys->size);
 
     /* */
     access->pf_read = Read;
@@ -271,7 +273,7 @@ static int Seek(stream_t *access, uint64_t position)
     if (ret < 0) {
         msg_Err(access, "Seek to %"PRIu64" failed: %s", position,
                 vlc_strerror_c(AVUNERROR(ret)));
-        if (sys->size < 0 || position != sys->size)
+        if (sys->size < 0 || position != (uint64_t)sys->size)
             return VLC_EGENERIC;
     }
     return VLC_SUCCESS;

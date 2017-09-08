@@ -27,7 +27,7 @@
 #endif
 
 #include <GLES2/gl2ext.h>
-#include "internal.h"
+#include "converter.h"
 #include "../android/display.h"
 #include "../android/utils.h"
 
@@ -154,8 +154,8 @@ tc_anop_update(const opengl_tex_converter_t *tc, GLuint *textures,
         return VLC_EGENERIC;
     }
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(tc->tex_target, textures[0]);
+    tc->vt->ActiveTexture(GL_TEXTURE0);
+    tc->vt->BindTexture(tc->tex_target, textures[0]);
 
     return VLC_SUCCESS;
 }
@@ -164,7 +164,7 @@ static int
 tc_anop_fetch_locations(opengl_tex_converter_t *tc, GLuint program)
 {
     struct priv *priv = tc->priv;
-    priv->uloc.uSTMatrix = tc->api->GetUniformLocation(program, "uSTMatrix");
+    priv->uloc.uSTMatrix = tc->vt->GetUniformLocation(program, "uSTMatrix");
     return priv->uloc.uSTMatrix != -1 ? VLC_SUCCESS : VLC_EGENERIC;
 }
 
@@ -176,13 +176,14 @@ tc_anop_prepare_shader(const opengl_tex_converter_t *tc,
     (void) tex_width; (void) tex_height; (void) alpha;
     struct priv *priv = tc->priv;
     if (priv->transform_mtx != NULL)
-        tc->api->UniformMatrix4fv(priv->uloc.uSTMatrix, 1, GL_FALSE,
+        tc->vt->UniformMatrix4fv(priv->uloc.uSTMatrix, 1, GL_FALSE,
                                   priv->transform_mtx);
 }
 
 static void
-tc_anop_release(const opengl_tex_converter_t *tc)
+Close(vlc_object_t *obj)
 {
+    opengl_tex_converter_t *tc = (void *)obj;
     struct priv *priv = tc->priv;
 
     if (priv->stex_attached)
@@ -191,9 +192,11 @@ tc_anop_release(const opengl_tex_converter_t *tc)
     free(priv);
 }
 
-int
-opengl_tex_converter_anop_init(opengl_tex_converter_t *tc)
+static int
+Open(vlc_object_t *obj)
 {
+    opengl_tex_converter_t *tc = (void *) obj;
+
     if (tc->fmt.i_chroma != VLC_CODEC_ANDROID_OPAQUE
      || !tc->gl->surface->handle.anativewindow)
         return VLC_EGENERIC;
@@ -212,10 +215,9 @@ opengl_tex_converter_anop_init(opengl_tex_converter_t *tc)
     tc->pf_update         = tc_anop_update;
     tc->pf_fetch_locations = tc_anop_fetch_locations;
     tc->pf_prepare_shader = tc_anop_prepare_shader;
-    tc->pf_release        = tc_anop_release;
 
     tc->tex_count = 1;
-    tc->texs[0] = (struct opengl_tex_cfg) { { 1, 1 }, { 1, 1 } };
+    tc->texs[0] = (struct opengl_tex_cfg) { { 1, 1 }, { 1, 1 }, 0, 0, 0 };
 
     tc->tex_target   = GL_TEXTURE_EXTERNAL_OES;
 
@@ -250,10 +252,10 @@ opengl_tex_converter_anop_init(opengl_tex_converter_t *tc)
             break;
     }
 
-    static const char *code =
-        "#version " GLSL_VERSION "\n"
+    static const char *template =
+        "#version %u\n"
         "#extension GL_OES_EGL_image_external : require\n"
-        PRECISION
+        "%s" /* precision */
         "varying vec2 TexCoord0;"
         "uniform samplerExternalOES sTexture;"
         "uniform mat4 uSTMatrix;"
@@ -261,10 +263,23 @@ opengl_tex_converter_anop_init(opengl_tex_converter_t *tc)
         "{ "
         "  gl_FragColor = texture2D(sTexture, (uSTMatrix * vec4(TexCoord0, 1, 1)).xy);"
         "}";
-    GLuint fragment_shader = tc->api->CreateShader(GL_FRAGMENT_SHADER);
-    tc->api->ShaderSource(fragment_shader, 1, &code, NULL);
-    tc->api->CompileShader(fragment_shader);
+
+    char *code;
+    if (asprintf(&code, template, tc->glsl_version, tc->glsl_precision_header) < 0)
+        return 0;
+    GLuint fragment_shader = tc->vt->CreateShader(GL_FRAGMENT_SHADER);
+    tc->vt->ShaderSource(fragment_shader, 1, (const char **) &code, NULL);
+    tc->vt->CompileShader(fragment_shader);
     tc->fshader = fragment_shader;
+    free(code);
 
     return VLC_SUCCESS;
 }
+
+vlc_module_begin ()
+    set_description("Android OpenGL SurfaceTexture converter")
+    set_capability("glconv", 1)
+    set_callbacks(Open, Close)
+    set_category(CAT_VIDEO)
+    set_subcategory(SUBCAT_VIDEO_VOUT)
+vlc_module_end ()

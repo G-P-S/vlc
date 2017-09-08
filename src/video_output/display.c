@@ -338,7 +338,6 @@ typedef struct {
     vlc_rational_t sar_initial;
 
     /* */
-    bool ch_display_filled;
     bool is_display_filled;
 
     bool ch_zoom;
@@ -789,7 +788,7 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
 
         if (!ch_display_size &&
             !reset_pictures &&
-            !osys->ch_display_filled &&
+            osys->is_display_filled == osys->cfg.is_display_filled &&
             !osys->ch_zoom &&
 #if defined(_WIN32) || defined(__OS2__)
             !ch_fullscreen &&
@@ -828,58 +827,31 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
 
         /* */
         if (ch_display_size) {
-            vout_display_cfg_t cfg = osys->cfg;
-            cfg.display.width  = display_width;
-            cfg.display.height = display_height;
 #if defined(_WIN32) || defined(__OS2__)
             osys->width_saved  = osys->cfg.display.width;
             osys->height_saved = osys->cfg.display.height;
 #endif
-
-            vout_display_Control(vd, VOUT_DISPLAY_CHANGE_DISPLAY_SIZE, &cfg);
-
             osys->cfg.display.width  = display_width;
             osys->cfg.display.height = display_height;
+
+            vout_display_Control(vd, VOUT_DISPLAY_CHANGE_DISPLAY_SIZE,
+                                 &osys->cfg);
         }
         /* */
-        if (osys->ch_display_filled) {
-            vout_display_cfg_t cfg = osys->cfg;
-
-            cfg.is_display_filled = osys->is_display_filled;
-
-            if (vout_display_Control(vd, VOUT_DISPLAY_CHANGE_DISPLAY_FILLED, &cfg)) {
-                msg_Err(vd, "Failed to change display filled state");
-                osys->is_display_filled = osys->cfg.is_display_filled;
-            }
+        if (osys->is_display_filled != osys->cfg.is_display_filled) {
             osys->cfg.is_display_filled = osys->is_display_filled;
-            osys->ch_display_filled = false;
+
+            vout_display_Control(vd, VOUT_DISPLAY_CHANGE_DISPLAY_FILLED,
+                                 &osys->cfg);
         }
         /* */
         if (osys->ch_zoom) {
-            vout_display_cfg_t cfg = osys->cfg;
-
-            cfg.zoom.num = osys->zoom.num;
-            cfg.zoom.den = osys->zoom.den;
-
-            if (10 * cfg.zoom.num <= cfg.zoom.den) {
-                cfg.zoom.num = 1;
-                cfg.zoom.den = 10;
-            } else if (cfg.zoom.num >= 10 * cfg.zoom.den) {
-                cfg.zoom.num = 10;
-                cfg.zoom.den = 1;
-            }
-
-            if (vout_display_Control(vd, VOUT_DISPLAY_CHANGE_ZOOM, &cfg)) {
-                msg_Err(vd, "Failed to change zoom");
-                osys->zoom.num = osys->cfg.zoom.num;
-                osys->zoom.den = osys->cfg.zoom.den;
-            } else {
-                osys->fit_window = -1;
-            }
-
+            osys->fit_window = -1;
             osys->cfg.zoom.num = osys->zoom.num;
             osys->cfg.zoom.den = osys->zoom.den;
             osys->ch_zoom = false;
+
+            vout_display_Control(vd, VOUT_DISPLAY_CHANGE_ZOOM, &osys->cfg);
         }
 #if defined(_WIN32) || defined(__OS2__)
         /* */
@@ -893,9 +865,6 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
 #endif
         /* */
         if (osys->ch_sar) {
-            unsigned int i_sar_num = vd->source.i_sar_num;
-            unsigned int i_sar_den = vd->source.i_sar_den;
-
             if (osys->sar.num > 0 && osys->sar.den > 0) {
                 vd->source.i_sar_num = osys->sar.num;
                 vd->source.i_sar_den = osys->sar.den;
@@ -904,18 +873,9 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
                 vd->source.i_sar_den = osys->source.i_sar_den;
             }
 
-            if (vout_display_Control(vd, VOUT_DISPLAY_CHANGE_SOURCE_ASPECT)) {
-                /* There nothing much we can do. The only reason a vout display
-                 * does not support it is because it need the core to add black border
-                 * to the video for it.
-                 * TODO add black borders ?
-                 */
-                msg_Err(vd, "Failed to change source AR");
-                vd->source.i_sar_num = i_sar_num;
-                vd->source.i_sar_den = i_sar_den;
-            } else if (!osys->fit_window) {
+            vout_display_Control(vd, VOUT_DISPLAY_CHANGE_SOURCE_ASPECT);
+            if (!osys->fit_window)
                 osys->fit_window = 1;
-            }
             osys->sar.num = vd->source.i_sar_num;
             osys->sar.den = vd->source.i_sar_den;
             osys->ch_sar  = false;
@@ -954,32 +914,16 @@ bool vout_ManageDisplay(vout_display_t *vd, bool allow_reset_pictures)
                 bottom = (int)osys->source.i_y_offset + osys->crop.bottom;
             bottom = VLC_CLIP(bottom, top + 1, bottom_max);
 
-            unsigned int i_x_offset       = vd->source.i_x_offset;
-            unsigned int i_y_offset       = vd->source.i_y_offset;
-            unsigned int i_visible_width  = vd->source.i_visible_width;
-            unsigned int i_visible_height = vd->source.i_visible_height;
-
             vd->source.i_x_offset       = left;
             vd->source.i_y_offset       = top;
             vd->source.i_visible_width  = right - left;
             vd->source.i_visible_height = bottom - top;
             video_format_Print(VLC_OBJECT(vd), "SOURCE ", &osys->source);
             video_format_Print(VLC_OBJECT(vd), "CROPPED", &vd->source);
-            if (vout_display_Control(vd, VOUT_DISPLAY_CHANGE_SOURCE_CROP)) {
-                msg_Err(vd, "Failed to change source crop TODO implement crop at core");
+            vout_display_Control(vd, VOUT_DISPLAY_CHANGE_SOURCE_CROP);
 
-                vd->source.i_x_offset       = i_x_offset;
-                vd->source.i_y_offset       = i_y_offset;
-                vd->source.i_visible_width  = i_visible_width;
-                vd->source.i_visible_height = i_visible_height;
-                crop_num = 0;
-                crop_den = 0;
-                /* FIXME implement cropping in the core if not supported by the
-                 * vout module (easy)
-                 */
-            } else if (!osys->fit_window) {
+            if (!osys->fit_window)
                 osys->fit_window = 1;
-            }
             osys->crop.left   = vd->source.i_x_offset - osys->source.i_x_offset;
             osys->crop.top    = vd->source.i_y_offset - osys->source.i_y_offset;
             /* FIXME for right/bottom we should keep the 'type' border vs window */
@@ -1083,10 +1027,7 @@ void vout_SetDisplayFilled(vout_display_t *vd, bool is_filled)
 {
     vout_display_owner_sys_t *osys = vd->owner.sys;
 
-    if (!osys->is_display_filled != !is_filled) {
-        osys->ch_display_filled = true;
-        osys->is_display_filled = is_filled;
-    }
+    osys->is_display_filled = is_filled;
 }
 
 void vout_SetDisplayZoom(vout_display_t *vd, unsigned num, unsigned den)
@@ -1097,6 +1038,14 @@ void vout_SetDisplayZoom(vout_display_t *vd, unsigned num, unsigned den)
         vlc_ureduce(&num, &den, num, den, 0);
     } else {
         num = 1;
+        den = 1;
+    }
+
+    if (10 * num <= den) {
+        num = 1;
+        den = 10;
+    } else if (num >= 10 * den) {
+        num = 10;
         den = 1;
     }
 

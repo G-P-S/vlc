@@ -94,6 +94,10 @@ AS_IF([test -n "${with_binary_version}"],[
          [Binary specific version])
 ])
 
+dnl Prevent clang from accepting unknown flags with a mere warning
+AX_APPEND_COMPILE_FLAGS([-Werror=unknown-warning-option -Werror=invalid-command-line-argument], [CFLAGS])
+AX_APPEND_COMPILE_FLAGS([-Werror=unknown-warning-option -Werror=invalid-command-line-argument], [CXXFLAGS])
+
 dnl
 dnl  Check the operating system
 dnl
@@ -924,29 +928,16 @@ PKG_CHECK_MODULES([SYSTEMD], [libsystemd], [
 AM_CONDITIONAL([HAVE_SYSTEMD], [test "${have_systemd}" = "yes"])
 
 
-dnl Check for ntohl, etc.
-VLC_SAVE_FLAGS
-CFLAGS="${CFLAGS} -Wall -Werror"
-AC_CACHE_CHECK([for ntohl in sys/param.h],
-    [ac_cv_c_ntohl_sys_param_h],
-    [     AC_TRY_COMPILE([#include <sys/param.h>],
-        [int meuh; ntohl(meuh);],
-        ac_cv_c_ntohl_sys_param_h=yes, ac_cv_c_ntohl_sys_param_h=no)])
-if test "${ac_cv_c_ntohl_sys_param_h}" != "no"; then
-    AC_DEFINE(NTOHL_IN_SYS_PARAM_H, 1, Define if <sys/param.h> defines ntohl.)
-fi
-VLC_RESTORE_FLAGS
-
 EXTEND_HELP_STRING([Optimization options:])
 dnl
 dnl  Compiler warnings
 dnl
 
-RDC_PROG_CC_WFLAGS([all extra sign-compare undef pointer-arith bad-function-cast write-strings missing-prototypes volatile-register-var error-implicit-function-declaration init-self logical-op format-security shadow=local])
-RDC_PROG_CC_FLAGS([-pipe])
-AC_LANG_PUSH([C++])
-RDC_PROG_CXX_WFLAGS([all extra sign-compare undef pointer-arith volatile-register-var format-security])
-AC_LANG_POP([C++])
+AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -Wsign-compare -Wundef -Wpointer-arith -Wvolatile-register-var -Wformat -Wformat-security], [CFLAGS])
+AX_APPEND_COMPILE_FLAGS([-Wall -Wextra -Wsign-compare -Wundef -Wpointer-arith -Wvolatile-register-var -Wformat -Wformat-security], [CXXFLAGS])
+
+AX_APPEND_COMPILE_FLAGS([-Wbad-function-cast -Wwrite-strings -Wmissing-prototypes -Werror-implicit-function-declaration -Winit-self -Wlogical-op -Wshadow=local], [CFLAGS])
+AX_APPEND_COMPILE_FLAGS([-pipe], [CFLAGS])
 
 dnl
 dnl  Debugging mode
@@ -1015,6 +1006,39 @@ AS_IF([test "${SYS}" != "mingw32" -a "${SYS}" != "os2"], [
   AS_IF([test "${ac_cv_c_visibility_hidden}" = "no"], [VLC_RESTORE_FLAGS])
 ])
 
+dnl
+dnl Sanitizer flags
+dnl
+AC_ARG_WITH([sanitizer],
+    [AS_HELP_STRING([--with-sanitizer=(address/memory/undefined/thread)],
+        [build with sanitizer flags (default disabled)])],
+     [],
+     [with_sanitizer=no])
+
+AS_VAR_IF(with_sanitizer, no, [], [
+    AX_CHECK_COMPILE_FLAG([-fsanitize=${with_sanitizer}], [
+        AX_APPEND_FLAG([-fsanitize=${with_sanitizer}])
+        AX_APPEND_FLAG([-fsanitize=${with_sanitizer}], [CXXFLAGS])
+        AX_APPEND_FLAG([-fsanitize=${with_sanitizer}], [LDFLAGS])
+    ], [
+        AC_MSG_ERROR(["-fsanitize=${with_sanitizer} not supported!"])
+    ])
+    AX_APPEND_FLAG([-g])
+    AX_APPEND_FLAG([-g], [CXXFLAGS])
+
+    AS_IF([test -z "${with_sanitizer##*address*}" ], [
+       AX_APPEND_COMPILE_FLAGS([-fsanitize-address-use-after-scope -fno-omit-frame-pointer])
+       AX_APPEND_COMPILE_FLAGS([-fsanitize-address-use-after-scope -fno-omit-frame-pointer], [CXXFLAGS])
+    ])
+    AS_IF([test -z "${with_sanitizer##*memory*}" ], [
+        AX_APPEND_COMPILE_FLAGS([-fPIE -pie])
+        AX_APPEND_COMPILE_FLAGS([-fPIE -pie], [CXXFLAGS])
+    ])
+    AS_IF([test -z "${with_sanitizer##*thread*}" ], [
+        AX_APPEND_COMPILE_FLAGS([-fPIE -pie])
+        AX_APPEND_COMPILE_FLAGS([-fPIE -pie], [CXXFLAGS])
+    ])
+])
 
 dnl
 dnl  Enable/disable optimizations
@@ -1044,10 +1068,8 @@ AS_IF([test "${enable_optimizations}" != "no"], [
   ])
 
   dnl Check for fast maths
-  RDC_PROG_CC_FFLAGS([no-math-errno unsafe-math-optimizations no-rounding-math no-signaling-nans cx-limited-range])
-  AC_LANG_PUSH(C++)
-  RDC_PROG_CXX_FFLAGS([no-math-errno unsafe-math-optimizations no-rounding-math no-signaling-nans cx-limited-range])
-  AC_LANG_POP
+  AX_APPEND_COMPILE_FLAGS([-fno-math-errno -funsafe-math-optimizations -fno-rounding-math -fno-signaling-nans -fcx-limited-range], [CFLAGS])
+  AX_APPEND_COMPILE_FLAGS([-fno-math-errno -funsafe-math-optimizations -fno-rounding-math -fno-signaling-nans -fcx-limited-range], [CXXFLAGS])
 
 AH_BOTTOM([
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -1115,7 +1137,7 @@ AC_CACHE_CHECK([if linker supports -z,defs], [ac_cv_ld_z_defs], [
     ac_cv_ld_z_defs="no"
   ])
 ])
-AS_IF([test "${ac_cv_ld_z_defs}" = "no"], [VLC_RESTORE_FLAGS])
+AS_IF([test "${ac_cv_ld_z_defs}" = "no" -o "x$with_sanitizer" != xno], [VLC_RESTORE_FLAGS])
 
 dnl Check for __attribute__((packed))
 AC_CACHE_CHECK([for __attribute__((packed))],

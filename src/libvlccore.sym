@@ -17,6 +17,7 @@ aout_FormatPrint
 aout_FormatPrintChannels
 aout_VolumeGet
 aout_VolumeSet
+aout_VolumeUpdate
 aout_MuteSet
 aout_MuteGet
 aout_DeviceGet
@@ -677,7 +678,6 @@ vlc_epg_Delete
 vlc_epg_Duplicate
 vlc_epg_AddEvent
 vlc_epg_SetCurrent
-vlc_epg_Merge
 vlc_fifo_Lock
 vlc_fifo_Unlock
 vlc_fifo_Signal

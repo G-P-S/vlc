@@ -336,6 +336,8 @@ audio_output_t *aout_New (vlc_object_t *parent)
 
     /* Stereo mode */
     var_Create (aout, "stereo-mode", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
+    owner->initial_stereo_mode = var_GetInteger (aout, "stereo-mode");
+
     var_AddCallback (aout, "stereo-mode", StereoModeCallback, NULL);
     vlc_value_t txt;
     txt.psz_string = _("Stereo audio mode");
@@ -734,6 +736,33 @@ int aout_VolumeSet (audio_output_t *aout, float vol)
     if (aout_OutputTryLock (aout) == 0)
         aout_OutputUnlock (aout);
     return 0;
+}
+
+/**
+ * Raises the volume.
+ * \param value how much to increase (> 0) or decrease (< 0) the volume
+ * \param volp if non-NULL, will contain contain the resulting volume
+ */
+int aout_VolumeUpdate (audio_output_t *aout, int value, float *volp)
+{
+    int ret = -1;
+    float stepSize = var_InheritFloat (aout, "volume-step") / (float)AOUT_VOLUME_DEFAULT;
+    float delta = value * stepSize;
+    float vol = aout_VolumeGet (aout);
+
+    if (vol >= 0.f)
+    {
+        vol += delta;
+        if (vol < 0.f)
+            vol = 0.f;
+        if (vol > 2.f)
+            vol = 2.f;
+        vol = (roundf (vol / stepSize)) * stepSize;
+        if (volp != NULL)
+            *volp = vol;
+        ret = aout_VolumeSet (aout, vol);
+    }
+    return ret;
 }
 
 /**
