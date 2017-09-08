@@ -310,7 +310,7 @@ int OpenDemux( vlc_object_t *p_this )
     {
         msg_Err( p_demux, "Could not open %s: %s", psz_url,
                  vlc_strerror_c(AVUNERROR(error)) );
-        av_free( p_io_buffer );
+        av_free( pb->buffer );
         av_free( pb );
         p_sys->ic = NULL;
         free( psz_url );
@@ -614,11 +614,11 @@ int OpenDemux( vlc_object_t *p_this )
             es = es_out_Add( p_demux->out, &es_fmt );
             if( s->disposition & AV_DISPOSITION_DEFAULT )
                 es_out_Control( p_demux->out, ES_OUT_SET_ES_DEFAULT, es );
-            es_format_Clean( &es_fmt );
 
             msg_Dbg( p_demux, "adding es: %s codec = %4.4s (%d)",
                      psz_type, (char*)&fcc, cp->codec_id  );
         }
+        es_format_Clean( &es_fmt );
         TAB_APPEND( p_sys->i_tk, p_sys->tk, es );
     }
     p_sys->tk_pcr = xcalloc( p_sys->i_tk, sizeof(*p_sys->tk_pcr) );
@@ -820,7 +820,7 @@ static int Demux( demux_t *p_demux )
         if( p_sys->tk_pcr[i] > VLC_TS_INVALID && p_sys->tk_pcr[i] + 10 * CLOCK_FREQ >= i_ts_max )
             i_ts_min = __MIN( i_ts_min, p_sys->tk_pcr[i] );
     }
-    if( i_ts_min >= p_sys->i_pcr )
+    if( i_ts_min >= p_sys->i_pcr && likely(i_ts_min != INT64_MAX) )
     {
         p_sys->i_pcr = i_ts_min;
         es_out_SetPCR( p_demux->out, p_sys->i_pcr );

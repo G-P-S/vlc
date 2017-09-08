@@ -233,7 +233,7 @@ static int Open(vlc_object_t *this)
     }
 }
 
-void Close (vlc_object_t *this)
+static void Close (vlc_object_t *this)
 {
     vout_display_t *vd = (vout_display_t *)this;
     vout_display_sys_t *sys = vd->sys;
@@ -257,7 +257,7 @@ void Close (vlc_object_t *this)
             @synchronized (sys->glESView) {
                 msg_Dbg(this, "deleting display");
 
-                if (likely([sys->glESView isAppActive]) && sys->vgl)
+                if (likely(sys->vgl))
                 {
                     vlc_gl_MakeCurrent(sys->gl);
                     vout_display_opengl_Delete(sys->vgl);
@@ -294,6 +294,9 @@ static int Control(vout_display_t *vd, int query, va_list ap)
             @autoreleasepool {
                 const vout_display_cfg_t *cfg;
 
+                if (vlc_gl_MakeCurrent(sys->gl) != VLC_SUCCESS)
+                    return VLC_EGENERIC;
+
                 if (query == VOUT_DISPLAY_CHANGE_SOURCE_ASPECT ||
                     query == VOUT_DISPLAY_CHANGE_SOURCE_CROP) {
                     cfg = vd->cfg;
@@ -321,22 +324,19 @@ static int Control(vout_display_t *vd, int query, va_list ap)
                     sys->place = place;
                 }
 
-                if (sys->gl != NULL)
-                    vout_display_opengl_SetWindowAspectRatio(sys->vgl, (float)place.width / place.height);
+                vout_display_opengl_SetWindowAspectRatio(sys->vgl, (float)place.width / place.height);
 
                 // x / y are top left corner, but we need the lower left one
                 if (query != VOUT_DISPLAY_CHANGE_DISPLAY_SIZE)
                     glViewport(place.x, cfg_tmp.display.height - (place.y + place.height), place.width, place.height);
+                vlc_gl_ReleaseCurrent(sys->gl);
             }
             return VLC_SUCCESS;
         }
 
         case VOUT_DISPLAY_CHANGE_VIEWPOINT:
-            if (sys->gl != NULL)
-                return vout_display_opengl_SetViewpoint(sys->vgl,
-                    &va_arg (ap, const vout_display_cfg_t* )->viewpoint);
-            else
-                return VLC_EGENERIC;
+            return vout_display_opengl_SetViewpoint(sys->vgl,
+                &va_arg (ap, const vout_display_cfg_t* )->viewpoint);
 
         case VOUT_DISPLAY_RESET_PICTURES:
             vlc_assert_unreachable ();
@@ -350,7 +350,7 @@ static void PictureDisplay(vout_display_t *vd, picture_t *pic, subpicture_t *sub
 {
     vout_display_sys_t *sys = vd->sys;
     @synchronized (sys->glESView) {
-        if (likely([sys->glESView isAppActive]) && vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
+        if (vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
         {
             vout_display_opengl_Display(sys->vgl, &vd->source);
             vlc_gl_ReleaseCurrent(sys->gl);
@@ -366,7 +366,7 @@ static void PictureDisplay(vout_display_t *vd, picture_t *pic, subpicture_t *sub
 static void PictureRender(vout_display_t *vd, picture_t *pic, subpicture_t *subpicture)
 {
     vout_display_sys_t *sys = vd->sys;
-    if (likely([sys->glESView isAppActive]) && vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
+    if (vlc_gl_MakeCurrent(sys->gl) == VLC_SUCCESS)
     {
         vout_display_opengl_Prepare(sys->vgl, pic, subpicture);
         vlc_gl_ReleaseCurrent(sys->gl);
@@ -392,11 +392,13 @@ static int OpenglESLock(vlc_gl_t *gl)
 {
     struct gl_sys *sys = gl->sys;
 
+    if (unlikely(![sys->glESView isAppActive]))
+        return VLC_EGENERIC;
+
     [sys->glESView lock];
-    if (likely([sys->glESView isAppActive]))
-        [sys->glESView resetBuffers];
+    [sys->glESView resetBuffers];
     sys->locked_ctx = (__bridge CVEAGLContext) ((__bridge void *) [sys->glESView eaglContext]);
-    return 0;
+    return VLC_SUCCESS;
 }
 
 static void OpenglESUnlock(vlc_gl_t *gl)
@@ -483,14 +485,14 @@ static void OpenglESSwap(vlc_gl_t *gl)
             return;
         }
 
+        if (unlikely(![viewContainer respondsToSelector:@selector(isKindOfClass:)])) {
+            msg_Err(_voutDisplay, "void pointer not an ObjC object");
+            return;
+        }
+
         [viewContainer retain];
 
         @synchronized(viewContainer) {
-            if (unlikely(![viewContainer respondsToSelector:@selector(isKindOfClass:)])) {
-                msg_Err(_voutDisplay, "void pointer not an ObjC object");
-                return;
-            }
-
             if (![viewContainer isKindOfClass:[UIView class]]) {
                 msg_Err(_voutDisplay, "passed ObjC object not of class UIView");
                 return;
@@ -529,7 +531,6 @@ static void OpenglESSwap(vlc_gl_t *gl)
 
 - (void)dealloc
 {
-
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_eaglContext release];
     [super dealloc];
@@ -548,6 +549,10 @@ static void OpenglESSwap(vlc_gl_t *gl)
         [self performSelectorOnMainThread:@selector(createBuffers)
                                                  withObject:nil
                                               waitUntilDone:YES];
+        return;
+    }
+
+    if (unlikely(!_appActive)) {
         return;
     }
 
@@ -633,22 +638,19 @@ static void OpenglESSwap(vlc_gl_t *gl)
     [EAGLContext setCurrentContext:_eaglContext];
 
     CGSize viewSize = [self bounds].size;
-
+    CGFloat scaleFactor = self.contentScaleFactor;
     vout_display_place_t place;
 
-    @synchronized (self) {
-        if (_voutDisplay) {
-            vout_display_cfg_t cfg_tmp = *(_voutDisplay->cfg);
-            CGFloat scaleFactor = self.contentScaleFactor;
+    if (_voutDisplay) {
+        vout_display_cfg_t cfg_tmp = *(_voutDisplay->cfg);
 
-            cfg_tmp.display.width  = viewSize.width * scaleFactor;
-            cfg_tmp.display.height = viewSize.height * scaleFactor;
+        cfg_tmp.display.width  = viewSize.width * scaleFactor;
+        cfg_tmp.display.height = viewSize.height * scaleFactor;
 
-            vout_display_PlacePicture(&place, &_voutDisplay->source, &cfg_tmp, false);
-            _voutDisplay->sys->place = place;
-            vout_display_SendEventDisplaySize(_voutDisplay, viewSize.width * scaleFactor,
-                                              viewSize.height * scaleFactor);
-        }
+        vout_display_PlacePicture(&place, &_voutDisplay->source, &cfg_tmp, false);
+        _voutDisplay->sys->place = place;
+        vout_display_SendEventDisplaySize(_voutDisplay, viewSize.width * scaleFactor,
+                                          viewSize.height * scaleFactor);
     }
 
     // x / y are top left corner, but we need the lower left one

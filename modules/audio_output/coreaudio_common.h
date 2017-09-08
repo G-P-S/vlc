@@ -29,6 +29,7 @@
 #import <vlc_common.h>
 #import <vlc_atomic.h>
 #import <vlc_aout.h>
+#import <vlc_threads.h>
 
 #import <AudioUnit/AudioUnit.h>
 #import <AudioToolbox/AudioToolbox.h>
@@ -53,6 +54,8 @@ struct aout_sys_common
     TPCircularBuffer    circular_buffer;
     atomic_uint         i_underrun_size;
     atomic_bool         b_paused;
+    atomic_bool         b_do_flush;
+    vlc_sem_t           flush_sem;
     int                 i_rate;
     unsigned int        i_bytes_per_frame;
     unsigned int        i_frame_length;
@@ -61,6 +64,10 @@ struct aout_sys_common
     /* ca_TimeGet extra latency, in micro-seconds */
     mtime_t             i_dev_latency_us;
 };
+
+void ca_Open(audio_output_t *p_aout);
+
+void ca_Close(audio_output_t *p_aout);
 
 void ca_Render(audio_output_t *p_aout, uint8_t *p_output, size_t i_requested);
 

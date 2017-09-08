@@ -899,9 +899,12 @@ void FilterSliderData::writeToConfig()
 }
 
 AudioFilterControlWidget::AudioFilterControlWidget
-( intf_thread_t *_p_intf, QWidget *parent, const char *_name ) :
-    QWidget( parent ), p_intf( _p_intf ), name( _name ), i_smallfont(0)
-{}
+( intf_thread_t *_p_intf, QWidget *parent, const char *_shortcut,
+  const char *_name = NULL ) :
+    QWidget( parent ), p_intf( _p_intf ), shortcut( _shortcut ),
+    name( _name ? _name : _shortcut ), i_smallfont(0)
+{
+}
 
 void AudioFilterControlWidget::connectConfigChanged( FilterSliderData *slider )
 {
@@ -944,7 +947,7 @@ void AudioFilterControlWidget::build()
 
     char *psz_af = var_InheritString( THEPL, "audio-filter" );
 
-    if( psz_af && filterIsPresent( qfu(psz_af), name ) )
+    if( psz_af && filterIsPresent( qfu(psz_af), shortcut ) )
         slidersBox->setChecked( true );
     else
         slidersBox->setChecked( false );
@@ -962,10 +965,10 @@ void AudioFilterControlWidget::enable( bool b_enable )
         return;
     }
 
-    QString result = ChangeFiltersString( p_intf, "audio-filter", qtu(name),
+    QString result = ChangeFiltersString( p_intf, "audio-filter", qtu(shortcut),
                                           b_enable );
     emit configChanged( qfu("audio-filter"), result );
-    playlist_EnableAudioFilter( THEPL, qtu(name), b_enable );
+    playlist_EnableAudioFilter( THEPL, qtu(shortcut), b_enable );
 }
 
 /**********************************************************************
@@ -1304,6 +1307,19 @@ StereoWidener::StereoWidener( intf_thread_t *p_intf, QWidget *parent )
         { "stereowiden-dry-mix",   N_("Dry mix"),       "%",  0.0, 1.0, 0.8, 0.1, 1.0 },
     };
     for( int i=0; i<4 ;i++ ) controls.append( a[i] );
+    build();
+}
+
+/**********************************************************************
+ * Advanced
+ **********************************************************************/
+
+PitchShifter::PitchShifter( intf_thread_t *p_intf, QWidget *parent )
+    : AudioFilterControlWidget( p_intf, parent, "pitch", "scaletempo" )
+{
+    i_smallfont = -1;
+    controls.append( { "pitch-shift", N_("Adjust pitch"), "semitones",
+                        -12.0, 12.0, 0.0, 0.25, 1.0 } );
     build();
 }
 

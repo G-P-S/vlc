@@ -162,6 +162,12 @@ $Id$
  * gaussianblur: gaussian blur video filter
  * gestures: mouse gestures control plugin
  * gl: OpenGL video output using the generic OpenGL provider
+ * glconv_android: Android SurfaceTexture OpenGL hardware converter
+ * glconv_cvpx: Apple CVPX OpenGL hardware converter (for iOS and macOS)
+ * glconv_vaapi_drm: VA-API OpenGL hardware converter for DRM
+ * glconv_vaapi_wl: VA-API OpenGL hardware converter for Wayland
+ * glconv_vaapi_x11: VA-API OpenGL hardware converter for X11
+ * glconv_vdpau: VDPAU OpenGL surface converter
  * gles2: OpenGL ES2 video output using the generic OpenGL provider
  * glspectrum: 3D OpenGL spectrum visualization
  * glwin32: a opengl provider using DirectX OpenGL
@@ -333,7 +339,7 @@ $Id$
  * sapi: Windows Text to Speech Synthetizer using the SAPI 5.1 API
  * satip: SES Astra SAT>IP access module
  * scale: Images rescaler
- * scaletempo: Scale audio tempo in sync with playback rate
+ * scaletempo: Scale audio tempo in sync with playback rate, or adjust pitch without changing tempo
  * scene: scene video filter
  * schroedinger: Schroedinger video decoder
  * screen: a input module that takes screenshots of the primary monitor

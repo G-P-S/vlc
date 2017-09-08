@@ -1737,6 +1737,119 @@ static void ControlUnpause( input_thread_t *p_input, mtime_t i_control_date )
     es_out_SetPauseState( input_priv(p_input)->p_es_out, false, false, i_control_date );
 }
 
+static void ViewpointApply( input_thread_t *p_input )
+{
+    input_thread_private_t *priv = input_priv(p_input);
+
+    vlc_viewpoint_clip( &priv->viewpoint );
+
+    vout_thread_t **pp_vout;
+    size_t i_vout;
+    input_resource_HoldVouts( priv->p_resource, &pp_vout, &i_vout );
+
+    for( size_t i = 0; i < i_vout; ++i )
+    {
+        var_SetAddress( pp_vout[i], "viewpoint", &priv->viewpoint );
+        /* This variable can only be read from callbacks */
+        var_Change( pp_vout[i], "viewpoint", VLC_VAR_SETVALUE,
+                    &(vlc_value_t) { .p_address = NULL }, NULL );
+        vlc_object_release( pp_vout[i] );
+    }
+    free( pp_vout );
+
+    audio_output_t *p_aout = input_resource_HoldAout( priv->p_resource );
+    if( p_aout )
+    {
+
+        var_SetAddress( p_aout, "viewpoint", &priv->viewpoint );
+        /* This variable can only be read from callbacks */
+        var_Change( p_aout, "viewpoint", VLC_VAR_SETVALUE,
+                    &(vlc_value_t) { .p_address = NULL }, NULL );
+        vlc_object_release( p_aout );
+    }
+}
+
+static void ControlNav( input_thread_t *p_input, int i_type )
+{
+    input_thread_private_t *priv = input_priv(p_input);
+
+    if( !demux_Control( priv->master->p_demux, i_type
+                        - INPUT_CONTROL_NAV_ACTIVATE + DEMUX_NAV_ACTIVATE ) )
+        return; /* The demux handled the navigation control */
+
+    /* Handle Up/Down/Left/Right if the demux can't navigate */
+    vlc_viewpoint_t vp = {};
+    int vol_direction = 0;
+    int seek_direction = 0;
+    switch( i_type )
+    {
+        case INPUT_CONTROL_NAV_UP:
+            vol_direction = 1;
+            vp.pitch = -1.f;
+            break;
+        case INPUT_CONTROL_NAV_DOWN:
+            vol_direction = -1;
+            vp.pitch = 1.f;
+            break;
+        case INPUT_CONTROL_NAV_LEFT:
+            seek_direction = -1;
+            vp.yaw = -1.f;
+            break;
+        case INPUT_CONTROL_NAV_RIGHT:
+            seek_direction = 1;
+            vp.yaw = 1.f;
+            break;
+        case INPUT_CONTROL_NAV_ACTIVATE:
+        case INPUT_CONTROL_NAV_POPUP:
+        case INPUT_CONTROL_NAV_MENU:
+            return;
+        default:
+            vlc_assert_unreachable();
+    }
+
+    /* Try to change the viewpoint if possible */
+    vout_thread_t **pp_vout;
+    size_t i_vout;
+    bool b_viewpoint_ch = false;
+    input_resource_HoldVouts( priv->p_resource, &pp_vout, &i_vout );
+    for( size_t i = 0; i < i_vout; ++i )
+    {
+        if( !b_viewpoint_ch
+         && var_GetBool( pp_vout[i], "viewpoint-changeable" ) )
+            b_viewpoint_ch = true;
+        vlc_object_release( pp_vout[i] );
+    }
+    free( pp_vout );
+
+    if( b_viewpoint_ch )
+    {
+        priv->viewpoint_changed = true;
+        priv->viewpoint.yaw   += vp.yaw;
+        priv->viewpoint.pitch += vp.pitch;
+        priv->viewpoint.roll  += vp.roll;
+        priv->viewpoint.fov   += vp.fov;
+        ViewpointApply( p_input );
+        return;
+    }
+
+    /* Seek or change volume if the input doesn't have navigation or viewpoint */
+    if( seek_direction != 0 )
+    {
+        mtime_t it = var_InheritInteger( p_input, "short-jump-size" );
+        var_SetInteger( p_input, "time-offset", it * seek_direction * CLOCK_FREQ );
+    }
+    else
+    {
+        assert( vol_direction != 0 );
+        audio_output_t *p_aout = input_resource_HoldAout( priv->p_resource );
+        if( p_aout )
+        {
+            aout_VolumeUpdate( p_aout, vol_direction, NULL );
+            vlc_object_release( p_aout );
+        }
+    }
+}
+
 static bool Control( input_thread_t *p_input,
                      int i_type, vlc_value_t val )
 {
@@ -1977,32 +2090,7 @@ static bool Control( input_thread_t *p_input,
                 priv->viewpoint.fov   += p_vp->fov;
             }
 
-            vlc_viewpoint_clip( &priv->viewpoint );
-
-            vout_thread_t **pp_vout;
-            size_t i_vout;
-            input_resource_HoldVouts( priv->p_resource, &pp_vout, &i_vout );
-
-            for( size_t i = 0; i < i_vout; ++i )
-            {
-                var_SetAddress( pp_vout[i], "viewpoint", &priv->viewpoint );
-                /* This variable can only be read from callbacks */
-                var_Change( pp_vout[i], "viewpoint", VLC_VAR_SETVALUE,
-                            &(vlc_value_t) { .p_address = NULL }, NULL );
-                vlc_object_release( pp_vout[i] );
-            }
-            free( pp_vout );
-
-            audio_output_t *p_aout = input_resource_HoldAout( priv->p_resource );
-            if( p_aout )
-            {
-
-                var_SetAddress( p_aout, "viewpoint", &priv->viewpoint );
-                /* This variable can only be read from callbacks */
-                var_Change( p_aout, "viewpoint", VLC_VAR_SETVALUE,
-                            &(vlc_value_t) { .p_address = NULL }, NULL );
-                vlc_object_release( p_aout );
-            }
+            ViewpointApply( p_input );
             break;
         }
 
@@ -2189,8 +2277,7 @@ static bool Control( input_thread_t *p_input,
         case INPUT_CONTROL_NAV_RIGHT:
         case INPUT_CONTROL_NAV_POPUP:
         case INPUT_CONTROL_NAV_MENU:
-            demux_Control( input_priv(p_input)->master->p_demux, i_type
-                           - INPUT_CONTROL_NAV_ACTIVATE + DEMUX_NAV_ACTIVATE );
+            ControlNav( p_input, i_type );
             break;
 
         default:
@@ -2269,7 +2356,8 @@ static void UpdateGenericFromDemux( input_thread_t *p_input )
 
 static void UpdateTitleListfromDemux( input_thread_t *p_input )
 {
-    input_source_t *in = input_priv(p_input)->master;
+    input_thread_private_t *priv = input_priv(p_input);
+    input_source_t *in = priv->master;
 
     /* Delete the preexisting titles */
     if( in->i_title > 0 )
@@ -2277,6 +2365,8 @@ static void UpdateTitleListfromDemux( input_thread_t *p_input )
         for( int i = 0; i < in->i_title; i++ )
             vlc_input_title_Delete( in->title[i] );
         TAB_CLEAN( in->i_title, in->title );
+        priv->i_title = 0;
+        priv->title = NULL;
         in->b_title_demux = false;
     }
 

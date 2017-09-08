@@ -22,7 +22,7 @@
 # include "config.h"
 #endif
 
-#include "internal.h"
+#include "converter.h"
 #include "../../codec/vt_utils.h"
 
 #if TARGET_OS_IPHONE
@@ -63,8 +63,7 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
 
     for (unsigned i = 0; i < tc->tex_count; ++i)
     {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glClientActiveTexture(GL_TEXTURE0 + i);
+        tc->vt->ActiveTexture(GL_TEXTURE0 + i);
 
         CVOpenGLESTextureRef texture;
         CVReturn err = CVOpenGLESTextureCacheCreateTextureFromImage(
@@ -80,11 +79,11 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
         }
 
         textures[i] = CVOpenGLESTextureGetName(texture);
-        glBindTexture(tc->tex_target, textures[i]);
-        glTexParameteri(tc->tex_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(tc->tex_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameterf(tc->tex_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameterf(tc->tex_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        tc->vt->BindTexture(tc->tex_target, textures[i]);
+        tc->vt->TexParameteri(tc->tex_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        tc->vt->TexParameteri(tc->tex_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        tc->vt->TexParameterf(tc->tex_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        tc->vt->TexParameterf(tc->tex_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         CFRelease(texture);
     }
 
@@ -115,9 +114,8 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
 
     for (unsigned i = 0; i < tc->tex_count; ++i)
     {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glClientActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(tc->tex_target, textures[i]);
+        tc->vt->ActiveTexture(GL_TEXTURE0 + i);
+        tc->vt->BindTexture(tc->tex_target, textures[i]);
 
         CGLError err =
             CGLTexImageIOSurface2D(glsys->locked_ctx, tc->tex_target,
@@ -146,8 +144,9 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
 #endif
 
 static void
-tc_cvpx_release(const opengl_tex_converter_t *tc)
+Close(vlc_object_t *obj)
 {
+    opengl_tex_converter_t *tc = (void *)obj;
     struct priv *priv = tc->priv;
 
     if (priv->last_pic != NULL)
@@ -158,9 +157,10 @@ tc_cvpx_release(const opengl_tex_converter_t *tc)
     free(tc->priv);
 }
 
-int
-opengl_tex_converter_cvpx_init(opengl_tex_converter_t *tc)
+static int
+Open(vlc_object_t *obj)
 {
+    opengl_tex_converter_t *tc = (void *) obj;
     if (tc->fmt.i_chroma != VLC_CODEC_CVPX_UYVY
      && tc->fmt.i_chroma != VLC_CODEC_CVPX_NV12
      && tc->fmt.i_chroma != VLC_CODEC_CVPX_I420
@@ -195,12 +195,19 @@ opengl_tex_converter_cvpx_init(opengl_tex_converter_t *tc)
     switch (tc->fmt.i_chroma)
     {
         case VLC_CODEC_CVPX_UYVY:
+            /* Generate a VLC_CODEC_VYUY shader in order to use the "gbr"
+             * swizzling. Indeed, the Y, Cb and Cr color channels within the
+             * GL_RGB_422_APPLE format are mapped into the existing green, blue
+             * and red color channels, respectively. cf. APPLE_rgb_422 khronos
+             * extenstion. */
+
             fragment_shader =
-                opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_UYVY,
+                opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_VYUY,
                                             COLOR_SPACE_UNDEF);
             tc->texs[0].internal = GL_RGB;
             tc->texs[0].format = GL_RGB_422_APPLE;
             tc->texs[0].type = GL_UNSIGNED_SHORT_8_8_APPLE;
+            tc->texs[0].w = tc->texs[0].h = (vlc_rational_t) { 1, 1 };
             break;
         case VLC_CODEC_CVPX_NV12:
         {
@@ -238,8 +245,15 @@ opengl_tex_converter_cvpx_init(opengl_tex_converter_t *tc)
 
     tc->priv              = priv;
     tc->pf_update         = tc_cvpx_update;
-    tc->pf_release        = tc_cvpx_release;
     tc->fshader           = fragment_shader;
 
     return VLC_SUCCESS;
 }
+
+vlc_module_begin ()
+    set_description("Apple OpenGL CVPX converter")
+    set_capability("glconv", 1)
+    set_callbacks(Open, Close)
+    set_category(CAT_VIDEO)
+    set_subcategory(SUBCAT_VIDEO_VOUT)
+vlc_module_end ()

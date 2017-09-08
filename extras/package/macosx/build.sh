@@ -15,6 +15,7 @@ OSX_VERSION=`xcrun --show-sdk-version`
 #OSX_KERNELVERSION=`uname -r | cut -d. -f1`
 OSX_KERNELVERSION=15
 SDKROOT=`xcode-select -print-path`/Platforms/MacOSX.platform/Developer/SDKs/MacOSX$OSX_VERSION.sdk
+VLCBUILDDIR=""
 
 CORE_COUNT=`sysctl -n machdep.cpu.core_count`
 let JOBS=$CORE_COUNT+1
@@ -32,8 +33,10 @@ OPTIONS:
    -j            Force number of cores to be used
    -r            Rebuild everything (tools, contribs, vlc)
    -c            Recompile contribs from sources
+   -p            Build packages for all artifacts
    -k <sdk>      Use the specified sdk (default: $SDKROOT)
    -a <arch>     Use the specified arch (default: $ARCH)
+   -C            Use the specified VLC build dir
 EOF
 
 }
@@ -48,7 +51,7 @@ spopd()
     popd > /dev/null
 }
 
-while getopts "hvrck:a:j:" OPTION
+while getopts "hvrcpk:a:j:C:" OPTION
 do
      case $OPTION in
          h)
@@ -65,6 +68,9 @@ do
          c)
              CONTRIBFROMSOURCE="yes"
          ;;
+         p)
+             PACKAGE="yes"
+         ;;
          a)
              ARCH=$OPTARG
          ;;
@@ -73,6 +79,9 @@ do
          ;;
          j)
              JOBS=$OPTARG
+         ;;
+         C)
+             VLCBUILDDIR=$OPTARG
          ;;
      esac
 done
@@ -176,6 +185,11 @@ if [ "$CONTRIBFROMSOURCE" = "yes" ]; then
     make fetch
     make -j$JOBS .gettext
     make -j$JOBS
+
+    if [ "$PACKAGE" = "yes" ]; then
+        make package
+    fi
+
 else
 if [ ! -e "../$TRIPLET" ]; then
     make prebuilt > $out
@@ -188,6 +202,10 @@ unset CFLAGS
 unset CXXFLAGS
 unset OBJCFLAGS
 
+# Enable debug symbols by default
+export CFLAGS="-g"
+export CXXFLAGS="-g"
+export OBJCFLAGS="-g"
 
 #
 # vlc/bootstrap
@@ -201,6 +219,10 @@ fi
 spopd
 
 
+if [ ! -z "$VLCBUILDDIR" ];then
+    mkdir -p $VLCBUILDDIR
+    pushd $VLCBUILDDIR
+fi
 #
 # vlc/configure
 #
@@ -211,14 +233,14 @@ if [ "${vlcroot}/configure" -nt Makefile ]; then
       --build=$TRIPLET \
       --host=$TRIPLET \
       --with-macosx-version-min=$MINIMAL_OSX_VERSION \
-      --with-macosx-sdk=$SDKROOT > $out
+      --with-macosx-sdk=$SDKROOT \
+      $VLC_CONFIGURE_ARGS > $out
 fi
 
 
 #
 # make
 #
-
 
 if [ "$REBUILD" = "yes" ]; then
     info "Running make clean"
@@ -230,3 +252,13 @@ make -j$JOBS
 
 info "Preparing VLC.app"
 make VLC.app
+
+
+if [ "$PACKAGE" = "yes" ]; then
+    info "Building VLC dmg package"
+    make package-macosx
+fi
+
+if [ ! -z "$VLCBUILDDIR" ];then
+    popd
+fi
