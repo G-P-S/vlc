@@ -419,17 +419,18 @@ static picture_pool_t *Direct3D9CreatePicturePool(vout_display_t *vd, unsigned c
 
     for (picture_count = 0; picture_count < count; ++picture_count)
     {
-        picture_sys_t *picsys = malloc(sizeof(*picsys));
+		picture_sys_t *picsys = malloc(sizeof(picture_sys_t)); 
         if (unlikely(picsys == NULL))
             goto error;
 
-        HRESULT hr = IDirect3DDevice9_CreateOffscreenPlainSurface(vd->sys->d3ddev,
-                                                          vd->fmt.i_width,
-                                                          vd->fmt.i_height,
-                                                          format,
-                                                          D3DPOOL_DEFAULT,
-                                                          &picsys->surface,
-                                                          NULL);
+		HRESULT hr = IDirect3DDevice9_CreateOffscreenPlainSurface(vd->sys->d3ddev,
+			vd->fmt.i_width,
+			vd->fmt.i_height,
+			 format,
+			D3DPOOL_DEFAULT,
+			&picsys->surface,
+			NULL); 
+
         if (FAILED(hr)) {
            msg_Err(vd, "Failed to allocate surface %d (hr=0x%0lx)", picture_count, hr);
            free(picsys);
@@ -495,10 +496,10 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
             visibleSource.right = picture->format.i_visible_width;
             visibleSource.bottom = picture->format.i_visible_height;
             hr = IDirect3DDevice9_StretchRect( sys->d3ddev, pic_ctx->picsys.surface, &visibleSource, surface, &visibleSource, D3DTEXF_NONE);
-            if (FAILED(hr)) {
+           if (FAILED(hr)) {
                 msg_Err(vd, "Failed to copy the hw surface to the decoder surface (hr=0x%0lx)", hr );
             }
-        }
+       }
     }
 
     /* check if device is still available */
@@ -516,22 +517,22 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         return;
     }
 
-    // call gpu newframe callback if exists, else do common rendering in window
-    if (sys->gpunewframe != NULL)
-    {
-        sys->gpunewframe(sys->opaque, surface, &sys->sys.rect_src);
-    }
-    else
-    {
-        d3d_region_t picture_region;
-        if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
-            picture_region.width = picture->format.i_visible_width;
-            picture_region.height = picture->format.i_visible_height;
-            int subpicture_region_count     = 0;
-            d3d_region_t *subpicture_region = NULL;
-            if (subpicture)
-                Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
-                                         subpicture);
+	// call gpu newframe callback if exists, else do common rendering in window
+	if (sys->gpunewframe != NULL)
+	{
+		sys->gpunewframe(sys->opaque, surface, &sys->sys.rect_src);
+	}
+	 else  
+	{
+		d3d_region_t picture_region;
+		if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
+			picture_region.width = picture->format.i_visible_width;
+			picture_region.height = picture->format.i_visible_height;
+			int subpicture_region_count = 0;
+			d3d_region_t *subpicture_region = NULL;
+			if (subpicture)
+				Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
+				subpicture);
 
             Direct3D9RenderScene(vd, &picture_region,
                                 subpicture_region_count, subpicture_region);
@@ -554,23 +555,26 @@ static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         return;
     }
 
-    // Present the back buffer contents to the display
-    // No stretching should happen here !
-    const RECT src = sys->sys.rect_dest_clipped;
-    const RECT dst = sys->sys.rect_dest_clipped;
+	if (vd->sys->gpunewframe == NULL) {  //vz!!!
+		// Present the back buffer contents to the display
+		// No stretching should happen here !
+		const RECT src = sys->sys.rect_dest_clipped;
+		const RECT dst = sys->sys.rect_dest_clipped;
 
-    HRESULT hr;
-    if (sys->use_d3d9ex) {
-        LPDIRECT3DDEVICE9EX d3ddev = (LPDIRECT3DDEVICE9EX)sys->d3ddev;
-        hr = IDirect3DDevice9Ex_PresentEx(d3ddev, &src, &dst, NULL, NULL, 0);
-    } else {
-        LPDIRECT3DDEVICE9 d3ddev = sys->d3ddev;
-        hr = IDirect3DDevice9_Present(d3ddev, &src, &dst, NULL, NULL);
-    }
-    if (FAILED(hr)) {
-        msg_Dbg(vd, "Failed IDirect3DDevice9_Present: 0x%0lx", hr);
-    }
+		HRESULT hr;
 
+		if (sys->use_d3d9ex) {
+			LPDIRECT3DDEVICE9EX d3ddev = (LPDIRECT3DDEVICE9EX)sys->d3ddev;
+			hr = IDirect3DDevice9Ex_PresentEx(d3ddev, &src, &dst, NULL, NULL, 0);
+		}
+		else {
+			LPDIRECT3DDEVICE9 d3ddev = sys->d3ddev;
+			hr = IDirect3DDevice9_Present(d3ddev, &src, &dst, NULL, NULL);
+		}
+		if (FAILED(hr)) {
+			msg_Dbg(vd, "Failed IDirect3DDevice9_Present: 0x%0lx", hr);
+		}
+	}
     /* XXX See Prepare() */
     if ( !is_d3d9_opaque(picture->format.i_chroma) )
         Direct3D9LockSurface(picture);
@@ -578,7 +582,9 @@ static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
     if (subpicture)
         subpicture_Delete(subpicture);
 
-    CommonDisplay(vd);
+	if (vd->sys->gpunewframe == NULL) {  //vz!!!
+		CommonDisplay(vd);
+	}
 }
 
 static int ControlReopenDevice(vout_display_t *vd)
@@ -853,7 +859,7 @@ static int Direct3D9FillPresentationParameters(vout_display_t *vd)
     /* Set up the structure used to create the D3DDevice. */
     D3DPRESENT_PARAMETERS *d3dpp = &vd->sys->d3dpp;
     ZeroMemory(d3dpp, sizeof(D3DPRESENT_PARAMETERS));
-    d3dpp->Flags                  = D3DPRESENTFLAG_VIDEO;
+	d3dpp->Flags =  D3DPRESENTFLAG_VIDEO;
     d3dpp->Windowed               = TRUE;
     d3dpp->hDeviceWindow          = vd->sys->sys.hvideownd;
     d3dpp->BackBufferWidth        = __MAX((unsigned int)GetSystemMetrics(SM_CXVIRTUALSCREEN),
@@ -921,11 +927,15 @@ static int Direct3D9Open(vout_display_t *vd, video_format_t *fmt)
 
     // Create the D3DDevice
     HRESULT hr;
-    if (sys->use_d3d9ex) {
+#ifndef COMPILE_VS2013
+    if ( sys->use_d3d9ex) {
+#else
+    if (0) {
+#endif
         LPDIRECT3DDEVICE9EX d3ddevex;
-        hr = IDirect3D9Ex_CreateDeviceEx((LPDIRECT3D9EX)d3dobj, AdapterToUse,
-                                         DeviceType, sys->sys.hvideownd,
-                                         D3DCREATE_SOFTWARE_VERTEXPROCESSING|
+		 hr = IDirect3D9Ex_CreateDeviceEx((LPDIRECT3D9EX)d3dobj, AdapterToUse,
+			DeviceType, sys->sys.hvideownd,
+			D3DCREATE_HARDWARE_VERTEXPROCESSING |
                                          D3DCREATE_MULTITHREADED,
                                          &sys->d3dpp, NULL, &d3ddevex);
         sys->d3ddev = (LPDIRECT3DDEVICE9)d3ddevex;
@@ -933,7 +943,7 @@ static int Direct3D9Open(vout_display_t *vd, video_format_t *fmt)
         LPDIRECT3DDEVICE9 d3ddev;
         hr = IDirect3D9_CreateDevice(d3dobj, AdapterToUse,
                                      DeviceType, sys->sys.hvideownd,
-                                     D3DCREATE_SOFTWARE_VERTEXPROCESSING|
+                                     D3DCREATE_HARDWARE_VERTEXPROCESSING|
                                      D3DCREATE_MULTITHREADED,
                                      &sys->d3dpp, &d3ddev);
         sys->d3ddev = d3ddev;
@@ -1473,7 +1483,7 @@ static void Direct3D9DestroyShaders(vout_display_t *vd)
  * Vertex 0 should be assigned coordinates at index 2 from the
  * unrotated order and so on, thus yielding order: 2 3 0 1.
  */
-static void orientationVertexOrder(video_orientation_t orientation, int vertex_order[static 4])
+static void orientationVertexOrder(video_orientation_t orientation, int vertex_order[4]) //vz
 {
     switch (orientation) {
         case ORIENT_ROTATED_90:
