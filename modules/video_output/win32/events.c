@@ -767,11 +767,11 @@ static int Win32VoutCreateWindow( event_thread_t *p_event )
         /* No window decoration */
         : WS_POPUP;
     AdjustWindowRect( &rect_window, i_style, 0 );
-    i_style |= WS_VISIBLE|WS_CLIPCHILDREN;
+    i_style |= WS_CLIPCHILDREN;
 
     if( p_event->hparent )
     {
-        i_style = WS_VISIBLE|WS_CLIPCHILDREN|WS_CHILD;
+        i_style = WS_CLIPCHILDREN|WS_CHILD;
 
         /* allow user to regain control over input events if requested */
         bool b_mouse_support = var_InheritBool( vd, "mouse-events" );
@@ -804,6 +804,9 @@ static int Win32VoutCreateWindow( event_thread_t *p_event )
         msg_Warn( vd, "Win32VoutCreateWindow create window FAILED (err=%lu)", GetLastError() );
         return VLC_EGENERIC;
     }
+    
+    /* Ensure to hide the window */
+    ShowWindow( p_event->hwnd, SW_HIDE );
 
     InitGestures( p_event->hwnd, &p_event->p_gesture );
 
@@ -835,6 +838,9 @@ static int Win32VoutCreateWindow( event_thread_t *p_event )
         p_event->hfswnd = NULL;
     }
 
+    /* Ensure to hide the window */
+    ShowWindow( p_event->hfswnd, SW_HIDE );
+
     /* Append a "Always On Top" entry in the system menu */
     hMenu = GetSystemMenu( p_event->hwnd, FALSE );
     AppendMenu( hMenu, MF_SEPARATOR, 0, _T("") );
@@ -860,8 +866,8 @@ static int Win32VoutCreateWindow( event_thread_t *p_event )
     else
         msg_Dbg( vd, "created video sub-window" );
 
-    /* Now display the window */
-    ShowWindow( p_event->hwnd, SW_SHOW );
+    /* Ensure to hide the window */
+    ShowWindow( p_event->hwnd, SW_HIDE );
 
     return VLC_SUCCESS;
 }
