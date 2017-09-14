@@ -630,7 +630,6 @@ libvlc_media_player_new( libvlc_instance_t *instance )
     var_Create (mp, "vmem-data", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-setup", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-cleanup", VLC_VAR_ADDRESS);
-    var_Create (mp, "decoding-error", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-chroma", VLC_VAR_STRING | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-width", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
     var_Create (mp, "vmem-height", VLC_VAR_INTEGER | VLC_VAR_DOINHERIT);
@@ -641,6 +640,8 @@ libvlc_media_player_new( libvlc_instance_t *instance )
     var_Create (mp, "vmem-gpunewframe", VLC_VAR_ADDRESS);
     var_Create (mp, "vmem-opaque", VLC_VAR_ADDRESS);
     var_Create (mp, "avcodec-hw", VLC_VAR_STRING);
+    var_Create (mp, "avcodec-hack-cb", VLC_VAR_ADDRESS);
+    var_Create (mp, "avcodec-hack-error", VLC_VAR_ADDRESS);
     var_Create (mp, "drawable-xid", VLC_VAR_INTEGER);
 #if defined (_WIN32) || defined (__OS2__)
     var_Create (mp, "drawable-hwnd", VLC_VAR_INTEGER);
@@ -1132,10 +1133,12 @@ void libvlc_video_set_gpu_callbacks( libvlc_media_player_t *mp,
     var_SetAddress( mp, "vmem-opaque", opaque );
 }
 
-void libvlc_video_set_decoding_error_callback( libvlc_media_player_t *mp,
-                                        libvlc_video_decoding_error_cb error )
+void libvlc_video_set_avcodec_hack_callback( libvlc_media_player_t *mp,
+                                        libvlc_video_avcodec_hack_cb hack_cb,
+                                        void *opaque )
 {
-    var_SetAddress( mp, "decoding-error", error );
+    var_SetAddress( mp, "avcodec-hack-cb", hack_cb );
+    var_SetAddress( mp, "avcodec-hack-error", opaque );
 }
 
 /**************************************************************************

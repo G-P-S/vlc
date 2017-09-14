@@ -413,7 +413,7 @@ typedef void (*libvlc_video_gpu_newframe_cb)(void *opaque,
  * \param opaque private pointer as passed to libvlc_video_set_callbacks() [IN]
  * \param code pointer to the error code [OUT]
  */
-typedef void (*libvlc_video_decoding_error_cb)(void *opaque, unsigned *code);
+typedef void (*libvlc_video_avcodec_hack_cb)(void *opaque, unsigned *code);
 
 /**
  * Set callbacks and private data to render decoded video to a custom area
@@ -517,11 +517,12 @@ void libvlc_video_set_gpu_callbacks( libvlc_media_player_t *mp,
  * libvlc_video_set_callbacks().
  *
  * \param mp the media player
- * \param error callback to called on decoding error
+ * \param hack_cb callback to called on decoding error
  */
 LIBVLC_API
-void libvlc_video_set_decoding_error_callback( libvlc_media_player_t *mp,
-                                        libvlc_video_decoding_error_cb error );
+void libvlc_video_set_avcodec_hack_callback( libvlc_media_player_t *mp,
+                                        libvlc_video_avcodec_hack_cb hack_cb,
+                                        void *opaque );
 
 /**
  * Set the NSView handler where the media player should render its video output.

@@ -35,7 +35,7 @@ int  OpenEncoder ( vlc_object_t * );
 void CloseEncoder( vlc_object_t * );
 
 /* Video Decoder */
-int InitVideoDec( vlc_object_t *, void (*p_error_cb)(void *sys, unsigned *code) );
+int InitVideoDec( vlc_object_t * );
 void EndVideoDec( vlc_object_t * );
 
 /* Audio Decoder */

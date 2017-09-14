@@ -92,8 +92,8 @@ struct decoder_sys_t
 
     vlc_sem_t sem_mt;
     
-    /* Custom callback & private pointer (like vmem) */
-    void (*error_cb)(void *sys, unsigned *code);
+    /* Custom callback & private pointer */
+    void (*hack_cb)(void *opaque, unsigned *code);
     void *opaque;
 };
 
@@ -439,9 +439,10 @@ static int OpenVideoCodec( decoder_t *p_dec )
  * the ffmpeg codec will be opened, some memory allocated. The vout is not yet
  * opened (done after the first decoded frame).
  *****************************************************************************/
-int InitVideoDec( vlc_object_t *obj, void (*p_error_cb)(void *sys, unsigned *code) )
+int InitVideoDec( vlc_object_t *obj )
 {
     decoder_t *p_dec = (decoder_t *)obj;
+      
     const AVCodec *p_codec;
     AVCodecContext *p_context = ffmpeg_AllocContext( p_dec, &p_codec );
     if( p_context == NULL )
@@ -461,7 +462,9 @@ int InitVideoDec( vlc_object_t *obj, void (*p_error_cb)(void *sys, unsigned *cod
     p_sys->p_context = p_context;
     p_sys->p_codec = p_codec;
     p_sys->p_va = NULL;
-    p_sys->error_cb = p_error_cb;
+    p_sys->hack_cb = var_InheritAddress(p_dec, "avcodec-hack-cb");
+    p_sys->opaque = var_InheritAddress(p_dec, "avcodec-hack-error");
+    
     vlc_sem_init( &p_sys->sem_mt, 0 );
 
     /* ***** Fill p_context with init values ***** */
@@ -616,6 +619,7 @@ int InitVideoDec( vlc_object_t *obj, void (*p_error_cb)(void *sys, unsigned *cod
         p_dec->fmt_in.i_profile = p_context->profile;
     if( p_context->level != FF_LEVEL_UNKNOWN )
         p_dec->fmt_in.i_level = p_context->level;
+        
     return VLC_SUCCESS;
 }
 
@@ -1542,14 +1546,14 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     {
         msg_Info( p_dec, "######## no acceleration, disable rendering");
         p_sys->p_va = NULL;       
-        if(p_sys->error_cb)
+        if(p_sys->hack_cb)
         {
             unsigned codeError = 1;
-            p_sys->error_cb(p_sys->opaque, &codeError);
+            p_sys->hack_cb(p_sys->opaque, &codeError);
         }
         else
         {
-            msg_Info( p_dec, "######## Error callback is null" );
+            msg_Info( p_dec, "######## hack_cb is null" );
         }   
         return AV_PIX_FMT_NONE; // return null PixelFormat
     }
@@ -1608,10 +1612,10 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     /* Fallback to default behaviour */
     msg_Info( p_dec, "######## no acceleration, disable rendering");
     p_sys->p_va = NULL;    
-    if(p_sys->error_cb)
+    if(p_sys->hack_cb)
     {
         unsigned codeError = 1;
-        p_sys->error_cb(p_sys->opaque, &codeError);
+        p_sys->hack_cb(p_sys->opaque, &codeError);
     }
     else
     {

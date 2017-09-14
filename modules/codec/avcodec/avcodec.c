@@ -245,14 +245,14 @@ vlc_module_end ()
 
 AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
                                      const AVCodec **restrict codecp )
-{
+{        
     unsigned i_codec_id;
     const char *psz_namecodec;
     const AVCodec *p_codec = NULL;
 
-    /* Get the error callback & private pointer */
-    void (*error_cb)(unsigned *code) = var_InheritAddress(p_dec, "decoding-error");
-    void *opaque = var_InheritAddress(p_dec, "vmem-data");
+    /* Get the error callback & private pointer */   
+    void (*hack_cb)(void *opaque, unsigned *code) = var_InheritAddress(p_dec, "avcodec-hack-cb");
+    void *opaque = var_InheritAddress(p_dec, "avcodec-hack-error");
     
     /* *** determine codec type *** */
     if( !GetFfmpegCodec( p_dec->fmt_in.i_cat, p_dec->fmt_in.i_codec,
@@ -292,6 +292,26 @@ AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
     msg_Info( p_dec, "######## Decoder capabilities %i", p_codec->capabilities );
     msg_Info( p_dec, "######## Decoder = %s", p_codec->name );
 
+    /**********************************
+    * Filter codecs here using p_codec
+    ***********************************/
+    if( hack_cb &&
+        strcmp(p_codec->name, "h264") != 0 &&
+        strcmp(p_codec->name, "h265") != 0 &&
+        strcmp(p_codec->name, "vp8")  != 0 &&
+        strcmp(p_codec->name, "vp9")  != 0 &&
+        strcmp(p_codec->name, "aac")  != 0 )
+    {
+        unsigned codeError = 2;
+        hack_cb(opaque, &codeError);
+        return NULL;
+    }
+    else if( !hack_cb )
+    {
+        msg_Info( p_dec, "######## hack_cb is null" );
+        return NULL;
+    }
+    
     *codecp = p_codec;
 
     /* *** get a p_context *** */
@@ -301,6 +321,7 @@ AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
 
     avctx->debug = var_InheritInteger( p_dec, "avcodec-debug" );
     avctx->opaque = p_dec;
+            
     return avctx;
 }
 
