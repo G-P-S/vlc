@@ -1544,7 +1544,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
 
     if (!can_hwaccel)
     {
-        msg_Info( p_dec, "######## no acceleration, disable rendering");
+        msg_Info( p_dec, "######## no acceleration, disable rendering 1");
         p_sys->p_va = NULL;       
         if(p_sys->hack_cb)
         {
@@ -1557,6 +1557,8 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
         }   
         return AV_PIX_FMT_NONE; // return null PixelFormat
     }
+    
+    msg_Info( p_dec, "######## found hw acceleration, allow rendering 1");
 
 #if (LIBAVCODEC_VERSION_MICRO >= 100) \
   && (LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 83, 101))
@@ -1602,6 +1604,8 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
         if (va->description != NULL)
             msg_Info(p_dec, "Using %s for hardware decoding", va->description);
 
+        msg_Info( p_dec, "######## found hw acceleration, allow rendering 2");
+
         p_sys->p_va = va;
         p_sys->pix_fmt = hwfmt;
         p_context->draw_horiz_band = NULL;
@@ -1610,7 +1614,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
 
     post_mt(p_sys);
     /* Fallback to default behaviour */
-    msg_Info( p_dec, "######## no acceleration, disable rendering");
+    msg_Info( p_dec, "######## no acceleration, disable rendering 2");
     p_sys->p_va = NULL;    
     if(p_sys->hack_cb)
     {
