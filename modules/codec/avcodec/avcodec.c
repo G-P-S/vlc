@@ -296,17 +296,13 @@ AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
     * Filter codecs here using p_codec
     ***********************************/
     if( hack_cb &&
-#ifdef _WIN32
-        // on Windows we allow the following codecs, video codecs can be potentially hw accelerated see in video.c::ffmpeg_GetFormat
+        // we allow the following codecs, video codecs can be potentially hw accelerated see in video.c::ffmpeg_GetFormat
+        // a second check is made in video.c::ffmpeg_GetFormat to allow only some codecs for software decoding if hw decoding failed
         strcmp(p_codec->name, "h264") != 0 &&
         strcmp(p_codec->name, "h265") != 0 &&
         strcmp(p_codec->name, "vp8")  != 0 &&
         strcmp(p_codec->name, "vp9")  != 0 &&
         strcmp(p_codec->name, "aac")  != 0 )
-#else
-        // on Mac we only allow AAC in libav, video codecs are now handled by libvideotoolbox
-        strcmp(p_codec->name, "aac")  != 0 )
-#endif
     {
         msg_Info( p_dec, "######## Forbid the codec %s", p_codec->name );
         unsigned codeError = 2;
