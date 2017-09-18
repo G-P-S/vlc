@@ -300,6 +300,7 @@ AVCodecContext *ffmpeg_AllocContext( decoder_t *p_dec,
         // a second check is made in video.c::ffmpeg_GetFormat to allow only some codecs for software decoding if hw decoding failed
         strcmp(p_codec->name, "h264") != 0 &&
         strcmp(p_codec->name, "h265") != 0 &&
+        strcmp(p_codec->name, "hevc") != 0 &&
         strcmp(p_codec->name, "vp8")  != 0 &&
         strcmp(p_codec->name, "vp9")  != 0 &&
         strcmp(p_codec->name, "aac")  != 0 )
