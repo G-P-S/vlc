@@ -223,15 +223,10 @@ static void ActivateSets( decoder_t *p_dec, const h264_sequence_parameter_set_t 
                 }
             }
             if( p_dec->fmt_in.video.primaries == COLOR_PRIMARIES_UNDEF )
-            {
-                p_dec->fmt_out.video.primaries =
-                        hxxx_colour_primaries_to_vlc( p_sps->vui.colour.i_colour_primaries );
-                p_dec->fmt_out.video.transfer =
-                        hxxx_transfer_characteristics_to_vlc( p_sps->vui.colour.i_transfer_characteristics );
-                p_dec->fmt_out.video.space =
-                        hxxx_matrix_coeffs_to_vlc( p_sps->vui.colour.i_matrix_coefficients );
-                p_dec->fmt_out.video.b_color_range_full = p_sps->vui.colour.b_full_range;
-            }
+                h264_get_colorimetry( p_sps, &p_dec->fmt_out.video.primaries,
+                                      &p_dec->fmt_out.video.transfer,
+                                      &p_dec->fmt_out.video.space,
+                                      &p_dec->fmt_out.video.b_color_range_full );
         }
     }
 }
@@ -493,8 +488,7 @@ static block_t *PacketizeAVC1( decoder_t *p_dec, block_t **pp_block )
  *****************************************************************************/
 static block_t *GetCc( decoder_t *p_dec, bool pb_present[4], int *pi_reorder_depth )
 {
-    *pi_reorder_depth = 0;
-    return cc_storage_get_current( p_dec->p_sys->p_ccs, pb_present );
+    return cc_storage_get_current( p_dec->p_sys->p_ccs, pb_present, pi_reorder_depth );
 }
 
 /****************************************************************************

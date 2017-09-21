@@ -942,7 +942,7 @@ static int LoadGlyphs( filter_t *p_filter, paragraph_t *p_paragraph,
         FT_Face p_face = 0;
         if( !p_run->p_face )
         {
-            p_face = SelectAndLoadFace( p_filter, p_style, 0 );
+            p_face = SelectAndLoadFace( p_filter, p_style, p_paragraph->p_code_points );
             if( !p_face )
             {
                 /* Uses the default font and style */
@@ -1418,9 +1418,9 @@ static int LayoutParagraph( filter_t *p_filter, paragraph_t *p_paragraph,
         const run_desc_t *p_run = &p_paragraph->p_runs[p_paragraph->pi_run_ids[i]];
         const int i_advance_x = p_paragraph->p_glyph_bitmaps[ i ].i_x_advance;
 
-        if( ( i_last_space_width + i_advance_x >= i_preferred_width &&
+        if( ( i_last_space_width + i_advance_x > i_preferred_width &&
               p_run->p_style->e_wrapinfo == STYLE_WRAP_DEFAULT )
-            || i_width + i_advance_x >= i_max_width )
+            || i_width + i_advance_x > i_max_width )
         {
             if( i_line_start == i )
             {

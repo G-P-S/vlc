@@ -51,10 +51,6 @@
 #include <vlc_dialog.h>
 #include "opengl/vout_helper.h"
 
-#define GLHW_TEXT N_("GL/GLES hw converter")
-#define GLHW_LONGTEXT N_( \
-    "Force an \"gl hw converter\" module.")
-
 /**
  * Forward declarations
  */
@@ -83,9 +79,6 @@ vlc_module_begin ()
     set_subcategory (SUBCAT_VIDEO_VOUT)
     set_capability ("vout display", 300)
     set_callbacks (Open, Close)
-    add_module ("glhw", NULL, NULL,
-                GLHW_TEXT, GLHW_LONGTEXT, true)
-
     add_shortcut ("macosx", "vout_macosx")
 vlc_module_end ()
 
@@ -205,6 +198,7 @@ static int Open (vlc_object_t *this)
             goto error;
         }
 #else
+
         /* Get the drawable object */
         id container = var_CreateGetAddress (vd, "drawable-nsobject");
         if (container)
@@ -275,11 +269,12 @@ static int Open (vlc_object_t *this)
         sys->gl->swap = OpenglSwap;
         sys->gl->getProcAddress = OurGetProcAddress;
 
-        var_Create(vd->obj.parent, "macosx-ns-opengl-context", VLC_VAR_ADDRESS);
+        var_Create(vd->obj.parent, "macosx-glcontext", VLC_VAR_ADDRESS);
+        
 #ifdef VLC_GP_GPU
-        var_SetAddress(vd->obj.parent, "macosx-ns-opengl-context", nscontext);
+        var_SetAddress(vd->obj.parent, "macosx-glcontext", nscontext);
 #else
-        var_SetAddress(vd->obj.parent, "macosx-ns-opengl-context", [sys->glView openGLContext]);
+        var_SetAddress(vd->obj.parent, "macosx-glcontext", [[sys->glView openGLContext] CGLContextObj]);
 #endif
 
         // keep pointer to the context, do not destroy it
@@ -408,7 +403,9 @@ void Close (vlc_object_t *this)
                                       withObject:nil
                                    waitUntilDone:NO];
 #endif
-        var_Destroy(vd->obj.parent, "macosx-ns-opengl-context");
+
+        var_Destroy(vd->obj.parent, "macosx-glcontext");
+
         if (sys->vgl != NULL)
         {
             vlc_gl_MakeCurrent(sys->gl);

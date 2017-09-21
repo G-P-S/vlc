@@ -98,6 +98,7 @@ cvpxpic_destroy_mapped_ro_cb(picture_t *pic)
     CVPixelBufferRef cvpx = (void *) pic->p_sys;
     CVPixelBufferUnlockBaseAddress(cvpx, kCVPixelBufferLock_ReadOnly);
     CFRelease(cvpx);
+    free(pic);
 }
 
 static void
@@ -106,6 +107,7 @@ cvpxpic_destroy_mapped_rw_cb(picture_t *pic)
     CVPixelBufferRef cvpx = (void *) pic->p_sys;
     CVPixelBufferUnlockBaseAddress(cvpx, 0);
     CFRelease(cvpx);
+    free(pic);
 }
 
 picture_t *
@@ -154,7 +156,6 @@ cvpxpic_create_mapped(const video_format_t *fmt, CVPixelBufferRef cvpx,
     if (pic == NULL)
     {
         CVPixelBufferUnlockBaseAddress(cvpx, lock);
-        CFRelease(cvpx);
         return NULL;
     }
     CVPixelBufferRetain(cvpx);
@@ -185,7 +186,7 @@ cvpxpic_unmap(picture_t *mapped_pic)
         return NULL;
     }
 
-    cvpxpic_attach(hw_pic, CVPixelBufferRetain((void *)mapped_pic->p_sys));
+    cvpxpic_attach(hw_pic, (void *)mapped_pic->p_sys);
     picture_CopyProperties(hw_pic, mapped_pic);
     picture_Release(mapped_pic);
     return hw_pic;
@@ -223,7 +224,6 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
         return NULL;
     }
 
-#if !TARGET_OS_IPHONE
     CFMutableDictionaryRef io_dict = cfdict_create(0);
     if (unlikely(io_dict == NULL))
     {
@@ -234,10 +234,6 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
     CFDictionarySetValue(cvpx_attrs_dict,
                          kCVPixelBufferIOSurfacePropertiesKey, io_dict);
     CFRelease(io_dict);
-#else
-    CFDictionarySetValue(cvpx_attrs_dict,
-                         kCVPixelBufferOpenGLESCompatibilityKey, kCFBooleanTrue);
-#endif
 
     cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferBytesPerRowAlignmentKey,
                      fmt->i_width);
@@ -245,6 +241,8 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
                      cvpx_format);
     cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferWidthKey, fmt->i_width);
     cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferHeightKey, fmt->i_height);
+    /* Required by CIFilter to render IOSurface */
+    cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferBytesPerRowAlignmentKey, 16);
 
     cfdict_set_int32(pool_dict, kCVPixelBufferPoolMinimumBufferCountKey, count);
     cfdict_set_int32(pool_dict, kCVPixelBufferPoolMaximumBufferAgeKey, 0);
@@ -276,7 +274,7 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
 }
 
 CVPixelBufferRef
-cvpxpool_get_cvpx(CVPixelBufferPoolRef pool)
+cvpxpool_new_cvpx(CVPixelBufferPoolRef pool)
 {
     CVPixelBufferRef cvpx;
     CVReturn err = CVPixelBufferPoolCreatePixelBuffer(NULL, pool, &cvpx);

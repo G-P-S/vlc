@@ -126,7 +126,9 @@ static void cancelCallback(void *p_data,
                            vlc_dialog_id *p_id)
 {
     @autoreleasepool {
-        [NSApp stopModalWithCode: 0];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSApp stopModalWithCode: 0];
+        });
     }
 }
 
@@ -286,8 +288,10 @@ static void updateProgressCallback(void *p_data,
 
     if ([[dialogData objectAtIndex:5] length] > 0) {
         progressCancelButton.title = [dialogData objectAtIndex:5];
+        progressCancelButton.enabled = YES;
     } else {
         progressCancelButton.title = _NS("Cancel");
+        progressCancelButton.enabled = NO;
     }
 
     [progressIndicator startAnimation:self];
@@ -298,8 +302,7 @@ static void updateProgressCallback(void *p_data,
 
     [progressIndicator stopAnimation:self];
 
-    if (returnValue == -1)
-        vlc_dialog_id_dismiss([[dialogData objectAtIndex:0] pointerValue]);
+    vlc_dialog_id_dismiss([[dialogData objectAtIndex:0] pointerValue]);
 }
 
 - (void)updateDisplayedProgressDialog:(NSArray *)dialogData

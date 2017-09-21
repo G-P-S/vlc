@@ -35,7 +35,6 @@
 #include "filter_picture.h"
 #include "vt_utils.h"
 
-#include <AppKit/NSOpenGL.h>
 #include <CoreImage/CIContext.h>
 #include <CoreImage/CIImage.h>
 #include <CoreImage/CIFilter.h>
@@ -303,7 +302,7 @@ Filter(filter_t *filter, picture_t *src)
     if (!dst)
         goto error;
 
-    CVPixelBufferRef cvpx = cvpxpool_get_cvpx(ctx->cvpx_pool);
+    CVPixelBufferRef cvpx = cvpxpool_new_cvpx(ctx->cvpx_pool);
     if (!cvpx)
         goto error;
 
@@ -312,35 +311,42 @@ Filter(filter_t *filter, picture_t *src)
         CFRelease(cvpx);
         goto error;
     }
+    CFRelease(cvpx);
 
-    CIImage *ci_img = [CIImage imageWithCVImageBuffer: cvpxpic_get_ref(src)];
-    if (!ci_img)
-        goto error;
+    @autoreleasepool {
+        CIImage *ci_img = [CIImage imageWithCVImageBuffer: cvpxpic_get_ref(src)];
+        if (!ci_img)
+            goto error;
 
-    for (struct filter_chain *fchain = ctx->fchain;
-         fchain; fchain = fchain->next)
-    {
-        [fchain->ci_filter setValue: ci_img
-                             forKey: kCIInputImageKey];
-
-        for (unsigned int i = 0; i < NUM_FILTER_PARAM_MAX &&
-                 filter_desc_table[fchain->filter].param_descs[i].vlc; ++i)
+        for (struct filter_chain *fchain = ctx->fchain;
+             fchain; fchain = fchain->next)
         {
-            NSString *ci_param_name =
-                filter_desc_table[fchain->filter].param_descs[i].ci;
-            float ci_value = vlc_atomic_load_float(fchain->ci_params + i);
+            [fchain->ci_filter setValue: ci_img
+                                 forKey: kCIInputImageKey];
 
-            [fchain->ci_filter setValue: [NSNumber numberWithFloat: ci_value]
-                                 forKey: ci_param_name];
+            for (unsigned int i = 0; i < NUM_FILTER_PARAM_MAX &&
+                     filter_desc_table[fchain->filter].param_descs[i].vlc; ++i)
+            {
+                NSString *ci_param_name =
+                    filter_desc_table[fchain->filter].param_descs[i].ci;
+                float ci_value = vlc_atomic_load_float(fchain->ci_params + i);
+
+                [fchain->ci_filter setValue: [NSNumber numberWithFloat: ci_value]
+                                     forKey: ci_param_name];
+            }
+
+            ci_img = [fchain->ci_filter valueForKey: kCIOutputImageKey];
         }
 
-        ci_img = [fchain->ci_filter valueForKey: kCIOutputImageKey];
-    }
-
-    [ctx->ci_ctx render: ci_img
-            toIOSurface: CVPixelBufferGetIOSurface(cvpx)
-                 bounds: [ci_img extent]
-             colorSpace: ctx->color_space];
+        [ctx->ci_ctx render: ci_img
+#if !TARGET_OS_IPHONE
+                toIOSurface: CVPixelBufferGetIOSurface(cvpx)
+#else
+            toCVPixelBuffer: cvpx
+#endif
+                     bounds: [ci_img extent]
+                 colorSpace: ctx->color_space];
+    } /* autoreleasepool */
 
     CopyInfoAndRelease(dst, src);
 
@@ -417,7 +423,7 @@ static picture_t *
 CVPX_buffer_new(filter_t *converter)
 {
     CVPixelBufferPoolRef pool = converter->owner.sys;
-    CVPixelBufferRef cvpx = cvpxpool_get_cvpx(pool);
+    CVPixelBufferRef cvpx = cvpxpool_new_cvpx(pool);
     if (!cvpx)
         return NULL;
 
@@ -427,8 +433,26 @@ CVPX_buffer_new(filter_t *converter)
         CFRelease(cvpx);
         return NULL;
     }
+    CFRelease(cvpx);
 
     return pic;
+}
+
+static void
+Close_RemoveConverters(filter_t *filter, struct ci_filters_ctx *ctx)
+{
+    VLC_UNUSED(filter);
+    if (ctx->dst_converter)
+    {
+        module_unneed(ctx->dst_converter, ctx->dst_converter->p_module);
+        vlc_object_release(ctx->dst_converter);
+        CVPixelBufferPoolRelease(ctx->outconv_cvpx_pool);
+    }
+    if (ctx->src_converter)
+    {
+        module_unneed(ctx->src_converter, ctx->src_converter->p_module);
+        vlc_object_release(ctx->src_converter);
+    }
 }
 
 static int
@@ -530,14 +554,26 @@ Open(vlc_object_t *obj, char const *psz_filter)
                 goto error;
         }
 
-        NSOpenGLContext *context =
-            var_InheritAddress(filter, "macosx-ns-opengl-context");
-        assert(context);
-
-        ctx->ci_ctx = [CIContext contextWithCGLContext: [context CGLContextObj]
+#if !TARGET_OS_IPHONE
+        CGLContextObj glctx = var_InheritAddress(filter, "macosx-glcontext");
+        if (!glctx)
+        {
+            msg_Err(filter, "can't find 'macosx-glcontext' var");
+            goto error;
+        }
+        ctx->ci_ctx = [CIContext contextWithCGLContext: glctx
                                            pixelFormat: nil
                                             colorSpace: nil
                                                options: nil];
+#else
+        CVEAGLContext eaglctx = var_InheritAddress(filter, "ios-eaglcontext");
+        if (!eaglctx)
+        {
+            msg_Err(filter, "can't find 'ios-eaglcontext' var");
+            goto error;
+        }
+        ctx->ci_ctx = [CIContext contextWithEAGLContext: eaglctx];
+#endif
         if (!ctx->ci_ctx)
             goto error;
 
@@ -570,6 +606,7 @@ error:
     {
         if (ctx->color_space)
             CGColorSpaceRelease(ctx->color_space);
+        Close_RemoveConverters(filter, ctx);
         if (ctx->cvpx_pool)
             CVPixelBufferPoolRelease(ctx->cvpx_pool);
         free(ctx);
@@ -623,20 +660,11 @@ Close(vlc_object_t *obj)
 
     if (!ctx->fchain)
     {
-        if (ctx->dst_converter)
-        {
-            module_unneed(ctx->dst_converter, ctx->dst_converter->p_module);
-            vlc_object_release(ctx->dst_converter);
-            CVPixelBufferPoolRelease(ctx->outconv_cvpx_pool);
-        }
-        if (ctx->src_converter)
-        {
-            module_unneed(ctx->src_converter, ctx->src_converter->p_module);
-            vlc_object_release(ctx->src_converter);
-        }
+        Close_RemoveConverters(filter, ctx);
+        if (ctx->cvpx_pool)
+            CVPixelBufferPoolRelease(ctx->cvpx_pool);
         if (ctx->color_space)
             CGColorSpaceRelease(ctx->color_space);
-        CVPixelBufferPoolRelease(ctx->cvpx_pool);
         free(ctx);
         var_Destroy(filter->obj.parent, "ci-filters-ctx");
     }
