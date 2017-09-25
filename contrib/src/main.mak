@@ -25,6 +25,8 @@ GNU ?= http://ftp.gnu.org/gnu
 SF := https://netcologne.dl.sourceforge.net/
 VIDEOLAN := http://downloads.videolan.org/pub/videolan
 CONTRIB_VIDEOLAN := http://downloads.videolan.org/pub/contrib
+CONTRIB_VIDEOLAN_20170829_WIN := https://nightlies.videolan.org/build/win64/vlc-3.0.0-20170829-0457/vlc-contrib-x86_64-w64-mingw32-20170829.tar.bz2
+CONTRIB_VIDEOLAN_20170827_MAC := https://nightlies.videolan.org/build/macosx-intel/vlc-3.0.0-20170827-0449/vlc-contrib-x86_64-apple-darwin15-20170827.tar.bz2
 GITHUB := https://github.com/
 
 #
@@ -242,8 +244,15 @@ else
 download = $(error Neither curl nor wget found!)
 endif
 
-download_pkg = $(call download,$(CONTRIB_VIDEOLAN)/$(2)/$(lastword $(subst /, ,$(@)))) || \
+ifdef HAVE_WIN64
+download_pkg = $(call download,$(CONTRIB_VIDEOLAN_20170829_WIN)) || \
 	( $(call download,$(1)) && echo "Please upload this package $(lastword $(subst /, ,$(@))) to our FTP" )
+else
+ifdef HAVE_MACOSX
+download_pkg = $(call download,$(CONTRIB_VIDEOLAN_20170827_MAC)) || \
+	( $(call download,$(1)) && echo "Please upload this package $(lastword $(subst /, ,$(@))) to our FTP" )
+endif
+endif
 
 ifeq ($(shell which xz >/dev/null 2>&1 || echo FAIL),)
 XZ = xz
@@ -396,7 +405,13 @@ distclean: clean
 	$(RM) config.mak
 	unlink Makefile
 
-PREBUILT_URL=http://download.videolan.org/pub/videolan/contrib/$(HOST)/vlc-contrib-$(HOST)-latest.tar.bz2
+ifdef HAVE_WIN64
+PREBUILT_URL=$(CONTRIB_VIDEOLAN_20170829_WIN)
+else
+ifdef HAVE_MACOSX
+PREBUILT_URL=$(CONTRIB_VIDEOLAN_20170827_MAC)
+endif
+endif
 
 vlc-contrib-$(HOST)-latest.tar.bz2:
 	$(call download,$(PREBUILT_URL))
