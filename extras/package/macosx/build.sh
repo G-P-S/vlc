@@ -94,7 +94,7 @@ builddir=`pwd`
 
 info "Building in \"$builddir\""
 
-TRIPLET=$ARCH-apple-darwin$OSX_KERNELVERSION
+TRIPLET=$ARCH-apple-darwin15
 
 export CC="`xcrun --find clang`"
 export CXX="`xcrun --find clang++`"
