@@ -166,7 +166,7 @@ typedef enum
 typedef struct
 {
     bool b_started;
-    int        i_data;
+    size_t     i_data;
     uint8_t    p_data[XDS_MAX_DATA_SIZE];
     int        i_sum;
 } xds_packet_t;
@@ -761,12 +761,6 @@ static int DemuxRecVideo( demux_t *p_demux, ty_rec_hdr_t *rec_hdr, block_t *p_bl
     /* Register the CC decoders when needed */
     for( i = 0; i < 4; i++ )
     {
-        static const vlc_fourcc_t fcc[4] = {
-            VLC_CODEC_EIA608_1,
-            VLC_CODEC_EIA608_2,
-            VLC_CODEC_EIA608_3,
-            VLC_CODEC_EIA608_4,
-        };
         static const char *ppsz_description[4] = {
             N_("Closed captions 1"),
             N_("Closed captions 2"),
@@ -779,7 +773,8 @@ static int DemuxRecVideo( demux_t *p_demux, ty_rec_hdr_t *rec_hdr, block_t *p_bl
         if( !p_sys->cc.pb_present[i] || p_sys->p_cc[i] )
             continue;
 
-        es_format_Init( &fmt, SPU_ES, fcc[i] );
+        es_format_Init( &fmt, SPU_ES, VLC_CODEC_CEA608 );
+        fmt.subs.cc.i_channel = i;
         fmt.psz_description = strdup( vlc_gettext(ppsz_description[i]) );
         fmt.i_group = TY_ES_GROUP;
         p_sys->p_cc[i] = es_out_Add( p_demux->out, &fmt );
@@ -1121,10 +1116,10 @@ static void XdsExit( xds_t *h )
     free( h->meta.future.psz_name );
     free( h->meta.future.psz_rating );
 }
-static void XdsStringUtf8( char dst[2*32+1], const uint8_t *p_src, int i_src )
+static void XdsStringUtf8( char dst[2*32+1], const uint8_t *p_src, size_t i_src )
 {
-    int i_dst = 0;
-    for( int i = 0; i < i_src; i++ )
+    size_t i_dst = 0;
+    for( size_t i = 0; i < i_src; i++ )
     {
         switch( p_src[i] )
         {

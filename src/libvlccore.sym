@@ -1,8 +1,5 @@
 access_vaDirectoryControlHelper
 vlc_access_NewMRL
-access_fsdir_init
-access_fsdir_finish
-access_fsdir_additem
 AddMD5
 aout_BitsPerSample
 aout_ChannelExtract
@@ -217,6 +214,9 @@ input_resource_ResetAout
 input_Start
 input_Stop
 input_vaControl
+vlc_readdir_helper_init
+vlc_readdir_helper_finish
+vlc_readdir_helper_additem
 input_Close
 intf_Create
 libvlc_InternalAddIntf
@@ -362,6 +362,7 @@ playlist_VolumeSet
 playlist_VolumeUp
 playlist_MuteSet
 playlist_MuteGet
+playlist_SetRenderer
 sdp_AddAttribute
 sdp_AddMedia
 secstotimestr
@@ -689,7 +690,8 @@ vlc_fifo_DequeueAllUnlocked
 vlc_fifo_GetCount
 vlc_fifo_GetBytes
 vlc_gl_Create
-vlc_gl_Destroy
+vlc_gl_Release
+vlc_gl_Hold
 vlc_gl_surface_Create
 vlc_gl_surface_CheckSize
 vlc_gl_surface_Destroy

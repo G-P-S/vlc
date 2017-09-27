@@ -150,7 +150,6 @@ LD=xcrun ld
 STRIP=xcrun strip
 RANLIB=xcrun ranlib
 EXTRA_CFLAGS += $(CFLAGS)
-EXTRA_LDFLAGS += $(LDFLAGS)
 endif
 
 ifdef HAVE_WIN32
@@ -175,8 +174,7 @@ EXTRA_CFLAGS += -I$(PREFIX)/include
 CPPFLAGS := $(CPPFLAGS) $(EXTRA_CFLAGS)
 CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS) -g
 CXXFLAGS := $(CXXFLAGS) $(EXTRA_CFLAGS) $(EXTRA_CXXFLAGS) -g
-EXTRA_LDFLAGS += -L$(PREFIX)/lib
-LDFLAGS := $(LDFLAGS) $(EXTRA_LDFLAGS)
+LDFLAGS := $(LDFLAGS) -L$(PREFIX)/lib $(EXTRA_LDFLAGS)
 
 ifndef WITH_OPTIMIZATION
 CFLAGS := $(CFLAGS) -O0
@@ -369,6 +367,19 @@ RECONF = mkdir -p -- $(PREFIX)/share/aclocal && \
 	cd $< && $(AUTORECONF) -fiv $(ACLOCAL_AMFLAGS)
 CMAKE = cmake . -DCMAKE_TOOLCHAIN_FILE=$(abspath toolchain.cmake) \
 		-DCMAKE_INSTALL_PREFIX=$(PREFIX) $(CMAKE_GENERATOR)
+
+ifdef GPL
+REQUIRE_GPL =
+else
+REQUIRE_GPL = @echo "Package \"$<\" requires the GPL license." >&2; exit 1
+endif
+ifdef GNUV3
+REQUIRE_GNUV3 =
+else
+REQUIRE_GNUV3 = \
+	@echo "Package \"$<\" requires the version 3 of GNU licenses." >&2; \
+	exit 1
+endif
 
 #
 # Per-package build rules

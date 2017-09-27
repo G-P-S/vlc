@@ -1,10 +1,10 @@
 /*****************************************************************************
- * VLCSimplePrefsWindow.m: Simple Preferences Window subclass for Mac OS X
+ * VLCLogMessage.h: Log message class
  *****************************************************************************
- * Copyright (C) 2008-2014 VLC authors and VideoLAN
+ * Copyright (C) 2017 VLC authors and VideoLAN
  * $Id$
  *
- * Authors: Felix Paul Kühne <fkuehne at videolan dot org>
+ * Authors: Marvin Scholz <epirat07 at gmail dot com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,27 +21,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 
-#import "VLCSimplePrefsWindow.h"
-#import "VLCSimplePrefsController.h"
+#import <Foundation/Foundation.h>
+#import <vlc_common.h>
 
-@implementation VLCSimplePrefsWindow
+@interface VLCLogMessage : NSObject
 
-- (BOOL)acceptsFirstResponder
-{
-    return YES;
-}
+@property (readonly, getter=typeName) NSString *typeName;
+@property (readonly) int type;
+@property (readonly) NSString *message;
+@property (readonly) NSString *component;
+@property (readonly) NSString *function;
+@property (readonly) NSString *location;
+@property (readonly, getter=fullMessage) NSString *fullMessage;
 
-- (void)changeFont:(id)sender
-{
-    [[[VLCMain sharedInstance] simplePreferences] changeFont: sender];
-}
-@end
-
-@implementation VLCSimplePrefsClipView
-
-- (BOOL)isFlipped
-{
-    return YES;
-}
++ (instancetype)logMessage:(char *)msg type:(int)type info:(const vlc_log_t *)info;
+- (instancetype)initWithMessage:(char *)message type:(int)type info:(const vlc_log_t *)info;
 
 @end

@@ -54,6 +54,7 @@
 #include <vlc_modules.h>
 #include <vlc_stream.h>
 #include <vlc_stream_extractor.h>
+#include <vlc_renderer_discovery.h>
 
 /*****************************************************************************
  * Local prototypes
@@ -62,7 +63,8 @@ static  void *Run( void * );
 static  void *Preparse( void * );
 
 static input_thread_t * Create  ( vlc_object_t *, input_item_t *,
-                                  const char *, bool, input_resource_t * );
+                                  const char *, bool, input_resource_t *,
+                                  vlc_renderer_item_t * );
 static  int             Init    ( input_thread_t *p_input );
 static void             End     ( input_thread_t *p_input );
 static void             MainLoop( input_thread_t *p_input, bool b_interactive );
@@ -125,9 +127,10 @@ static void input_ChangeState( input_thread_t *p_input, int i_state ); /* TODO f
  */
 input_thread_t *input_Create( vlc_object_t *p_parent,
                               input_item_t *p_item,
-                              const char *psz_log, input_resource_t *p_resource )
+                              const char *psz_log, input_resource_t *p_resource,
+                              vlc_renderer_item_t *p_renderer )
 {
-    return Create( p_parent, p_item, psz_log, false, p_resource );
+    return Create( p_parent, p_item, psz_log, false, p_resource, p_renderer );
 }
 
 #undef input_Read
@@ -140,7 +143,7 @@ input_thread_t *input_Create( vlc_object_t *p_parent,
  */
 int input_Read( vlc_object_t *p_parent, input_item_t *p_item )
 {
-    input_thread_t *p_input = Create( p_parent, p_item, NULL, false, NULL );
+    input_thread_t *p_input = Create( p_parent, p_item, NULL, false, NULL, NULL );
     if( !p_input )
         return VLC_EGENERIC;
 
@@ -157,7 +160,7 @@ int input_Read( vlc_object_t *p_parent, input_item_t *p_item )
 input_thread_t *input_CreatePreparser( vlc_object_t *parent,
                                        input_item_t *item )
 {
-    return Create( parent, item, NULL, true, NULL );
+    return Create( parent, item, NULL, true, NULL, NULL );
 }
 
 /**
@@ -237,6 +240,8 @@ static void input_Destructor( vlc_object_t *obj )
     free( psz_name );
 #endif
 
+    if( priv->p_renderer )
+        vlc_renderer_item_release( priv->p_renderer );
     if( priv->p_es_out_display )
         es_out_Delete( priv->p_es_out_display );
 
@@ -279,7 +284,8 @@ input_item_t *input_GetItem( input_thread_t *p_input )
  *****************************************************************************/
 static input_thread_t *Create( vlc_object_t *p_parent, input_item_t *p_item,
                                const char *psz_header, bool b_preparsing,
-                               input_resource_t *p_resource )
+                               input_resource_t *p_resource,
+                               vlc_renderer_item_t *p_renderer )
 {
     /* Allocate descriptor */
     input_thread_private_t *priv;
@@ -320,6 +326,9 @@ static input_thread_t *Create( vlc_object_t *p_parent, input_item_t *p_item,
     priv->attachment_demux = NULL;
     priv->p_sout   = NULL;
     priv->b_out_pace_control = false;
+    /* The renderer is passed after its refcount was incremented.
+     * The input thread is now responsible for releasing it */
+    priv->p_renderer = p_renderer;
 
     priv->viewpoint_changed = false;
     /* Fetch the viewpoint from the mediaplayer or the playlist if any */
@@ -803,7 +812,8 @@ static void InitStatistics( input_thread_t *p_input )
     if( priv->b_preparsing ) return;
 
     /* Prepare statistics */
-#define INIT_COUNTER( c, compute ) priv->counters.p_##c = \
+#define INIT_COUNTER( c, compute ) free( priv->counters.p_##c ); \
+    priv->counters.p_##c = \
  stats_CounterCreate( STATS_##compute);
     if( libvlc_stats( p_input ) )
     {
@@ -836,7 +846,15 @@ static int InitSout( input_thread_t * p_input )
         return VLC_SUCCESS;
 
     /* Find a usable sout and attach it to p_input */
-    char *psz = var_GetNonEmptyString( p_input, "sout" );
+    char *psz = NULL;
+    if( priv->p_renderer )
+    {
+        const char *psz_renderer_sout = vlc_renderer_item_sout( priv->p_renderer );
+        if( asprintf( &psz, "#%s", psz_renderer_sout ) < 0 )
+            return VLC_ENOMEM;
+    }
+    if( !psz )
+        psz = var_GetNonEmptyString( p_input, "sout" );
     if( psz && strncasecmp( priv->p_item->psz_uri, "vlc:", 4 ) )
     {
         priv->p_sout  = input_resource_RequestSout( priv->p_resource, NULL, psz );
@@ -1850,6 +1868,38 @@ static void ControlNav( input_thread_t *p_input, int i_type )
     }
 }
 
+#ifdef ENABLE_SOUT
+static void ControlUpdateSout( input_thread_t *p_input, const char* psz_chain )
+{
+    var_SetString( p_input, "sout", psz_chain );
+    if( psz_chain && *psz_chain )
+    {
+        if( InitSout( p_input ) != VLC_SUCCESS )
+        {
+            msg_Err( p_input, "Failed to start sout" );
+            return;
+        }
+    }
+    else
+    {
+        input_resource_RequestSout( input_priv(p_input)->p_resource,
+                                    input_priv(p_input)->p_sout, NULL );
+        input_priv(p_input)->p_sout = NULL;
+    }
+    es_out_Control( input_priv(p_input)->p_es_out, ES_OUT_RESTART_ALL_ES );
+}
+#endif
+
+static void ControlInsertDemuxFilter( input_thread_t* p_input, const char* psz_demux_chain )
+{
+    input_source_t *p_inputSource = input_priv(p_input)->master;
+    demux_t *p_filtered_demux = demux_FilterChainNew( p_inputSource->p_demux, psz_demux_chain );
+    if ( p_filtered_demux != NULL )
+        p_inputSource->p_demux = p_filtered_demux;
+    else if ( psz_demux_chain != NULL )
+        msg_Dbg(p_input, "Failed to create demux filter %s", psz_demux_chain);
+}
+
 static bool Control( input_thread_t *p_input,
                      int i_type, vlc_value_t val )
 {
@@ -2269,6 +2319,38 @@ static bool Control( input_thread_t *p_input,
             b_force_update = Control( p_input, INPUT_CONTROL_SET_TIME, val );
             break;
         }
+        case INPUT_CONTROL_SET_RENDERER:
+        {
+#ifdef ENABLE_SOUT
+            vlc_renderer_item_t *p_item = val.p_address;
+            input_thread_private_t *p_priv = input_priv( p_input );
+            // We do not support switching from a renderer to another for now
+            if ( p_item == NULL && p_priv->p_renderer == NULL )
+                break;
+
+            if ( p_priv->p_renderer )
+            {
+                ControlUpdateSout( p_input, NULL );
+                demux_FilterDisable( p_priv->master->p_demux,
+                        vlc_renderer_item_demux_filter( p_priv->p_renderer ) );
+                vlc_renderer_item_release( p_priv->p_renderer );
+                p_priv->p_renderer = NULL;
+            }
+            if( p_item != NULL )
+            {
+                p_priv->p_renderer = vlc_renderer_item_hold( p_item );
+                ControlUpdateSout( p_input, vlc_renderer_item_sout( p_item ) );
+                if( !demux_FilterEnable( p_priv->master->p_demux,
+                                vlc_renderer_item_demux_filter( p_priv->p_renderer ) ) )
+                {
+                    ControlInsertDemuxFilter( p_input,
+                                        vlc_renderer_item_demux_filter( p_item ) );
+                }
+                input_resource_TerminateVout( p_priv->p_resource );
+            }
+#endif
+            break;
+        }
 
         case INPUT_CONTROL_NAV_ACTIVATE:
         case INPUT_CONTROL_NAV_UP:
@@ -2480,6 +2562,7 @@ static input_source_t *InputSourceNew( input_thread_t *p_input,
                                        const char *psz_forced_demux,
                                        bool b_in_can_fail )
 {
+    input_thread_private_t *priv = input_priv(p_input);
     input_source_t *in = vlc_custom_create( p_input, sizeof( *in ),
                                             "input source" );
     if( unlikely(in == NULL) )
@@ -2580,7 +2663,16 @@ static input_source_t *InputSourceNew( input_thread_t *p_input,
         return NULL;
     }
 
-    char *psz_demux_chain = var_GetNonEmptyString(p_input, "demux-filter");
+    char *psz_demux_chain = NULL;
+    if( priv->p_renderer )
+    {
+        const char* psz_renderer_demux = vlc_renderer_item_demux_filter(
+                    priv->p_renderer );
+        if( psz_renderer_demux )
+            psz_demux_chain = strdup( psz_renderer_demux );
+    }
+    if( !psz_demux_chain )
+        psz_demux_chain = var_GetNonEmptyString(p_input, "demux-filter");
     if( psz_demux_chain != NULL ) /* add the chain of demux filters */
     {
         in->p_demux = demux_FilterChainNew( in->p_demux, psz_demux_chain );

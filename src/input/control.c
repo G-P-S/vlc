@@ -411,6 +411,7 @@ int input_vaControl( input_thread_t *p_input, int i_query, va_list args )
             enum slave_type type =  (enum slave_type) va_arg( args, enum slave_type );
             psz = va_arg( args, char * );
             b_bool = va_arg( args, int );
+            bool b_notify = va_arg( args, int );
 
             if( !psz || ( type != SLAVE_TYPE_SPU && type != SLAVE_TYPE_AUDIO ) )
                 return VLC_EGENERIC;
@@ -423,6 +424,25 @@ int input_vaControl( input_thread_t *p_input, int i_query, va_list args )
 
             val.p_address = p_slave;
             input_ControlPush( p_input, INPUT_CONTROL_ADD_SLAVE, &val );
+            if( b_notify )
+            {
+                vout_thread_t *p_vout = input_GetVout( p_input );
+                if( p_vout )
+                {
+                    switch( type )
+                    {
+                        case SLAVE_TYPE_AUDIO:
+                            vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s",
+                                            vlc_gettext("Audio track added"));
+                            break;
+                        case SLAVE_TYPE_SPU:
+                            vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s",
+                                            vlc_gettext("Subtitle track added"));
+                            break;
+                    }
+                    vlc_object_release( (vlc_object_t *)p_vout );
+                }
+            }
             return VLC_SUCCESS;
         }
 
@@ -560,6 +580,14 @@ int input_vaControl( input_thread_t *p_input, int i_query, va_list args )
             bool b_absolute = va_arg( args, int );
             mtime_t i_system = va_arg( args, mtime_t );
             return es_out_ControlModifyPcrSystem( priv->p_es_out_display, b_absolute, i_system );
+        }
+
+        case INPUT_SET_RENDERER:
+        {
+            vlc_renderer_item_t* p_item = va_arg( args, vlc_renderer_item_t* );
+            val.p_address = p_item;
+            input_ControlPush( p_input, INPUT_CONTROL_SET_RENDERER, &val );
+            return VLC_SUCCESS;
         }
 
         default:

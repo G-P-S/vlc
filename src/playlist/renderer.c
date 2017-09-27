@@ -1,7 +1,9 @@
 /*****************************************************************************
- * hxxx_common.h: AVC/HEVC packetizers shared code
+ * renderer.c : Manage renderer modules
  *****************************************************************************
- * Copyright (C) 2001-2015 VLC authors and VideoLAN
+ * Copyright (C) 1999-2017 VLC authors, VideoLAN and VideoLabs
+ *
+ * Authors: Hugo Beauzée-Luyssen <hugo@beauzee.fr>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -17,29 +19,33 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
-#ifndef HXXX_COMMON_H
-#define HXXX_COMMON_H
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <vlc_common.h>
+#include <vlc_playlist.h>
+#include <vlc_renderer_discovery.h>
 
-/* */
-typedef struct cc_storage_t cc_storage_t;
+#include "playlist/playlist_internal.h"
 
-cc_storage_t * cc_storage_new( void );
-void cc_storage_delete( cc_storage_t *p_ccs );
+int playlist_SetRenderer( playlist_t* p_playlist, vlc_renderer_item_t* p_item )
+{
+    if( p_item )
+        vlc_renderer_item_hold( p_item );
 
-void cc_storage_reset( cc_storage_t *p_ccs );
-void cc_storage_append( cc_storage_t *p_ccs, bool b_top_field_first,
-                                      const uint8_t *p_buf, size_t i_buf );
-void cc_storage_commit( cc_storage_t *p_ccs, block_t *p_pic );
+    PL_LOCK;
 
-block_t * cc_storage_get_current( cc_storage_t *p_ccs, bool pb_present[4],
-                                  int *pi_reorder_depth );
+    playlist_private_t *p_priv = pl_priv( p_playlist );
+    vlc_renderer_item_t *p_prev_renderer = p_priv->p_renderer;
+    p_priv->p_renderer = p_item;
+    if( p_priv->p_input )
+        input_Control( p_priv->p_input, INPUT_SET_RENDERER, p_item );
 
-/* */
+    PL_UNLOCK;
 
-typedef block_t * (*pf_annexb_nal_packetizer)(decoder_t *, bool *, block_t *);
-block_t *PacketizeXXC1( decoder_t *, uint8_t, block_t **, pf_annexb_nal_packetizer );
-
-#endif // HXXX_COMMON_H
-
+    if( p_prev_renderer )
+        vlc_renderer_item_release( p_prev_renderer );
+    return VLC_SUCCESS;
+}

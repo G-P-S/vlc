@@ -302,7 +302,7 @@ VLC_API void playlist_Deactivate( playlist_t * );
  * \param b_locked TRUE if playlist is locked when entering this function
  * \param variable number of arguments
  */
-VLC_API void playlist_Control( playlist_t *p_playlist, int i_query, bool b_locked, ...  );
+VLC_API void playlist_Control( playlist_t *p_playlist, int i_query, int b_locked, ...  );
 
 static inline void playlist_ViewPlay(playlist_t *pl, playlist_item_t *node,
                                      playlist_item_t *item)
@@ -358,6 +358,14 @@ VLC_API bool playlist_IsServicesDiscoveryLoaded( playlist_t *,const char *) VLC_
 /** Query a services discovery */
 VLC_API int playlist_ServicesDiscoveryControl( playlist_t *, const char *, int, ... );
 
+/********************** Renderer ***********************/
+/**
+ * Sets a renderer or remove the current one
+ * @param p_item    The renderer item to be used, or NULL to disable the current
+ *                  one. If a renderer is provided, its reference count will be
+ *                  incremented.
+ */
+VLC_API int playlist_SetRenderer( playlist_t* p_pl, vlc_renderer_item_t* p_item );
 
 
 /********************************************************

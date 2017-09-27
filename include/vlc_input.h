@@ -460,7 +460,7 @@ enum input_query_e
     INPUT_GET_ATTACHMENT,  /* arg1=input_attachment_t**, arg2=char*  res=can fail */
 
     /* On the fly input slave */
-    INPUT_ADD_SLAVE,       /* arg1= enum slave_type, arg2= const char *, arg3= bool */
+    INPUT_ADD_SLAVE,       /* arg1= enum slave_type, arg2= const char *, arg3= bool, arg4= bool */
     INPUT_ADD_SUBTITLE,    /* arg1= const char *, arg2=bool b_check_extension */
 
     /* On the fly record while playing */
@@ -480,6 +480,9 @@ enum input_query_e
     INPUT_GET_VOUTS,        /* arg1=vout_thread_t ***, size_t *        res=can fail */
     INPUT_GET_ES_OBJECTS,   /* arg1=int id, vlc_object_t **dec, vout_thread_t **, audio_output_t ** */
 
+    /* Renderers */
+    INPUT_SET_RENDERER,     /* arg1=vlc_renderer_item_t* */
+
     /* External clock managments */
     INPUT_GET_PCR_SYSTEM,   /* arg1=mtime_t *, arg2=mtime_t *       res=can fail */
     INPUT_MODIFY_PCR_SYSTEM,/* arg1=int absolute, arg2=mtime_t      res=can fail */
@@ -491,8 +494,10 @@ enum input_query_e
  * Prototypes
  *****************************************************************************/
 
-VLC_API input_thread_t * input_Create( vlc_object_t *p_parent, input_item_t *, const char *psz_log, input_resource_t * ) VLC_USED;
-#define input_Create(a,b,c,d) input_Create(VLC_OBJECT(a),b,c,d)
+VLC_API input_thread_t * input_Create( vlc_object_t *p_parent, input_item_t *,
+                                       const char *psz_log, input_resource_t *,
+                                       vlc_renderer_item_t* p_renderer ) VLC_USED;
+#define input_Create(a,b,c,d,e) input_Create(VLC_OBJECT(a),b,c,d,e)
 
 VLC_API int input_Start( input_thread_t * );
 
@@ -518,7 +523,7 @@ static inline
 input_thread_t *input_CreateAndStart( vlc_object_t *parent,
                                       input_item_t *item, const char *log )
 {
-    input_thread_t *input = input_Create( parent, item, log, NULL );
+    input_thread_t *input = input_Create( parent, item, log, NULL, NULL );
     if( input != NULL && input_Start( input ) )
     {
         vlc_object_release( input );
@@ -570,32 +575,10 @@ static inline vout_thread_t *input_GetVout( input_thread_t *p_input )
      return p_vout;
 }
 
-/**
- * It will add a new subtitle source to the input.
- * Provided for convenience.
- */
-static inline int input_AddSubtitleOSD( input_thread_t *p_input, const char *psz_path,
-        bool b_check_extension, bool b_osd )
-{
-    int i_result = input_Control( p_input, INPUT_ADD_SUBTITLE, psz_path, b_check_extension );
-    if( i_result != VLC_SUCCESS || !b_osd )
-        return i_result;
-
-    vout_thread_t *p_vout = input_GetVout( p_input );
-    if( p_vout )
-    {
-        vout_OSDMessage(p_vout, VOUT_SPU_CHANNEL_OSD, "%s",
-                        vlc_gettext("Subtitle track added") );
-        vlc_object_release( (vlc_object_t *)p_vout );
-    }
-    return i_result;
-}
-#define input_AddSubtitle(a, b, c) input_AddSubtitleOSD(a, b, c, false)
-
 static inline int input_AddSlave( input_thread_t *p_input, enum slave_type type,
-                                  const char *psz_uri, bool b_forced )
+                                  const char *psz_uri, bool b_forced, bool b_notify )
 {
-    return input_Control( p_input, INPUT_ADD_SLAVE, type, psz_uri, b_forced );
+    return input_Control( p_input, INPUT_ADD_SLAVE, type, psz_uri, b_forced, b_notify );
 }
 
 /**

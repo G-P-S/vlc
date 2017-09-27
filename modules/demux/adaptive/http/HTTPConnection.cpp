@@ -217,26 +217,25 @@ bool HTTPConnection::send(const void *buf, size_t size)
 
 int HTTPConnection::parseReply()
 {
-    std::string line = readLine();
+    std::string statusline = readLine();
 
-    if(line.empty())
+    if(statusline.empty())
         return VLC_EGENERIC;
 
-    if (line.compare(0, 9, "HTTP/1.1 ")!=0)
+    if (statusline.compare(0, 9, "HTTP/1.1 ")!=0)
     {
-        if(line.compare(0, 9, "HTTP/1.0 ")!=0)
+        if(statusline.compare(0, 9, "HTTP/1.0 ")!=0)
             return VLC_ENOOBJ;
         else
             connectionClose = true;
     }
 
-    std::istringstream ss(line.substr(9));
+    std::istringstream ss(statusline.substr(9));
     ss.imbue(std::locale("C"));
     int replycode;
     ss >> replycode;
 
-
-    line = readLine();
+    std::string line = readLine();
 
     while(!line.empty() && line.compare("\r\n"))
     {
@@ -258,7 +257,7 @@ int HTTPConnection::parseReply()
     }
     else if (replycode != 200 && replycode != 206)
     {
-        msg_Err(p_object, "Failed reading %s: %s", params.getUrl().c_str(), line.c_str());
+        msg_Err(p_object, "Failed reading %s: %s", params.getUrl().c_str(), statusline.c_str());
         return VLC_ENOOBJ;
     }
 
@@ -363,9 +362,17 @@ void HTTPConnection::onHeader(const std::string &key,
 std::string HTTPConnection::buildRequestHeader(const std::string &path) const
 {
     std::stringstream req;
-    req << "GET " << path << " HTTP/1.1\r\n" <<
-           "Host: " << params.getHostname() << "\r\n" <<
-           "Cache-Control: no-cache" << "\r\n" <<
+    req << "GET " << path << " HTTP/1.1\r\n";
+    if((params.getScheme() == "http" && params.getPort() != 80) ||
+            (params.getScheme() == "https" && params.getPort() != 443))
+    {
+        req << "Host: " << params.getHostname() << ":" << params.getPort() << "\r\n";
+    }
+    else
+    {
+        req << "Host: " << params.getHostname() << "\r\n";
+    }
+    req << "Cache-Control: no-cache" << "\r\n" <<
            "User-Agent: " << std::string(psz_useragent) << "\r\n";
     req << extraRequestHeaders();
     return req.str();

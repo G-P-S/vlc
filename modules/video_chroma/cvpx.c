@@ -108,12 +108,17 @@ static picture_t *CVPX_TO_I420_Filter(filter_t *p_filter, picture_t *src)
     return dst;
 }
 
+static picture_t *SW_buffer_new(filter_t *p_filter)
+{
+    return picture_NewFromFormat( &p_filter->fmt_out.video );
+}
+
 static picture_t *CVPX_buffer_new(filter_t *p_sw_filter)
 {
     filter_t *p_filter = p_sw_filter->owner.sys;
     filter_sys_t *p_sys = p_filter->p_sys;
 
-    CVPixelBufferRef cvpx = cvpxpool_get_cvpx(p_sys->pool);
+    CVPixelBufferRef cvpx = cvpxpool_new_cvpx(p_sys->pool);
     if (cvpx == NULL)
         return NULL;
 
@@ -166,7 +171,7 @@ static int Open(vlc_object_t *obj)
         p_filter->pf_video_filter = CVPX_TO_I420_Filter; \
         i_sw_filter_in_chroma = VLC_CODEC_##x; \
         i_sw_filter_out_chroma = VLC_CODEC_I420; \
-        sw_filter_owner = p_filter->owner; \
+        sw_filter_owner.video.buffer_new = SW_buffer_new; \
         b_need_pool = false;
 
 #define CASE_CVPX_OUTPUT(x) \

@@ -346,12 +346,19 @@ static int lavc_CopyPicture(decoder_t *dec, picture_t *pic, AVFrame *frame)
 {
     decoder_sys_t *sys = dec->p_sys;
 
-    if (!FindVlcChroma(sys->p_context->pix_fmt))
+    vlc_fourcc_t fourcc = FindVlcChroma(frame->format);
+    if (!fourcc)
     {
-        const char *name = av_get_pix_fmt_name(sys->p_context->pix_fmt);
+        const char *name = av_get_pix_fmt_name(frame->format);
 
         msg_Err(dec, "Unsupported decoded output format %d (%s)",
                 sys->p_context->pix_fmt, (name != NULL) ? name : "unknown");
+        return VLC_EGENERIC;
+    } else if (fourcc != pic->format.i_chroma
+     || frame->width != (int) pic->format.i_visible_width
+     || frame->height != (int) pic->format.i_visible_height)
+    {
+        msg_Warn(dec, "dropping frame because the vout changed");
         return VLC_EGENERIC;
     }
 
@@ -856,7 +863,7 @@ static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p
     if( p_avcc )
     {
         cc_Extract( &p_sys->cc, CC_PAYLOAD_RAW, true, p_avcc->data, p_avcc->size );
-        if( p_sys->cc.i_data )
+        if( p_sys->cc.b_reorder || p_sys->cc.i_data )
         {
             block_t *p_cc = block_Alloc( p_sys->cc.i_data );
             if( p_cc )
@@ -1158,7 +1165,6 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
             /* Fill picture_t from AVFrame */
             if( lavc_CopyPicture( p_dec, p_pic, frame ) != VLC_SUCCESS )
             {
-                *error = true;
                 av_frame_free(&frame);
                 picture_Release( p_pic );
                 break;

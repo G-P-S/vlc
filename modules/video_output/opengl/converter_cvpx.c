@@ -29,16 +29,8 @@
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 #include <CoreVideo/CVOpenGLESTextureCache.h>
-struct gl_sys
-{
-    CVEAGLContext locked_ctx;
-};
 #else
 #include <IOSurface/IOSurface.h>
-struct gl_sys
-{
-    CGLContextObj locked_ctx;
-};
 #endif
 
 struct priv
@@ -46,6 +38,9 @@ struct priv
     picture_t *last_pic;
 #if TARGET_OS_IPHONE
     CVOpenGLESTextureCacheRef cache;
+    CVOpenGLESTextureRef last_cvtexs[PICTURE_PLANE_MAX];
+#else
+    CGLContextObj gl_ctx;
 #endif
 };
 
@@ -61,15 +56,15 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
 
     CVPixelBufferRef pixelBuffer = cvpxpic_get_ref(pic);
 
+    CVOpenGLESTextureCacheFlush(priv->cache, 0);
+
     for (unsigned i = 0; i < tc->tex_count; ++i)
     {
-        tc->vt->ActiveTexture(GL_TEXTURE0 + i);
-
-        CVOpenGLESTextureRef texture;
+        CVOpenGLESTextureRef cvtex;
         CVReturn err = CVOpenGLESTextureCacheCreateTextureFromImage(
             kCFAllocatorDefault, priv->cache, pixelBuffer, NULL,
             tc->tex_target, tc->texs[i].internal, tex_width[i], tex_height[i],
-            tc->texs[i].format, tc->texs[i].type, i, &texture);
+            tc->texs[i].format, tc->texs[i].type, i, &cvtex);
         if (err != noErr)
         {
             msg_Err(tc->gl,
@@ -78,13 +73,15 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
             return VLC_EGENERIC;
         }
 
-        textures[i] = CVOpenGLESTextureGetName(texture);
+        textures[i] = CVOpenGLESTextureGetName(cvtex);
         tc->vt->BindTexture(tc->tex_target, textures[i]);
         tc->vt->TexParameteri(tc->tex_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         tc->vt->TexParameteri(tc->tex_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         tc->vt->TexParameterf(tc->tex_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         tc->vt->TexParameterf(tc->tex_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        CFRelease(texture);
+        if (likely(priv->last_cvtexs[i]))
+            CFRelease(priv->last_cvtexs[i]);
+        priv->last_cvtexs[i] = cvtex;
     }
 
     if (priv->last_pic != pic)
@@ -105,7 +102,6 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
 {
     (void) plane_offset;
     struct priv *priv = tc->priv;
-    struct gl_sys *glsys = tc->gl->sys;
 
     CVPixelBufferRef pixelBuffer = cvpxpic_get_ref(pic);
 
@@ -118,7 +114,7 @@ tc_cvpx_update(const opengl_tex_converter_t *tc, GLuint *textures,
         tc->vt->BindTexture(tc->tex_target, textures[i]);
 
         CGLError err =
-            CGLTexImageIOSurface2D(glsys->locked_ctx, tc->tex_target,
+            CGLTexImageIOSurface2D(priv->gl_ctx, tc->tex_target,
                                    tc->texs[i].internal,
                                    tex_width[i], tex_height[i],
                                    tc->texs[i].format,
@@ -175,10 +171,16 @@ Open(vlc_object_t *obj)
     const GLenum tex_target = GL_TEXTURE_2D;
 
     {
-        struct gl_sys *glsys = tc->gl->sys;
+        CVEAGLContext eagl_ctx = var_InheritAddress(tc->gl, "ios-eaglcontext");
+        if (!eagl_ctx)
+        {
+            msg_Err(tc->gl, "can't find ios-eaglcontext\n");
+            free(priv);
+            return VLC_EGENERIC;
+        }
         CVReturn err =
             CVOpenGLESTextureCacheCreate(kCFAllocatorDefault, NULL,
-                                         glsys->locked_ctx, NULL, &priv->cache);
+                                         eagl_ctx, NULL, &priv->cache);
         if (err != noErr)
         {
             msg_Err(tc->gl, "CVOpenGLESTextureCacheCreate failed: %d", err);
@@ -189,6 +191,15 @@ Open(vlc_object_t *obj)
     tc->handle_texs_gen = true;
 #else
     const GLenum tex_target = GL_TEXTURE_RECTANGLE;
+    {
+        priv->gl_ctx = var_InheritAddress(tc->gl, "macosx-glcontext");
+        if (!priv->gl_ctx)
+        {
+            msg_Err(tc->gl, "can't find macosx-glcontext\n");
+            free(priv);
+            return VLC_EGENERIC;
+        }
+    }
 #endif
 
     GLuint fragment_shader;
@@ -203,7 +214,7 @@ Open(vlc_object_t *obj)
 
             fragment_shader =
                 opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_VYUY,
-                                            COLOR_SPACE_UNDEF);
+                                            tc->fmt.space);
             tc->texs[0].internal = GL_RGB;
             tc->texs[0].format = GL_RGB_422_APPLE;
             tc->texs[0].type = GL_UNSIGNED_SHORT_8_8_APPLE;
@@ -213,13 +224,13 @@ Open(vlc_object_t *obj)
         {
             fragment_shader =
                 opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_NV12,
-                                            COLOR_SPACE_UNDEF);
+                                            tc->fmt.space);
             break;
         }
         case VLC_CODEC_CVPX_I420:
             fragment_shader =
                 opengl_fragment_shader_init(tc, tex_target, VLC_CODEC_I420,
-                                            COLOR_SPACE_UNDEF);
+                                            tc->fmt.space);
             break;
         case VLC_CODEC_CVPX_BGRA:
             fragment_shader =

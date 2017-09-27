@@ -301,6 +301,14 @@ static int ftp_RecvCommand( vlc_object_t *obj, access_sys_t *sys,
     return ftp_RecvAnswer( obj, sys, codep, strp, DummyLine, NULL );
 }
 
+static int ftp_RecvCommandInit( vlc_object_t *obj, access_sys_t *sys )
+{
+    int val = ftp_RecvReply( obj, sys, NULL, DummyLine, NULL );
+    if( val >= 0 )
+        val /= 100;
+    return val;
+}
+
 static int ftp_StartStream( vlc_object_t *, access_sys_t *, uint64_t, bool );
 static int ftp_StopStream ( vlc_object_t *, access_sys_t * );
 
@@ -362,7 +370,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
         msg_Err( p_access, "connection failed" );
         vlc_dialog_display_error( p_access, _("Network interaction failed"), "%s",
             _("VLC could not connect with the given server.") );
-        return -1;
+        goto error;
     }
 
     if ( p_sys->tlsmode == IMPLICIT ) /* FTPS Mode */
@@ -378,7 +386,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
         msg_Err( p_access, "connection rejected" );
         vlc_dialog_display_error( p_access, _("Network interaction failed"), "%s",
             _("VLC's connection to the given server was rejected.") );
-        return -1;
+        goto error;
     }
 
     msg_Dbg( p_access, "connection accepted (%d)", i_answer );
@@ -389,7 +397,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
                         FeaturesCheck, &p_sys->features ) < 0 )
     {
          msg_Err( p_access, "cannot get server features" );
-         return -1;
+         goto error;
     }
 
     /* Create TLS Session */
@@ -398,7 +406,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
         if ( ! p_sys->features.b_authtls )
         {
             msg_Err( p_access, "Server does not support TLS" );
-            return -1;
+            goto error;
         }
 
         if( ftp_SendCommand( p_access, p_sys, "AUTH TLS" ) < 0
@@ -407,7 +415,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
         {
              msg_Err( p_access, "cannot switch to TLS: server replied with code %d",
                       i_answer );
-             return -1;
+             goto error;
         }
 
         if( createCmdTLS( p_access, p_sys, "ftpes") < 0 )
@@ -903,8 +911,8 @@ static int DirRead (stream_t *p_access, input_item_node_t *p_current_node)
     assert( p_sys->data != NULL );
     assert( !p_sys->out );
 
-    struct access_fsdir fsdir;
-    access_fsdir_init( &fsdir, p_access, p_current_node );
+    struct vlc_readdir_helper rdh;
+    vlc_readdir_helper_init( &rdh, p_access, p_current_node );
 
     while (i_ret == VLC_SUCCESS)
     {
@@ -948,15 +956,15 @@ static int DirRead (stream_t *p_access, input_item_node_t *p_current_node)
                       p_sys->url.psz_path ? p_sys->url.psz_path : "",
                       psz_filename ) != -1 )
         {
-            i_ret = access_fsdir_additem( &fsdir, psz_uri, psz_file,
-                                          type, ITEM_NET );
+            i_ret = vlc_readdir_helper_additem( &rdh, psz_uri, NULL, psz_file,
+                                                type, ITEM_NET );
             free( psz_uri );
         }
         free( psz_filename );
         free( psz_line );
     }
 
-    access_fsdir_finish( &fsdir, i_ret == VLC_SUCCESS );
+    vlc_readdir_helper_finish( &rdh, i_ret == VLC_SUCCESS );
     return i_ret;
 }
 
@@ -1124,13 +1132,13 @@ static int ftp_StartStream( vlc_object_t *p_access, access_sys_t *p_sys,
     {
         if( p_sys->features.b_mlst &&
             ftp_SendCommand( p_access, p_sys, "MLSD" ) >= 0 &&
-            ftp_RecvCommand( p_access, p_sys, NULL, NULL ) <= 2 )
+            ftp_RecvCommandInit( p_access, p_sys ) == 1 )
         {
             msg_Dbg( p_access, "Using MLST extension to list" );
         }
         else
         if( ftp_SendCommand( p_access, p_sys, "NLST" ) < 0 ||
-            ftp_RecvCommand( p_access, p_sys, NULL, NULL ) > 2 )
+            ftp_RecvCommandInit( p_access, p_sys ) == 1 )
         {
             msg_Err( p_access, "cannot list directory contents" );
             return VLC_EGENERIC;
@@ -1143,7 +1151,7 @@ static int ftp_StartStream( vlc_object_t *p_access, access_sys_t *p_sys,
         if( ftp_SendCommand( p_access, p_sys, "%s %s",
                              p_sys->out ? "STOR" : "RETR",
                              p_sys->url.psz_path ) < 0
-         || ftp_RecvCommand( p_access, p_sys, &i_answer, NULL ) > 2 )
+         || ftp_RecvCommandInit( p_access, p_sys ) != 1 )
         {
             msg_Err( p_access, "cannot retrieve file" );
             return VLC_EGENERIC;

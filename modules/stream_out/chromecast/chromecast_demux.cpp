@@ -43,8 +43,9 @@ struct demux_sys_t
         ,p_renderer(renderer)
         ,i_length(-1)
         ,demuxReady(false)
-        ,canSeek(false)
         ,m_seektime( VLC_TS_INVALID )
+        ,m_enabled( true )
+        ,m_startTime( VLC_TS_INVALID )
     {
         vlc_meta_t *p_meta = vlc_meta_New();
         if( likely(p_meta != NULL) )
@@ -60,12 +61,17 @@ struct demux_sys_t
             }
             vlc_meta_Delete(p_meta);
         }
+        if (demux_Control( demux->p_next, DEMUX_CAN_SEEK, &canSeek ) != VLC_SUCCESS)
+            canSeek = false;
     }
 
     ~demux_sys_t()
     {
-        p_renderer->pf_set_title( p_renderer->p_opaque, NULL );
-        p_renderer->pf_set_artwork( p_renderer->p_opaque, NULL );
+        if( p_renderer )
+        {
+            p_renderer->pf_set_title( p_renderer->p_opaque, NULL );
+            p_renderer->pf_set_artwork( p_renderer->p_opaque, NULL );
+        }
     }
 
     void setPauseState(bool paused)
@@ -119,12 +125,22 @@ struct demux_sys_t
 
     int Demux()
     {
+        if ( !m_enabled )
+            return demux_Demux( p_demux->p_next );
+
         if (!demuxReady)
         {
             msg_Dbg(p_demux, "wait to demux");
             p_renderer->pf_wait_app_started( p_renderer->p_opaque );
             demuxReady = true;
             msg_Dbg(p_demux, "ready to demux");
+        }
+        if( m_startTime == VLC_TS_INVALID )
+        {
+            if( demux_Control( p_demux->p_next, DEMUX_GET_TIME,
+                               &m_startTime ) == VLC_SUCCESS )
+                p_renderer->pf_set_initial_time( p_renderer->p_opaque,
+                                                 m_startTime );
         }
 
         /* hold the data while seeking */
@@ -140,6 +156,9 @@ struct demux_sys_t
 
     int Control( demux_t *p_demux_filter, int i_query, va_list args )
     {
+        if( !m_enabled && i_query != DEMUX_FILTER_ENABLE )
+            return demux_vaControl( p_demux_filter->p_next, i_query, args );
+
         switch (i_query)
         {
         case DEMUX_GET_POSITION:
@@ -230,6 +249,17 @@ struct demux_sys_t
             setPauseState( paused != 0 );
             break;
         }
+        case DEMUX_FILTER_ENABLE:
+            p_renderer = static_cast<chromecast_common *>(
+                        var_InheritAddress( p_demux, CC_SHARED_VAR_NAME ) );
+            m_enabled = true;
+            return VLC_SUCCESS;
+
+        case DEMUX_FILTER_DISABLE:
+            m_enabled = false;
+            p_renderer = NULL;
+            m_startTime = VLC_TS_INVALID;
+            return VLC_SUCCESS;
         }
 
         return demux_vaControl( p_demux_filter->p_next, i_query, args );
@@ -237,12 +267,14 @@ struct demux_sys_t
 
 protected:
     demux_t     * const p_demux;
-    chromecast_common  * const p_renderer;
+    chromecast_common  * p_renderer;
     mtime_t       i_length;
     bool          demuxReady;
     bool          canSeek;
     /* seek time kept while waiting for the chromecast to "seek" */
     mtime_t       m_seektime;
+    bool          m_enabled;
+    mtime_t       m_startTime;
 };
 
 static int Demux( demux_t *p_demux_filter )
