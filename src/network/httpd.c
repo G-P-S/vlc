@@ -1691,7 +1691,11 @@ auth_failed:
 
 static void httpdLoop(httpd_host_t *host)
 {
-    struct pollfd ufd[host->nfd + host->i_client];
+   //vz  struct pollfd ufd[host->nfd + host->i_client];
+	struct pollfd*  ufd = NULL;
+	const int size = host->nfd + host->i_client;
+	ufd = malloc(sizeof(struct pollfd) * size);
+
     unsigned nfd;
     for (nfd = 0; nfd < host->nfd; nfd++) {
         ufd[nfd].fd = host->fds[nfd];
@@ -2037,7 +2041,7 @@ static void httpdLoop(httpd_host_t *host)
 
         TAB_APPEND(host->i_client, host->client, cl);
     }
-
+	if (ufd) free(ufd);
     vlc_restorecancel(canc);
 }
 

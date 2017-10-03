@@ -263,7 +263,7 @@ extern char *textdomain (const char *__domainname)
        _INTL_ASM (libintl_textdomain);
 #endif
 
-#if 1 //vz
+
 /* Specify that the DOMAINNAME message catalog will be found
    in DIRNAME rather than in the system locale data base.  */
 #ifdef _INTL_REDIRECT_INLINE
@@ -281,7 +281,7 @@ static inline char *bindtextdomain (const char *__domainname,
 extern char *bindtextdomain (const char *__domainname, const char *__dirname)
        _INTL_ASM (libintl_bindtextdomain);
 #endif
-#endif
+
 
 /* Specify the character encoding in which the messages from the
    DOMAINNAME message catalog will be returned.  */

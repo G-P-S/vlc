@@ -109,7 +109,11 @@ typedef struct
 
 #if !defined (HAVE_DIRFD) || \
     !defined (HAVE_FDOPENDIR)
+#ifndef COMPILE_VS2013
 # include <dirent.h>
+#else
+# include <windirent.h>
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -376,6 +380,11 @@ const char *inet_ntop(int, const void *, char *, socklen_t);
 #if defined(__native_client__) && !defined( HAVE_NETINET_TCP_H )
 #  define TCP_NODELAY 1
 #endif
+#ifdef COMPILE_VS2013
+#ifndef HAVE_STRUCT_POLLFD  //vz
+#define HAVE_STRUCT_POLLFD 
+#endif 
+#endif 
 
 #ifndef HAVE_STRUCT_POLLFD
 enum
@@ -494,6 +503,11 @@ double erand48 (unsigned short subi[3]);
 long jrand48 (unsigned short subi[3]);
 long nrand48 (unsigned short subi[3]);
 #endif
+
+//vz
+# define SHUT_RD    0
+# define SHUT_WR    1
+# define SHUT_RDWR  2
 
 #ifdef __OS2__
 # undef HAVE_FORK   /* Implementation of fork() is imperfect on OS/2 */

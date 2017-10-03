@@ -487,13 +487,17 @@ static block_t * ConvertAVFrame( decoder_t *p_dec, AVFrame *frame )
         p_block = block_Alloc(frame->linesize[0] * ctx->channels);
         if ( likely(p_block) )
         {
-            const void *planes[ctx->channels];
+            //vz const void *planes[ctx->channels];
+			uint8_t** planes = NULL;
+			planes = malloc(sizeof(uint8_t*)*ctx->channels);
+
             for (int i = 0; i < ctx->channels; i++)
                 planes[i] = frame->extended_data[i];
 
             aout_Interleave(p_block->p_buffer, planes, frame->nb_samples,
                             ctx->channels, p_dec->fmt_out.audio.i_format);
             p_block->i_nb_samples = frame->nb_samples;
+			if (planes) free(planes);
         }
         av_frame_free(&frame);
     }
@@ -590,7 +594,9 @@ static void SetupOutputFormat( decoder_t *p_dec, bool b_trust )
     }
 
     const unsigned i_order_max = sizeof(pi_channels_map)/sizeof(*pi_channels_map);
-    uint32_t pi_order_src[i_order_max];
+  //vz  uint32_t pi_order_src[i_order_max]; 
+	uint32_t* pi_order_src= NULL; 
+	pi_order_src = malloc(sizeof(uint32_t)*i_order_max);
 
     int i_channels_src = 0;
     int64_t channel_layout =
@@ -627,6 +633,7 @@ static void SetupOutputFormat( decoder_t *p_dec, bool b_trust )
             msg_Warn( p_dec, "%d channels are dropped", i_channels_src - i_channels_dst );
 
         p_dec->fmt_out.audio.i_physical_channels = i_layout_dst;
+
     }
     else
     {
@@ -634,7 +641,7 @@ static void SetupOutputFormat( decoder_t *p_dec, bool b_trust )
         p_dec->fmt_out.audio.i_physical_channels = 0;
         p_dec->fmt_out.audio.i_channels = p_sys->p_context->channels;
     }
-
+	if (pi_order_src) free(pi_order_src);
     aout_FormatPrepare( &p_dec->fmt_out.audio );
 }
 

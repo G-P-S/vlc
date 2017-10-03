@@ -33,7 +33,12 @@
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <dirent.h>
+#ifndef COMPILE_VS2013
+#include <dirent.h> 
+#else
+#include <windirent.h> //vz
+#include <io.h> //vz
+#endif
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <winsock2.h>
@@ -43,6 +48,7 @@
 #include <vlc_charset.h>
 #include <vlc_fs.h>
 #include "libvlc.h" /* vlc_mkdir */
+
 
 #ifdef _MSC_VER
 # define __STDC__ 1

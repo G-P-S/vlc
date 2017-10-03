@@ -60,7 +60,11 @@ vlc_module_end()
 
 /* dxva2api.h GUIDs: http://msdn.microsoft.com/en-us/library/windows/desktop/ms697067(v=vs100).aspx
  * assume that they are declared in dxva2api.h */
+#ifndef COMPILE_VS2013
 #define MS_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8)
+#else
+#  define MS_GUID DEFINE_GUID //vz
+#endif
 
 #ifdef __MINGW32__
 # include <_mingw.h>
@@ -74,6 +78,7 @@ vlc_module_end()
 # endif
 
 #endif /* __MINGW32__ */
+
 
 MS_GUID(IID_IDirectXVideoDecoderService, 0xfc51a551, 0xd5e7, 0x11d9, 0xaf,0x55,0x00,0x05,0x4e,0x43,0xff,0x02);
 MS_GUID(IID_IDirectXVideoAccelerationService, 0xfc51a550, 0xd5e7, 0x11d9, 0xaf,0x55,0x00,0x05,0x4e,0x43,0xff,0x02);

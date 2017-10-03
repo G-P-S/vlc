@@ -17,9 +17,11 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
-
-#include <dirent.h>
-
+#ifdef COMPILE_VS2013
+#include <windirent.h> 
+#else
+#include <dirent.h> 
+#endif
 int FileOpen (vlc_object_t *);
 void FileClose (vlc_object_t *);
 

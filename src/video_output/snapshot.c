@@ -29,7 +29,11 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <dirent.h>
+#ifndef COMPILE_VS2013
+#include <dirent.h> 
+#else
+#include <windirent.h> //vz
+#endif
 #include <time.h>
 
 #include <vlc_common.h>

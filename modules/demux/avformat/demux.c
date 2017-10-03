@@ -147,7 +147,7 @@ int OpenDemux( vlc_object_t *p_this )
 {
     demux_t       *p_demux = (demux_t*)p_this;
     demux_sys_t   *p_sys;
-    AVProbeData   pd = { };
+	AVProbeData   pd; //vz  = {};
     AVInputFormat *fmt = NULL;
     int64_t       i_start_time = -1;
     bool          b_can_seek;
@@ -320,7 +320,10 @@ int OpenDemux( vlc_object_t *p_this )
     free( psz_url );
 
     char *psz_opts = var_InheritString( p_demux, "avformat-options" );
-    AVDictionary *options[p_sys->ic->nb_streams ? p_sys->ic->nb_streams : 1];
+    //vz AVDictionary *options[p_sys->ic->nb_streams ? p_sys->ic->nb_streams : 1];
+	AVDictionary **options = NULL;
+	int len = p_sys->ic->nb_streams ? p_sys->ic->nb_streams : 1;
+	options = malloc(sizeof(AVDictionary *)*len);
     options[0] = NULL;
     unsigned int nb_streams = p_sys->ic->nb_streams;
     for (unsigned i = 1; i < nb_streams; i++)
@@ -344,6 +347,7 @@ int OpenDemux( vlc_object_t *p_this )
     for (unsigned i = 1; i < nb_streams; i++) {
         av_dict_free(&options[i]);
     }
+	if (options) free(options);//vz
 
     if( error < 0 )
     {
@@ -419,8 +423,9 @@ int OpenDemux( vlc_object_t *p_this )
             es_fmt.video.i_visible_height = es_fmt.video.i_height;
 
             get_rotation(&es_fmt, s);
-
-# warning FIXME: implement palette transmission
+#ifdef COMPILE_VS2013
+ # warning FIXME: implement palette transmission
+#endif
             psz_type = "video";
             es_fmt.video.i_frame_rate = s->codec->time_base.num;
             es_fmt.video.i_frame_rate_base = s->codec->time_base.den * __MAX( s->codec->ticks_per_frame, 1 );

@@ -32,7 +32,9 @@ int fsync (int fd)
     /* WinCE can use FlushFileBuffers() but it operates on file handles */
     return _commit (fd);
 #else
-# warning fsync() not implemented!
+#ifndef COMPILE_VS2013
+	#warning fsync() not implemented!
+#endif
     return 0;
 #endif
 }

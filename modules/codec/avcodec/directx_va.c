@@ -86,6 +86,10 @@ static const int PROF_HEVC_MAIN10[]  = { FF_PROFILE_HEVC_MAIN,
 # endif
 
 #endif /* __MINGW32__ */
+#ifdef COMPILE_VS2013
+#  define MS_GUID DEFINE_GUID //vz
+#endif
+
 
 /* Codec capabilities GUID, sorted by codec */
 MS_GUID    (DXVA2_ModeMPEG2_MoComp,                 0xe6a9f44b, 0x61b0, 0x4563, 0x9e, 0xa4, 0x63, 0xd2, 0xa3, 0xc6, 0xfe, 0x66);

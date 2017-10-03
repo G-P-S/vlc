@@ -24,12 +24,14 @@
 #ifndef VLC_VIDEOCHROMA_COPY_H_
 #define VLC_VIDEOCHROMA_COPY_H_
 
+
 typedef struct {
-# ifdef CAN_COMPILE_SSE2
+#if defined (COMPILE_VS2013) || defined CAN_COMPILE_SSE2
     uint8_t *buffer;
     size_t  size;
 # endif
 } copy_cache_t;
+
 
 int  CopyInitCache(copy_cache_t *cache, unsigned width);
 void CopyCleanCache(copy_cache_t *cache);

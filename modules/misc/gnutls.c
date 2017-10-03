@@ -122,7 +122,7 @@ static ssize_t vlc_gnutls_writev(gnutls_transport_ptr_t ptr,
         return 0;
 
     vlc_tls_t *sock = ptr;
-    struct iovec iov[iovcnt];
+	struct iovec iov[IOV_MAX];//vz iovcnt
 
     for (int i = 0; i < iovcnt; i++)
     {

@@ -41,8 +41,10 @@ void vlc_global_mutex (unsigned n, bool acquire)
         VLC_STATIC_MUTEX, // For MTA holder
 #endif
     };
+#ifndef COMPILE_VS2013
     static_assert (VLC_MAX_MUTEX == (sizeof (locks) / sizeof (locks[0])),
-                   "Wrong number of global mutexes");
+                    "Wrong number of global mutexes");
+#endif
     assert (n < (sizeof (locks) / sizeof (locks[0])));
 
     vlc_mutex_t *lock = locks + n;
@@ -103,15 +105,19 @@ void (msleep)(mtime_t delay)
 #endif
 
 #ifdef LIBVLC_NEED_CONDVAR
-#include <stdalign.h>
-
+#ifndef COMPILE_VS2013
+ #include <stdalign.h>
+#endif
 static inline atomic_uint *vlc_cond_value(vlc_cond_t *cond)
 {
     /* XXX: ugly but avoids including vlc_atomic.h in vlc_threads.h */
     static_assert (sizeof (cond->value) <= sizeof (atomic_uint),
                    "Size mismatch!");
-    static_assert ((alignof (cond->value) % alignof (atomic_uint)) == 0,
+	unsigned int value = cond->value;
+#ifndef COMPILE_VS2013
+     static_assert ((alignof (value) % alignof (atomic_uint)) == 0, 
                    "Alignment mismatch");
+#endif
     return (atomic_uint *)&cond->value;
 }
 

@@ -26,7 +26,11 @@
 
 #ifdef _WIN32
 # ifndef HAVE__LOCK_FILE
-#  warning Broken SDK: VLC logs will be garbage.
+#ifdef COMPILE_VS2013
+#pragma message ( "Broken SDK: VLC logs will be garbage.")
+#else
+#warning  "Broken SDK: VLC logs will be garbage."
+#endif
 #  define _lock_file(s) ((void)(s))
 #  define _unlock_file(s) ((void)(s))
 #  undef _getc_nolock

@@ -33,7 +33,9 @@
 #include <sys/types.h>  /* for ssize_t */
 #ifdef _WINDOWS
 #include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
+#ifndef COMPILE_VS2013
+ typedef SSIZE_T ssize_t;
+#endif
 #endif
 
 /* realloc() that never fails *if* downsizing */
@@ -118,6 +120,8 @@ static inline void *realloc_down( void *ptr, size_t size )
 
 #define TAB_INSERT( count, tab, p, index )      \
     TAB_INSERT_CAST( , count, tab, p, index )
+
+
 
 /**
  * Binary search in a sorted array. The key must be comparable by < and >
@@ -272,19 +276,21 @@ static inline size_t vlc_array_count( vlc_array_t * p_array )
     _Generic((ar), \
         const vlc_array_t *: ((ar)->pp_elems[idx]), \
         vlc_array_t *: ((ar)->pp_elems[idx]))
-#elif defined (__cplusplus)
+#else
+#if defined (COMPILE_VS2013) || defined (__cplusplus)
 static inline void *vlc_array_item_at_index( vlc_array_t *ar, size_t idx )
 {
     return ar->pp_elems[idx];
 }
-
+#endif
+#ifndef COMPILE_VS2013
 static inline const void *vlc_array_item_at_index( const vlc_array_t *ar,
                                                    size_t idx )
 {
     return ar->pp_elems[idx];
 }
 #endif
-
+#endif
 static inline ssize_t vlc_array_index_of_item( const vlc_array_t *ar,
                                                const void *elem )
 {

@@ -36,8 +36,9 @@
 # include <ws2tcpip.h>
 # include <time.h>
 # ifndef __GNUC__
-//vz  typedef SSIZE_T ssize_t;
-
+#ifndef COMPILE_VS2013
+  typedef SSIZE_T ssize_t;
+#endif
   typedef int  pid_t;
 # endif /*!__GNUC__*/
 #else

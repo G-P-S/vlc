@@ -44,8 +44,11 @@
 #define vout_display_sys_win32_t vout_display_sys_t
 
 #include "common.h"
+#ifdef COMPILE_VS2013
+#include "../../video_chroma/copy.h" //vz
+#else
 #include "../video_chroma/copy.h"
-
+#endif
 #if !defined(NDEBUG) && defined(HAVE_DXGIDEBUG_H)
 # include <initguid.h>
 # include <dxgidebug.h>
