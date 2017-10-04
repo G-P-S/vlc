@@ -16,9 +16,9 @@ ToCharset
 VLC_CompileBy
 VLC_CompileHost
 VLC_Compiler
-access_fsdir_additem
-access_fsdir_finish
-access_fsdir_init
+;access_fsdir_additem
+;access_fsdir_finish
+;access_fsdir_init
 access_vaDirectoryControlHelper
 addon_entry_Hold
 addon_entry_New
@@ -531,7 +531,7 @@ vlc_getcwd
 vlc_getnameinfo
 vlc_gettext
 vlc_gl_Create
-vlc_gl_Destroy
+;vlc_gl_Destroy
 vlc_gl_surface_CheckSize
 vlc_gl_surface_Create
 vlc_gl_surface_Destroy
@@ -630,6 +630,9 @@ vlc_rd_release
 ;vlc_rd_stop
 vlc_read_i11e
 vlc_readdir
+vlc_readdir_helper_additem
+vlc_readdir_helper_finish
+vlc_readdir_helper_init
 vlc_readv_i11e
 vlc_recvfrom_i11e
 vlc_recvmsg_i11e

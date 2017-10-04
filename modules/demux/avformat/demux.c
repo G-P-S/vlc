@@ -423,7 +423,7 @@ int OpenDemux( vlc_object_t *p_this )
             es_fmt.video.i_visible_height = es_fmt.video.i_height;
 
             get_rotation(&es_fmt, s);
-#ifdef COMPILE_VS2013
+#ifndef COMPILE_VS2013
  # warning FIXME: implement palette transmission
 #endif
             psz_type = "video";

@@ -200,7 +200,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;uuid.lib;libvlccore.lib;SHLWAPI.lib;libcompat.lib;d3d9.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;uuid.lib;SHLWAPI.lib;d3d9.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)plugins/codec/lib$(ProjectName)_plugin$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>../../../win32/lib</AdditionalLibraryDirectories>
     </Link>
@@ -218,7 +218,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;uuid.lib;libvlccore.lib;SHLWAPI.lib;libcompat.lib;d3d9.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;uuid.lib;SHLWAPI.lib;d3d9.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)plugins/codec/lib$(ProjectName)_plugin$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>../../../win32/lib</AdditionalLibraryDirectories>
     </Link>

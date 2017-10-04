@@ -25,6 +25,9 @@
     <ProjectReference Include="..\..\..\libvlccore\libvlccore.vcxproj">
       <Project>{b901f7d9-104e-45c8-b58a-bd1d1083a6da}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\libvlc\libvlc.vcxproj">
+      <Project>{10dea1f9-4b2e-4abb-b520-49b27465fdee}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A9B56FD2-BBEB-4FC7-BE65-DFB50F5C95FA}</ProjectGuid>
@@ -206,7 +209,7 @@
       <OutputFile>$(OutDir)plugins/stream_filter/lib$(ProjectName)_plugin$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>../../../win32/lib/x64; </AdditionalLibraryDirectories>
       <ModuleDefinitionFile>../../../dllsrc/dll.def</ModuleDefinitionFile>
-      <AdditionalDependencies>libvlccore.lib;libvlc.lib;libzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -225,7 +228,7 @@
       <OutputFile>$(OutDir)plugins/stream_filter/lib$(ProjectName)_plugin$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>../../../win32/lib/x64; </AdditionalLibraryDirectories>
       <ModuleDefinitionFile>../../../dllsrc/dll.def</ModuleDefinitionFile>
-      <AdditionalDependencies>libvlccore.lib;libvlc.lib;libzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseN|x64'">
