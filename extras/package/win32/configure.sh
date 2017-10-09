@@ -24,6 +24,7 @@ OPTIONS="
       --enable-sse --enable-mmx
       --enable-libcddb
       --enable-zvbi --disable-telx
-      --enable-nls"
+      --enable-nls
+      --disable-x265"
 
 sh "$(dirname $0)"/../../../configure ${OPTIONS}  "$@"
