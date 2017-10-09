@@ -228,7 +228,7 @@
       <OutputFile>$(OutDir)plugins/stream_filter/lib$(ProjectName)_plugin$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>../../../win32/lib/x64; </AdditionalLibraryDirectories>
       <ModuleDefinitionFile>../../../dllsrc/dll.def</ModuleDefinitionFile>
-      <AdditionalDependencies>libzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseN|x64'">

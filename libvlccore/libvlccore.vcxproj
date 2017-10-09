@@ -1977,7 +1977,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../win32/lib;../win32/cygwin;../win32/cygwin/mingw;../debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../win32/lib;../win32/cygwin;../win32/cygwin/mingw</AdditionalLibraryDirectories>
       <AdditionalDependencies>libgcc.lib;libiconv.lib;libintl.lib;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;libmingwex.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
@@ -1992,7 +1992,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>COMPILE_VS2013;WIN32;COMPILE_VS2013;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_USRDLL;LIBVLCCORE_EXPORTS;HAVE_CONFIG_H;__i386__;MODULE_STRING="core";%(PreprocessorDefinitions);HAVE_NANF;HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
+      <PreprocessorDefinitions>COMPILE_VS2013;WIN32;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_USRDLL;LIBVLCCORE_EXPORTS;HAVE_CONFIG_H;__i386__;MODULE_STRING="core";%(PreprocessorDefinitions);HAVE_NANF;HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../src;../util;../win32/include;..;</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4244;4996</DisableSpecificWarnings>
       <SDLCheck>false</SDLCheck>
@@ -2008,7 +2008,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgcc.a;libiconvd.lib;libintl.a;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgcc.a;libiconv.lib;libintl.a;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>
@@ -2024,7 +2024,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>COMPILE_VS2013;WIN32;COMPILE_VS2013;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_USRDLL;LIBVLCCORE_EXPORTS;HAVE_CONFIG_H;__i386__;MODULE_STRING="core";%(PreprocessorDefinitions);HAVE_NANF;HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
+      <PreprocessorDefinitions>COMPILE_VS2013;WIN32;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_USRDLL;LIBVLCCORE_EXPORTS;HAVE_CONFIG_H;__i386__;MODULE_STRING="core";%(PreprocessorDefinitions);HAVE_NANF;HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../src;../util;../win32/include;..;</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4244;4996</DisableSpecificWarnings>
       <SDLCheck>false</SDLCheck>
@@ -2040,71 +2040,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgcc.a;libiconvd.lib;libintl.a;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
-      <IgnoreSpecificDefaultLibraries>
-      </IgnoreSpecificDefaultLibraries>
-    </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseN|x64'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_USRDLL;LIBVLCCORE_EXPORTS;HAVE_CONFIG_H;__i386__;MODULE_STRING="core";%(PreprocessorDefinitions);HAVE_NANF;HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include;../src;../util;../win32/include;..;</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4244;4996</DisableSpecificWarnings>
-      <SDLCheck>false</SDLCheck>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgcc.a;libiconvd.lib;libintl.a;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
-      <IgnoreSpecificDefaultLibraries>
-      </IgnoreSpecificDefaultLibraries>
-    </Link>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseN|x64'">
-    <ClCompile>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_USRDLL;LIBVLCCORE_EXPORTS;HAVE_CONFIG_H;__i386__;MODULE_STRING="core";%(PreprocessorDefinitions);HAVE_NANF;HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../include;../src;../util;../win32/include;..;</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4244;4996</DisableSpecificWarnings>
-      <SDLCheck>false</SDLCheck>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgcc.a;libiconvd.lib;libintl.a;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgcc.a;libiconv.lib;libintl.a;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>
