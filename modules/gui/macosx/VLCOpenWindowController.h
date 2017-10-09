@@ -153,10 +153,9 @@
 
 /* generic capturing stuff */
 @property (readwrite, weak) IBOutlet NSPopUpButton *captureModePopup;
+@property (readwrite, weak) IBOutlet NSTabView *captureTabView;
 
 /* screen support */
-@property (readwrite, weak) IBOutlet NSView *screenView;
-@property (readwrite, weak) IBOutlet NSTextField *screenlongLabel;
 @property (readwrite, weak) IBOutlet NSTextField *screenFPSTextField;
 @property (readwrite, weak) IBOutlet NSTextField *screenFPSLabel;
 @property (readwrite, weak) IBOutlet NSStepper *screenFPSStepper;
@@ -179,7 +178,6 @@
 @property (readwrite, weak) IBOutlet NSButton *screenqtkAudioCheckbox;
 
 /* QTK support */
-@property (readwrite, weak) IBOutlet NSView *qtkView;
 @property (readwrite, weak) IBOutlet NSPopUpButton *qtkVideoDevicePopup;
 @property (readwrite, weak) IBOutlet NSButton *qtkVideoCheckbox;
 @property (readwrite, weak) IBOutlet NSPopUpButton *qtkAudioDevicePopup;
@@ -215,10 +213,15 @@
 
 - (void)openCapture;
 - (IBAction)openCaptureModeChanged:(id)sender;
+
+// Screen actions
+- (IBAction)screenChanged:(id)sender;
+- (IBAction)screenAudioChanged:(id)sender;
+
+// QTKit actions
 - (IBAction)qtkChanged:(id)sender;
 - (IBAction)qtkAudioChanged:(id)sender;
 - (IBAction)qtkToggleUIElements:(id)sender;
-- (IBAction)screenChanged:(id)sender;
 
 - (IBAction)subsChanged:(id)sender;
 - (IBAction)subSettings:(id)sender;
