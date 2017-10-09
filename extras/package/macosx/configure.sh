@@ -34,6 +34,7 @@ OPTIONS="
         --disable-pulse
         --disable-sdl-image
         --disable-vnc
+        --disable-x265
         --with-macosx-version-min=10.7
 "
 
