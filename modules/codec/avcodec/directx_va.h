@@ -40,8 +40,11 @@
 #include "va.h"
 
 #include <unknwn.h>
+#ifdef COMPILE_VS2013
+#include <vlc_atomic.h> 
+#else
 #include <stdatomic.h>
-
+#endif
 #include "va_surface_internal.h"
 
 typedef struct input_list_t {

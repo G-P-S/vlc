@@ -29,7 +29,9 @@
 #include <sys/types.h>  /* for ssize_t */
 #ifdef _WINDOWS
 #include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
+#ifndef COMPILE_VS2013
+ typedef SSIZE_T ssize_t;
+#endif
 #endif
 
 # ifdef __cplusplus

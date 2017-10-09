@@ -923,7 +923,9 @@ static int DxCreateDecoderSurfaces(vlc_va_t *va, int codec_id,
     }
 
     /* List all configurations available for the decoder */
-    D3D11_VIDEO_DECODER_CONFIG cfg_list[cfg_count];
+    D3D11_VIDEO_DECODER_CONFIG cfg_list[128]; //vz cfg_count
+	assert(cfg_count<128);
+
     for (unsigned i = 0; i < cfg_count; i++) {
         hr = ID3D11VideoDevice_GetVideoDecoderConfig( dx_sys->d3ddec, &decoderDesc, i, &cfg_list[i] );
         if (FAILED(hr)) {

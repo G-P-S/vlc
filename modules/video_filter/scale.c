@@ -72,8 +72,10 @@ static int OpenFilter( vlc_object_t *p_this )
     if( p_filter->fmt_in.video.orientation != p_filter->fmt_out.video.orientation )
         return VLC_EGENERIC;
 
-#warning Converter cannot (really) change output format.
-    video_format_ScaleCropAr( &p_filter->fmt_out.video, &p_filter->fmt_in.video );
+#ifndef COMPILE_VS2013
+ #warning Converter cannot (really) change output format.
+#endif
+	video_format_ScaleCropAr( &p_filter->fmt_out.video, &p_filter->fmt_in.video );
     p_filter->pf_video_filter = Filter;
 
     msg_Dbg( p_filter, "%ix%i -> %ix%i", p_filter->fmt_in.video.i_width,
@@ -91,8 +93,9 @@ static picture_t *Filter( filter_t *p_filter, picture_t *p_pic )
     picture_t *p_pic_dst;
 
     if( !p_pic ) return NULL;
-
-#warning Converter cannot (really) change output format.
+#ifndef COMPILE_VS2013
+ #warning Converter cannot (really) change output format.
+#endif
     video_format_ScaleCropAr( &p_filter->fmt_out.video, &p_filter->fmt_in.video );
 
     /* Request output picture */

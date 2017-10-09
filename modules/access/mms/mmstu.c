@@ -34,8 +34,9 @@
 
 #include <errno.h>
 #include <assert.h>
-#include <stdnoreturn.h>
-
+#ifndef COMPILE_VS2013
+	#include <stdnoreturn.h>
+#endif
 #include <sys/types.h>
 #include <unistd.h>
 #ifdef HAVE_POLL
@@ -1598,7 +1599,10 @@ static int mms_HeaderMediaRead( stream_t *p_access, int i_type )
     return -1;
 }
 
-noreturn static void *KeepAliveThread( void *p_data )
+#ifndef COMPILE_VS2013
+noreturn 
+#endif
+static void *KeepAliveThread( void *p_data )
 {
     stream_t *p_access = p_data;
 

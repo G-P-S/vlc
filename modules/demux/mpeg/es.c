@@ -39,10 +39,15 @@
 
 #include "../../packetizer/a52.h"
 #include "../../packetizer/dts_header.h"
+#ifndef COMPILE_VS2013
 #include "../meta_engine/ID3Tag.h"
 #include "../meta_engine/ID3Text.h"
 #include "../meta_engine/ID3Meta.h"
-
+#else
+#include "../../meta_engine/ID3Tag.h"
+#include "../../meta_engine/ID3Text.h"
+#include "../../meta_engine/ID3Meta.h"
+#endif
 /*****************************************************************************
  * Module descriptor
  *****************************************************************************/

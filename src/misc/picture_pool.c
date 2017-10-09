@@ -157,7 +157,11 @@ picture_pool_t *picture_pool_New(unsigned count, picture_t *const *tab)
 picture_pool_t *picture_pool_NewFromFormat(const video_format_t *fmt,
                                            unsigned count)
 {
-    picture_t *picture[count ? count : 1];
+    //vz picture_t *picture[count ? count : 1];
+	picture_t**  picture = NULL;
+	const char size = count ? count : 1;
+	picture = malloc(sizeof( picture_t*) *size);
+
     unsigned i;
 
     for (i = 0; i < count; i++) {
@@ -169,19 +173,25 @@ picture_pool_t *picture_pool_NewFromFormat(const video_format_t *fmt,
     picture_pool_t *pool = picture_pool_New(count, picture);
     if (!pool)
         goto error;
-
+	if (picture)free( picture);
     return pool;
 
 error:
     while (i > 0)
         picture_Release(picture[--i]);
+
+	if (picture)free( picture);
     return NULL;
 }
 
 picture_pool_t *picture_pool_Reserve(picture_pool_t *master, unsigned count)
 {
-    picture_t *picture[count ? count : 1];
-    unsigned i;
+    //vz picture_t *picture[count ? count : 1];
+	picture_t**  picture = NULL;
+	const char size = count ? count : 1;
+	picture =malloc(sizeof( picture_t*)*size);
+	
+	unsigned i;
 
     for (i = 0; i < count; i++) {
         picture[i] = picture_pool_Get(master);
@@ -192,13 +202,15 @@ picture_pool_t *picture_pool_Reserve(picture_pool_t *master, unsigned count)
     picture_pool_t *pool = picture_pool_New(count, picture);
     if (!pool)
         goto error;
-
+	if (picture) free( picture);
     return pool;
 
 error:
     while (i > 0)
         picture_Release(picture[--i]);
-    return NULL;
+
+	if (picture) free( picture);
+     return NULL;
 }
 
 /** Find next (bit) set */
@@ -294,6 +306,14 @@ void picture_pool_Cancel(picture_pool_t *pool, bool canceled)
     if (canceled)
         vlc_cond_broadcast(&pool->wait);
     vlc_mutex_unlock(&pool->lock);
+}
+
+bool picture_pool_OwnsPic(picture_pool_t *pool, picture_t *pic)
+{
+    picture_priv_t *priv = (picture_priv_t *)pic;
+    uintptr_t sys = (uintptr_t)priv->gc.opaque;
+    picture_pool_t *picpool = (void *)(sys & ~(POOL_MAX - 1));
+    return pool == picpool;
 }
 
 unsigned picture_pool_GetSize(const picture_pool_t *pool)

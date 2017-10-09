@@ -71,7 +71,8 @@
 #define PBO_DISPLAY_COUNT 2 /* Double buffering */
 struct picture_sys_t
 {
-    const opengl_tex_converter_t *tc;
+    vlc_gl_t    *gl;
+    PFNGLDELETEBUFFERSPROC DeleteBuffers;
     GLuint      buffers[PICTURE_PLANE_MAX];
     size_t      bytes[PICTURE_PLANE_MAX];
     GLsync      fence;
@@ -93,24 +94,51 @@ struct priv
     } persistent;
 };
 
+static void
+pbo_picture_destroy(picture_t *pic)
+{
+    picture_sys_t *picsys = pic->p_sys;
+
+    if (picsys->gl)
+    {
+        /* Don't call glDeleteBuffers() here, since a picture can be destroyed
+         * from any threads after the vout is destroyed. Instead, release the
+         * reference to the GL context. All buffers will be destroyed when it
+         * reaches 0. */
+        vlc_gl_Release(picsys->gl);
+    }
+    else
+        picsys->DeleteBuffers(pic->i_planes, picsys->buffers);
+
+    free(picsys);
+    free(pic);
+}
+
 static picture_t *
-pbo_picture_create(const opengl_tex_converter_t *tc,
-                   void (*pf_destroy)(picture_t *))
+pbo_picture_create(const opengl_tex_converter_t *tc, bool direct_rendering)
 {
     picture_sys_t *picsys = calloc(1, sizeof(*picsys));
     if (unlikely(picsys == NULL))
         return NULL;
-    picsys->tc = tc;
+
     picture_resource_t rsc = {
         .p_sys = picsys,
-        .pf_destroy = pf_destroy,
+        .pf_destroy = pbo_picture_destroy,
     };
-
     picture_t *pic = picture_NewFromResource(&tc->fmt, &rsc);
     if (pic == NULL)
     {
         free(picsys);
         return NULL;
+    }
+
+    tc->vt->GenBuffers(pic->i_planes, picsys->buffers);
+    picsys->DeleteBuffers = tc->vt->DeleteBuffers;
+
+    if (direct_rendering)
+    {
+        picsys->gl = tc->gl;
+        vlc_gl_Hold(picsys->gl);
     }
     if (picture_Setup(pic, &tc->fmt))
     {
@@ -139,7 +167,6 @@ pbo_data_alloc(const opengl_tex_converter_t *tc, picture_t *pic)
     picture_sys_t *picsys = pic->p_sys;
 
     tc->vt->GetError();
-    tc->vt->GenBuffers(pic->i_planes, picsys->buffers);
 
     for (int i = 0; i < pic->i_planes; ++i)
     {
@@ -157,26 +184,13 @@ pbo_data_alloc(const opengl_tex_converter_t *tc, picture_t *pic)
     return VLC_SUCCESS;
 }
 
-static void
-picture_pbo_destroy_cb(picture_t *pic)
-{
-    picture_sys_t *picsys = pic->p_sys;
-    const opengl_tex_converter_t *tc = picsys->tc;
-
-    if (picsys->buffers[0] != 0)
-        tc->vt->DeleteBuffers(pic->i_planes, picsys->buffers);
-    free(picsys);
-    free(pic);
-}
-
 static int
 pbo_pics_alloc(const opengl_tex_converter_t *tc)
 {
     struct priv *priv = tc->priv;
     for (size_t i = 0; i < PBO_DISPLAY_COUNT; ++i)
     {
-        picture_t *pic = priv->pbo.display_pics[i] =
-            pbo_picture_create(tc, picture_pbo_destroy_cb);
+        picture_t *pic = priv->pbo.display_pics[i] = pbo_picture_create(tc, false);
         if (pic == NULL)
             goto error;
 
@@ -233,8 +247,6 @@ static int
 persistent_map(const opengl_tex_converter_t *tc, picture_t *pic)
 {
     picture_sys_t *picsys = pic->p_sys;
-
-    tc->vt->GenBuffers(pic->i_planes, picsys->buffers);
 
     const GLbitfield access = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT |
                               GL_MAP_PERSISTENT_BIT;
@@ -364,25 +376,6 @@ tc_persistent_update(const opengl_tex_converter_t *tc, GLuint *textures,
     return VLC_SUCCESS;
 }
 
-static void
-picture_persistent_destroy_cb(picture_t *pic)
-{
-    picture_sys_t *picsys = pic->p_sys;
-    const opengl_tex_converter_t *tc = picsys->tc;
-
-    if (picsys->buffers[0] != 0)
-    {
-        for (int i = 0; i < pic->i_planes; ++i)
-        {
-            tc->vt->BindBuffer(GL_PIXEL_UNPACK_BUFFER, picsys->buffers[i]);
-            tc->vt->UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-        }
-        tc->vt->DeleteBuffers(pic->i_planes, picsys->buffers);
-    }
-    free(picsys);
-    free(pic);
-}
-
 static picture_pool_t *
 tc_persistent_get_pool(const opengl_tex_converter_t *tc, unsigned requested_count)
 {
@@ -395,8 +388,7 @@ tc_persistent_get_pool(const opengl_tex_converter_t *tc, unsigned requested_coun
 
     for (count = 0; count < requested_count; count++)
     {
-        picture_t *pic = pictures[count] =
-            pbo_picture_create(tc, picture_persistent_destroy_cb);
+        picture_t *pic = pictures[count] = pbo_picture_create(tc, true);
         if (pic == NULL)
             break;
 #ifndef NDEBUG
@@ -613,8 +605,8 @@ opengl_tex_converter_generic_init(opengl_tex_converter_t *tc, bool allow_dr)
         const unsigned char *ogl_version = tc->vt->GetString(GL_VERSION);
         const bool glver_ok = strverscmp((const char *)ogl_version, "3.0") >= 0;
 
-        supports_map_persistent = glver_ok && has_pbo && has_bs && tc->vt->BufferStorage
-            && tc->vt->MapBufferRange && tc->vt->FlushMappedBufferRange
+        supports_map_persistent = glver_ok && has_pbo && has_bs && tc->gl->module
+            && tc->vt->BufferStorage && tc->vt->MapBufferRange && tc->vt->FlushMappedBufferRange
             && tc->vt->UnmapBuffer && tc->vt->FenceSync && tc->vt->DeleteSync
             && tc->vt->ClientWaitSync;
         if (supports_map_persistent)

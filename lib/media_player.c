@@ -1968,7 +1968,7 @@ int libvlc_media_player_add_slave( libvlc_media_player_t *p_mi,
     else
     {
         int i_ret = input_AddSlave( p_input_thread, (enum slave_type) i_type,
-                                    psz_uri, b_select );
+                                    psz_uri, b_select, false );
         vlc_object_release( p_input_thread );
 
         return i_ret == VLC_SUCCESS ? 0 : -1;
@@ -2027,7 +2027,7 @@ static const char roles[][16] =
     [libvlc_role_Video] =         "video",
     [libvlc_role_Communication] = "communication",
     [libvlc_role_Game] =          "game",
-    [liblvc_role_Notification] =  "notification",
+    [libvlc_role_Notification] =  "notification",
     [libvlc_role_Animation] =     "animation",
     [libvlc_role_Production] =    "production",
     [libvlc_role_Accessibility] = "accessibility",

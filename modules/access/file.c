@@ -51,7 +51,11 @@
 #else
 #   include <unistd.h>
 #endif
-#include <dirent.h>
+#ifdef COMPILE_VS2013
+#include <windirent.h> 
+#else
+#include <dirent.h> 
+#endif
 
 #include <vlc_common.h>
 #include "fs.h"

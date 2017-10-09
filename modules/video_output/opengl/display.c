@@ -42,10 +42,6 @@ static void Close (vlc_object_t *);
 #define PROVIDER_LONGTEXT N_( \
     "Extension through which to use the Open Graphics Library (OpenGL).")
 
-#define GLCONV_TEXT N_("Open GL/GLES hardware converter")
-#define GLCONV_LONGTEXT N_( \
-    "Force a \"glconv\" module.")
-
 vlc_module_begin ()
 #if defined (USE_OPENGL_ES2)
 # define API VLC_OPENGL_ES2
@@ -72,8 +68,7 @@ vlc_module_begin ()
     add_module ("gl", "opengl", NULL,
                 GL_TEXT, PROVIDER_LONGTEXT, true)
 #endif
-    add_module ("glconv", NULL, NULL,
-                GLCONV_TEXT, GLCONV_LONGTEXT, true)
+    add_glconv ()
 vlc_module_end ()
 
 struct vout_display_sys_t
@@ -165,7 +160,7 @@ static int Open (vlc_object_t *obj)
 
 error:
     if (sys->gl != NULL)
-        vlc_gl_Destroy (sys->gl);
+        vlc_gl_Release (sys->gl);
     if (surface != NULL)
         vout_display_DeleteWindow (vd, surface);
     free (sys);
@@ -186,7 +181,7 @@ static void Close (vlc_object_t *obj)
     vout_display_opengl_Delete (sys->vgl);
     vlc_gl_ReleaseCurrent (gl);
 
-    vlc_gl_Destroy (gl);
+    vlc_gl_Release (gl);
     vout_display_DeleteWindow (vd, surface);
     free (sys);
 }

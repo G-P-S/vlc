@@ -36,8 +36,11 @@
 #include <vlc_dialog.h>
 #include <assert.h>
 #include <limits.h>
+#ifndef COMPILE_VS2013
 #include "../codec/cc.h"
-
+#else
+#include "../../codec/cc.h" //vz
+#endif
 /*****************************************************************************
  * Module descriptor
  *****************************************************************************/

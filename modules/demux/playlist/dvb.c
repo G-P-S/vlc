@@ -61,11 +61,15 @@ int Import_DVB(vlc_object_t *p_this)
         return VLC_EGENERIC;
     len = eol - peek;
 
-    char line[len + 1];
+    //vz char line[len + 1];
+	char* line = NULL;
+	line = malloc(sizeof(char)*(len + 1));
+
     memcpy(line, peek, len);
     line[len] = '\0';
 
     input_item_t *item = ParseLine(line);
+	if (line) free(line); //vz
     if (item == NULL)
         return VLC_EGENERIC;
     input_item_Release(item);

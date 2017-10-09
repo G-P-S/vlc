@@ -158,7 +158,9 @@ static int ftp_SendCommand( vlc_object_t *obj, access_sys_t *sys,
                             const char *fmt, ... )
 {
     size_t fmtlen = strlen( fmt );
-    char fmtbuf[fmtlen + 3];
+   //vz  char fmtbuf[fmtlen + 3];
+	char* fmtbuf = NULL;
+	fmtbuf  = malloc(sizeof(char)*(fmtlen + 3));
 
     memcpy( fmtbuf, fmt, fmtlen );
     memcpy( fmtbuf + fmtlen, "\r\n", 3 );
@@ -170,6 +172,7 @@ static int ftp_SendCommand( vlc_object_t *obj, access_sys_t *sys,
     va_start( args, fmt );
     val = vasprintf( &cmd, fmtbuf, args );
     va_end( args );
+	if (fmtbuf) free(fmtbuf); //vz
     if( unlikely(val == -1) )
         return -1;
 

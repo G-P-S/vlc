@@ -46,7 +46,12 @@
 #include "avcodec.h"
 #include "va.h"
 
+#ifdef COMPILE_VS2013
+ #include "../cc.h" //vz
+#else
 #include "../codec/cc.h"
+#endif
+
 
 /*****************************************************************************
  * decoder_sys_t : decoder descriptor
@@ -346,12 +351,19 @@ static int lavc_CopyPicture(decoder_t *dec, picture_t *pic, AVFrame *frame)
 {
     decoder_sys_t *sys = dec->p_sys;
 
-    if (!FindVlcChroma(sys->p_context->pix_fmt))
+    vlc_fourcc_t fourcc = FindVlcChroma(frame->format);
+    if (!fourcc)
     {
-        const char *name = av_get_pix_fmt_name(sys->p_context->pix_fmt);
+        const char *name = av_get_pix_fmt_name(frame->format);
 
         msg_Err(dec, "Unsupported decoded output format %d (%s)",
                 sys->p_context->pix_fmt, (name != NULL) ? name : "unknown");
+        return VLC_EGENERIC;
+    } else if (fourcc != pic->format.i_chroma
+     || frame->width != (int) pic->format.i_visible_width
+     || frame->height != (int) pic->format.i_visible_height)
+    {
+        msg_Warn(dec, "dropping frame because the vout changed");
         return VLC_EGENERIC;
     }
 
@@ -856,7 +868,7 @@ static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p
     if( p_avcc )
     {
         cc_Extract( &p_sys->cc, CC_PAYLOAD_RAW, true, p_avcc->data, p_avcc->size );
-        if( p_sys->cc.i_data )
+        if( p_sys->cc.b_reorder || p_sys->cc.i_data )
         {
             block_t *p_cc = block_Alloc( p_sys->cc.i_data );
             if( p_cc )
@@ -1158,7 +1170,6 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
             /* Fill picture_t from AVFrame */
             if( lavc_CopyPicture( p_dec, p_pic, frame ) != VLC_SUCCESS )
             {
-                *error = true;
                 av_frame_free(&frame);
                 picture_Release( p_pic );
                 break;
@@ -1503,12 +1514,15 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
             can_hwaccel = true;
     }
 #if defined(_WIN32) && LIBAVUTIL_VERSION_CHECK(54, 13, 1, 24, 100)
-    enum PixelFormat p_fmts[i+1];
+    //vz  enum PixelFormat p_fmts[i+1];
+	enum PixelFormat p_fmts[AV_PIX_FMT_NB + 1]; //vz ugly
+
     if (i > 1 && pi_fmt[0] == AV_PIX_FMT_DXVA2_VLD && pi_fmt[1] == AV_PIX_FMT_D3D11VA_VLD)
     {
         /* favor D3D11VA over DXVA2 as the order will decide which vout will be
          * used */
-        memcpy(p_fmts, pi_fmt, sizeof(p_fmts));
+        //vz memcpy(p_fmts, pi_fmt, sizeof(p_fmts));
+		memcpy(p_fmts, pi_fmt, sizeof(int) *(i+1));
         p_fmts[0] = AV_PIX_FMT_D3D11VA_VLD;
         p_fmts[1] = AV_PIX_FMT_DXVA2_VLD;
         pi_fmt = p_fmts;

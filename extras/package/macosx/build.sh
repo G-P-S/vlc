@@ -12,8 +12,7 @@ info()
 ARCH="x86_64"
 MINIMAL_OSX_VERSION="10.7"
 OSX_VERSION=`xcrun --show-sdk-version`
-#OSX_KERNELVERSION=`uname -r | cut -d. -f1`
-OSX_KERNELVERSION=15
+OSX_KERNELVERSION=`uname -r | cut -d. -f1`
 SDKROOT=`xcode-select -print-path`/Platforms/MacOSX.platform/Developer/SDKs/MacOSX$OSX_VERSION.sdk
 VLCBUILDDIR=""
 
@@ -125,6 +124,13 @@ export USE_FFMPEG=1
 
 # The following symbols do not exist on the minimal macOS version (10.7), so they are disabled
 # here. This allows compilation also with newer macOS SDKs.
+# Added symbols in 10.13
+export ac_cv_func_open_wmemstream=no
+export ac_cv_func_fmemopen=no
+export ac_cv_func_open_memstream=no
+export ac_cv_func_futimens=no
+export ac_cv_func_utimensat=no
+
 # Added symbols between 10.11 and 10.12
 export ac_cv_func_basename_r=no
 export ac_cv_func_clock_getres=no

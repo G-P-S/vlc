@@ -44,7 +44,7 @@ static void FilterS32N (audio_volume_t *vol, block_t *block, float volume)
 {
     int32_t *p = (int32_t *)block->p_buffer;
 
-    int_fast32_t mult = lroundf (volume * 0x1.p24f);
+    int_fast32_t mult = lroundf (volume * 0x1000000);//vz 0x1.p24f
     if (mult == (1 << 24))
         return;
 
@@ -65,7 +65,7 @@ static void FilterS16N (audio_volume_t *vol, block_t *block, float volume)
 {
     int16_t *p = (int16_t *)block->p_buffer;
 
-    int_fast16_t mult = lroundf (volume * 0x1.p8f);
+    int_fast16_t mult = lroundf (volume * 0x100); //vz 0x1.p8f
     if (mult == (1 << 8))
         return;
 
@@ -86,7 +86,7 @@ static void FilterU8 (audio_volume_t *vol, block_t *block, float volume)
 {
     uint8_t *p = (uint8_t *)block->p_buffer;
 
-    int_fast16_t mult = lroundf (volume * 0x1.p8f);
+    int_fast16_t mult = lroundf (volume *0x100);  //vz 0x1.p8f
     if (mult == (1 << 8))
         return;
 

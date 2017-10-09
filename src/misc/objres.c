@@ -25,8 +25,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#ifndef COMPILE_VS2013
 #include <stdalign.h>
-
+#endif //vz
 #include <vlc_common.h>
 
 #include "libvlc.h"

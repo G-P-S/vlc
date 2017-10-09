@@ -21,8 +21,11 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
-
+#ifdef COMPILE_VS2013
+#include <windirent.h> //vz
+#else
 #include <dirent.h>
+#endif
 #include <errno.h>
 
 int (dirfd) (DIR *dir)

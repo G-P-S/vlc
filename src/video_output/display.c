@@ -28,8 +28,9 @@
 # include "config.h"
 #endif
 #include <assert.h>
-#include <stdnoreturn.h>
-
+#ifndef COMPILE_VS2013
+ #include <stdnoreturn.h>
+#endif
 #include <vlc_common.h>
 #include <vlc_video_splitter.h>
 #include <vlc_vout_display.h>
@@ -1381,7 +1382,7 @@ static int SplitterPictureNew(video_splitter_t *splitter, picture_t *picture[])
             /* TODO use a pool ? */
             picture[i] = picture_NewFromFormat(&wsys->display[i]->source);
         } else {
-            picture_pool_t *pool = vout_display_Pool(wsys->display[i], 1);
+            picture_pool_t *pool = vout_display_Pool(wsys->display[i], 3);
             picture[i] = pool ? picture_pool_Get(pool) : NULL;
         }
         if (!picture[i]) {
