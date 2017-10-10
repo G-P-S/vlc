@@ -258,7 +258,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>COMPILE_VS2013;WIN32;COMPILE_VS2013;HAVE_STRUCT_POLLFD;NDEBUG;_USRDLL;LIBVLC_EXPORTS;HAVE_CONFIG_H;DLL_EXPORT;__i386__;%(PreprocessorDefinitions);HAVE_NANF</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../include;../util;../lib;..</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>

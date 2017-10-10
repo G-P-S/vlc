@@ -2008,7 +2008,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgcc.a;libiconv.lib;libintl.a;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libiconvd.lib;libintl.a;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>
