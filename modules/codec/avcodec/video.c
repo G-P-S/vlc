@@ -510,13 +510,13 @@ int InitVideoDec( vlc_object_t *obj )
     p_sys->b_show_corrupted = var_CreateGetBool( p_dec, "avcodec-corrupted" );
 
     i_val = var_CreateGetInteger( p_dec, "avcodec-skip-frame" );
-    if( i_val >= 4 ) p_context->skip_frame = AVDISCARD_ALL;
-    else if( i_val == 3 ) p_context->skip_frame = AVDISCARD_NONKEY;
-    else if( i_val == 2 ) p_context->skip_frame = AVDISCARD_BIDIR;
-    else if( i_val == 1 ) p_context->skip_frame = AVDISCARD_NONREF;
-    else if( i_val == -1 ) p_context->skip_frame = AVDISCARD_NONE;
-    else p_context->skip_frame = AVDISCARD_DEFAULT;
-    p_sys->i_skip_frame = p_context->skip_frame;
+    if( i_val >= 4 ) p_sys->i_skip_frame = AVDISCARD_ALL;
+    else if( i_val == 3 ) p_sys->i_skip_frame = AVDISCARD_NONKEY;
+    else if( i_val == 2 ) p_sys->i_skip_frame = AVDISCARD_BIDIR;
+    else if( i_val == 1 ) p_sys->i_skip_frame = AVDISCARD_NONREF;
+    else if( i_val == -1 ) p_sys->i_skip_frame = AVDISCARD_NONE;
+    else p_sys->i_skip_frame = AVDISCARD_DEFAULT;
+    p_context->skip_frame = p_sys->i_skip_frame;
 
     i_val = var_CreateGetInteger( p_dec, "avcodec-skip-idct" );
     if( i_val >= 4 ) p_context->skip_idct = AVDISCARD_ALL;
@@ -556,9 +556,9 @@ int InitVideoDec( vlc_object_t *obj )
             i_thread_count++;
 
         //FIXME: take in count the decoding time
-        i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 6 : 4 );
+        i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 12 : 6 );
     }
-    i_thread_count = __MIN( i_thread_count, 16 );
+    i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 32 : 16 );
     msg_Dbg( p_dec, "allowing %d thread(s) for decoding", i_thread_count );
     p_context->thread_count = i_thread_count;
     p_context->thread_safe_callbacks = true;
@@ -878,7 +878,11 @@ static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p
                     p_cc->i_dts = p_cc->i_pts = p_pic->date;
                 else
                     p_cc->i_pts = p_cc->i_dts;
-                decoder_QueueCc( p_dec, p_cc, p_sys->cc.pb_present, 4 );
+                decoder_cc_desc_t desc;
+                desc.i_608_channels = p_sys->cc.i_608channels;
+                desc.i_708_channels = p_sys->cc.i_708channels;
+                desc.i_reorder_depth = 4;
+                decoder_QueueCc( p_dec, p_cc, &desc );
             }
             cc_Flush( &p_sys->cc );
         }
@@ -900,7 +904,7 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
 
 
     block_t *p_block;
-    mtime_t current_time = VLC_TS_INVALID;
+    mtime_t current_time;
 
     if( !p_context->extradata_size && p_dec->fmt_in.i_extra )
     {

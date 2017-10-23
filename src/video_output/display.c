@@ -28,9 +28,6 @@
 # include "config.h"
 #endif
 #include <assert.h>
-#ifndef COMPILE_VS2013
- #include <stdnoreturn.h>
-#endif
 #include <vlc_common.h>
 #include <vlc_video_splitter.h>
 #include <vlc_vout_display.h>

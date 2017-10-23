@@ -35,6 +35,7 @@
 
 #include "util/customwidgets.hpp"               // qtEventToVLCKey, QVLCStackedWidget
 #include "util/qt_dirs.hpp"                     // toNativeSeparators
+#include "util/imagehelper.hpp"
 
 #include "components/interface_widgets.hpp"     // bgWidget, videoWidget
 #include "components/controller.hpp"            // controllers
@@ -354,7 +355,7 @@ void MainInterface::createResumePanel( QWidget *w )
     resumePanelLayout->setSpacing( 0 ); resumePanelLayout->setMargin( 0 );
 
     QLabel *continuePixmapLabel = new QLabel();
-    continuePixmapLabel->setPixmap( QPixmap( ":/menu/help" ) );
+    continuePixmapLabel->setPixmap( ImageHelper::loadSvgToPixmap( ":/menu/help.svg" , fontMetrics().height(), fontMetrics().height()) );
     continuePixmapLabel->setContentsMargins( 5, 0, 5, 0 );
 
     QLabel *continueLabel = new QLabel( qtr( "Do you want to restart the playback where left off?") );
@@ -1203,7 +1204,7 @@ void MainInterface::showCryptedLabel( bool b_show )
     {
         cryptedLabel = new QLabel;
         // The lock icon is not the right one for DRM protection/scrambled.
-        //cryptedLabel->setPixmap( QPixmap( ":/lock" ) );
+        //cryptedLabel->setPixmap( QPixmap( ":/lock.svg" ) );
         cryptedLabel->setText( "DRM" );
         statusBar()->addWidget( cryptedLabel );
     }

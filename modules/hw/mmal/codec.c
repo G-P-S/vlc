@@ -42,8 +42,8 @@
 /*
  * This seems to be a bit high, but reducing it causes instabilities
  */
-#define NUM_EXTRA_BUFFERS 20
-#define NUM_DECODER_BUFFER_HEADERS 20
+#define NUM_EXTRA_BUFFERS 5
+#define NUM_DECODER_BUFFER_HEADERS 30
 
 #define MIN_NUM_BUFFERS_IN_TRANSIT 2
 
@@ -72,7 +72,6 @@ struct decoder_sys_t {
     MMAL_POOL_T *output_pool; /* only used for non-opaque mode */
     MMAL_ES_FORMAT_T *output_format;
     MMAL_QUEUE_T *decoded_pictures;
-    vlc_mutex_t mutex;
     vlc_sem_t sem;
 
     bool b_top_field_first;
@@ -235,7 +234,6 @@ static int OpenDecoder(decoder_t *dec)
     dec->pf_decode = decode;
     dec->pf_flush  = flush_decoder;
 
-    vlc_mutex_init_recursive(&sys->mutex);
     vlc_sem_init(&sys->sem, 0);
 
 out:
@@ -294,7 +292,6 @@ static void CloseDecoder(decoder_t *dec)
     if (sys->component)
         mmal_component_release(sys->component);
 
-    vlc_mutex_destroy(&sys->mutex);
     vlc_sem_destroy(&sys->sem);
     free(sys);
 
@@ -341,7 +338,7 @@ port_reset:
     }
 
     if (sys->opaque) {
-        sys->output->buffer_num = NUM_ACTUAL_OPAQUE_BUFFERS;
+        sys->output->buffer_num = NUM_DECODER_BUFFER_HEADERS;
         pool_size = NUM_DECODER_BUFFER_HEADERS;
     } else {
         sys->output->buffer_num = __MAX(sys->output->buffer_num_recommended,
@@ -511,7 +508,7 @@ static void fill_output_port(decoder_t *dec)
                 MIN_NUM_BUFFERS_IN_TRANSIT);
         buffers_available = mmal_queue_length(sys->output_pool->queue);
     } else {
-        max_buffers_in_transit = __MAX(sys->output->buffer_num, MIN_NUM_BUFFERS_IN_TRANSIT);
+        max_buffers_in_transit = NUM_DECODER_BUFFER_HEADERS;
         buffers_available = NUM_DECODER_BUFFER_HEADERS - atomic_load(&sys->output_in_transit) -
             mmal_queue_length(sys->decoded_pictures);
     }
@@ -540,37 +537,11 @@ static void flush_decoder(decoder_t *dec)
     MMAL_STATUS_T status;
 
     msg_Dbg(dec, "Flushing decoder ports...");
-    mmal_port_disable(sys->output);
-    mmal_port_disable(sys->input);
     mmal_port_flush(sys->output);
     mmal_port_flush(sys->input);
 
-    /* Reload extradata if available */
-    if (dec->fmt_in.i_codec == VLC_CODEC_H264) {
-        if (dec->fmt_in.i_extra > 0) {
-            status = mmal_format_extradata_alloc(sys->input->format,
-                    dec->fmt_in.i_extra);
-            if (status == MMAL_SUCCESS) {
-                memcpy(sys->input->format->extradata, dec->fmt_in.p_extra,
-                        dec->fmt_in.i_extra);
-                sys->input->format->extradata_size = dec->fmt_in.i_extra;
-            } else {
-                msg_Err(dec, "Failed to allocate extra format data on input port %s (status=%"PRIx32" %s)",
-                        sys->input->name, status, mmal_status_to_string(status));
-            }
-        }
-    }
-
-    status = mmal_port_format_commit(sys->input);
-    if (status != MMAL_SUCCESS) {
-        msg_Err(dec, "Failed to commit format for input port %s (status=%"PRIx32" %s)",
-                sys->input->name, status, mmal_status_to_string(status));
-    }
-
-    mmal_port_enable(sys->output, output_port_cb);
-    mmal_port_enable(sys->input, input_port_cb);
-
-    while (atomic_load(&sys->output_in_transit))
+    while (atomic_load(&sys->output_in_transit) ||
+           atomic_load(&sys->input_in_transit))
         vlc_sem_wait(&sys->sem);
 
     /* Free pictures which are decoded but have not yet been sent
@@ -649,9 +620,8 @@ static int decode(decoder_t *dec, block_t *block)
     if (block->i_flags & BLOCK_FLAG_CORRUPTED)
         flags |= MMAL_BUFFER_HEADER_FLAG_CORRUPTED;
 
-    vlc_mutex_lock(&sys->mutex);
-    while (block->i_buffer > 0) {
-        buffer = mmal_queue_timedwait(sys->input_pool->queue, 2);
+    while (block && block->i_buffer > 0) {
+        buffer = mmal_queue_timedwait(sys->input_pool->queue, 100);
         if (!buffer) {
             msg_Err(dec, "Failed to retrieve buffer header for input data");
             need_flush = true;
@@ -671,8 +641,10 @@ static int decode(decoder_t *dec, block_t *block)
         block->p_buffer += len;
         block->i_buffer -= len;
         buffer->length = len;
-        if (block->i_buffer == 0)
+        if (block->i_buffer == 0) {
             buffer->user_data = block;
+            block = NULL;
+        }
         buffer->flags = flags;
 
         status = mmal_port_send_buffer(sys->input, buffer);
@@ -683,7 +655,6 @@ static int decode(decoder_t *dec, block_t *block)
         }
         atomic_fetch_add(&sys->input_in_transit, 1);
     }
-    vlc_mutex_unlock(&sys->mutex);
 
 out:
     if (need_flush)
@@ -714,10 +685,8 @@ static void input_port_cb(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
     buffer->user_data = NULL;
 
     mmal_buffer_header_release(buffer);
-    vlc_mutex_lock(&sys->mutex);
     if (block)
         block_Release(block);
-    vlc_mutex_unlock(&sys->mutex);
     atomic_fetch_sub(&sys->input_in_transit, 1);
     vlc_sem_post(&sys->sem);
 }

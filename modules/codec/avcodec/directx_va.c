@@ -303,7 +303,8 @@ int directx_va_Setup(vlc_va_t *va, directx_sys_t *dx_sys, const AVCodecContext *
         /* decoding MPEG-2 requires additional alignment on some Intel GPUs,
            but it causes issues for H.264 on certain AMD GPUs..... */
         surface_alignment = 32;
-        surface_count += 2;
+        surface_count += 2 + 2; /* 2 for deinterlacing which can hold up to 2
+                                 * pictures from the decoder for smoothing */
         break;
     case AV_CODEC_ID_HEVC:
         /* the HEVC DXVA2 spec asks for 128 pixel aligned surfaces to ensure

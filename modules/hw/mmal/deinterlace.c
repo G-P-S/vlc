@@ -60,9 +60,7 @@ struct filter_sys_t {
     MMAL_PORT_T *output;
 
     MMAL_QUEUE_T *filtered_pictures;
-    vlc_mutex_t mutex;
-    vlc_mutex_t buffer_cond_mutex;
-    vlc_cond_t buffer_cond;
+    vlc_sem_t sem;
 
     atomic_bool started;
 
@@ -199,6 +197,17 @@ static int Open(filter_t *filter)
     sys->output->buffer_num = 3;
 
     if (filter->fmt_in.i_codec == VLC_CODEC_MMAL_OPAQUE) {
+        MMAL_PARAMETER_UINT32_T extra_buffers = {
+            { MMAL_PARAMETER_EXTRA_BUFFERS, sizeof(MMAL_PARAMETER_UINT32_T) },
+            5
+        };
+        status = mmal_port_parameter_set(sys->output, &extra_buffers.hdr);
+        if (status != MMAL_SUCCESS) {
+            msg_Err(filter, "Failed to set MMAL_PARAMETER_EXTRA_BUFFERS on output port (status=%"PRIx32" %s)",
+                    status, mmal_status_to_string(status));
+            goto out;
+        }
+
         MMAL_PARAMETER_BOOLEAN_T zero_copy = {
             { MMAL_PARAMETER_ZERO_COPY, sizeof(MMAL_PARAMETER_BOOLEAN_T) },
             1
@@ -232,9 +241,8 @@ static int Open(filter_t *filter)
 
     filter->pf_video_filter = deinterlace;
     filter->pf_flush = flush;
-    vlc_mutex_init_recursive(&sys->mutex);
-    vlc_mutex_init(&sys->buffer_cond_mutex);
-    vlc_cond_init(&sys->buffer_cond);
+
+    vlc_sem_init(&sys->sem, 0);
 
 out:
     if (ret != VLC_SUCCESS)
@@ -274,9 +282,7 @@ static void Close(filter_t *filter)
     if (sys->component)
         mmal_component_release(sys->component);
 
-    vlc_mutex_destroy(&sys->mutex);
-    vlc_mutex_destroy(&sys->buffer_cond_mutex);
-    vlc_cond_destroy(&sys->buffer_cond);
+    vlc_sem_destroy(&sys->sem);
     free(sys);
 
     bcm_host_deinit();
@@ -310,7 +316,6 @@ static int send_output_buffer(filter_t *filter)
 
     mmal_picture_lock(picture);
 
-    vlc_mutex_lock(&sys->buffer_cond_mutex);
     status = mmal_port_send_buffer(sys->output, buffer);
     if (status != MMAL_SUCCESS) {
         msg_Err(filter, "Failed to send buffer to output port (status=%"PRIx32" %s)",
@@ -320,9 +325,8 @@ static int send_output_buffer(filter_t *filter)
         ret = -1;
     } else {
         atomic_fetch_add(&sys->output_in_transit, 1);
-        vlc_cond_signal(&sys->buffer_cond);
+        vlc_sem_post(&sys->sem);
     }
-    vlc_mutex_unlock(&sys->buffer_cond_mutex);
 
 out:
     return ret;
@@ -370,7 +374,6 @@ static picture_t *deinterlace(filter_t *filter, picture_t *picture)
     buffer->cmd = 0;
 
     if (!picture->p_sys->displayed) {
-        vlc_mutex_lock(&sys->buffer_cond_mutex);
         status = mmal_port_send_buffer(sys->input, buffer);
         if (status != MMAL_SUCCESS) {
             msg_Err(filter, "Failed to send buffer to input port (status=%"PRIx32" %s)",
@@ -379,9 +382,8 @@ static picture_t *deinterlace(filter_t *filter, picture_t *picture)
         } else {
             picture->p_sys->displayed = true;
             atomic_fetch_add(&sys->input_in_transit, 1);
-            vlc_cond_signal(&sys->buffer_cond);
+            vlc_sem_post(&sys->sem);
         }
-        vlc_mutex_unlock(&sys->buffer_cond_mutex);
     } else {
         picture_Release(picture);
     }
@@ -418,22 +420,15 @@ static void flush(filter_t *filter)
 
     msg_Dbg(filter, "flush deinterlace filter");
 
-    if (atomic_load(&sys->input_in_transit) ||
-            atomic_load(&sys->output_in_transit)) {
+    msg_Dbg(filter, "flush: flush ports (input: %d, output: %d in transit)",
+            sys->input_in_transit, sys->output_in_transit);
+    mmal_port_flush(sys->output);
+    mmal_port_flush(sys->input);
 
-        msg_Dbg(filter, "flush: flush ports (input: %d, output: %d in transit)",
-                sys->input_in_transit, sys->output_in_transit);
-        mmal_port_flush(sys->output);
-        mmal_port_flush(sys->input);
-
-        msg_Dbg(filter, "flush: wait for all buffers to be returned");
-        vlc_mutex_lock(&sys->buffer_cond_mutex);
-        while (atomic_load(&sys->input_in_transit) ||
-                atomic_load(&sys->output_in_transit)) {
-            vlc_cond_wait(&sys->buffer_cond, &sys->buffer_cond_mutex);
-        }
-        vlc_mutex_unlock(&sys->buffer_cond_mutex);
-    }
+    msg_Dbg(filter, "flush: wait for all buffers to be returned");
+    while (atomic_load(&sys->input_in_transit) ||
+            atomic_load(&sys->output_in_transit))
+        vlc_sem_wait(&sys->sem);
 
     while ((buffer = mmal_queue_get(sys->filtered_pictures))) {
         picture_t *pic = (picture_t *)buffer->user_data;
@@ -441,6 +436,7 @@ static void flush(filter_t *filter)
                 (void *)pic);
         picture_Release(pic);
     }
+    atomic_store(&sys->started, false);
     msg_Dbg(filter, "flush: done");
 }
 
@@ -464,7 +460,6 @@ static void input_port_cb(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
     filter_t *filter = (filter_t *)port->userdata;
     filter_sys_t *sys = filter->p_sys;
 
-    vlc_mutex_lock(&sys->buffer_cond_mutex);
     if (picture) {
         picture_Release(picture);
     } else {
@@ -473,8 +468,7 @@ static void input_port_cb(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
     }
 
     atomic_fetch_sub(&sys->input_in_transit, 1);
-    vlc_cond_signal(&sys->buffer_cond);
-    vlc_mutex_unlock(&sys->buffer_cond_mutex);
+    vlc_sem_post(&sys->sem);
 }
 
 static void output_port_cb(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
@@ -484,7 +478,6 @@ static void output_port_cb(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
     picture_t *picture;
 
     if (buffer->cmd == 0) {
-        vlc_mutex_lock(&sys->buffer_cond_mutex);
         if (buffer->length > 0) {
             atomic_store(&sys->started, true);
             mmal_queue_put(sys->filtered_pictures, buffer);
@@ -495,8 +488,7 @@ static void output_port_cb(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
         }
 
         atomic_fetch_sub(&sys->output_in_transit, 1);
-        vlc_cond_signal(&sys->buffer_cond);
-        vlc_mutex_unlock(&sys->buffer_cond_mutex);
+        vlc_sem_post(&sys->sem);
     } else if (buffer->cmd == MMAL_EVENT_FORMAT_CHANGED) {
         msg_Warn(filter, "MMAL_EVENT_FORMAT_CHANGED seen but not handled");
         mmal_buffer_header_release(buffer);
