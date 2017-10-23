@@ -26,7 +26,7 @@ OPTIONS="
       --enable-zvbi --disable-telx
       --enable-nls
       --disable-x265
-      --disable-qt
+      --disable-qt --disable-skins2
       --disable-gme"
 
 sh "$(dirname $0)"/../../../configure ${OPTIONS}  "$@"
