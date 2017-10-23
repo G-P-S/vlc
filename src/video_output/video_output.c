@@ -1090,7 +1090,7 @@ static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
 
     /* Wait the real date (for rendering jitter) */
 #if 0
-    mtime_t delay = direct->date - mdate();
+    mtime_t delay = todisplay->date - mdate();
     if (delay < 1000)
         msg_Warn(vout, "picture is late (%lld ms)", delay / 1000);
 #endif
@@ -1259,6 +1259,7 @@ static void ThreadFlush(vout_thread_t *vout, bool below, mtime_t date)
     }
 
     picture_fifo_Flush(vout->p->decoder_fifo, date, below);
+    vout_FilterFlush(vout->p->display.vd);
 }
 
 static void ThreadStep(vout_thread_t *vout, mtime_t *duration)

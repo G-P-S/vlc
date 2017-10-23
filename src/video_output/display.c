@@ -28,9 +28,6 @@
 # include "config.h"
 #endif
 #include <assert.h>
-#ifndef COMPILE_VS2013
- #include <stdnoreturn.h>
-#endif
 #include <vlc_common.h>
 #include <vlc_video_splitter.h>
 #include <vlc_vout_display.h>
@@ -992,6 +989,14 @@ picture_t *vout_FilterDisplay(vout_display_t *vd, picture_t *picture)
     }
 
     return filter_chain_VideoFilter(osys->filters, picture);
+}
+
+void vout_FilterFlush(vout_display_t *vd)
+{
+    vout_display_owner_sys_t *osys = vd->owner.sys;
+
+    if (osys->filters != NULL)
+        filter_chain_VideoFlush(osys->filters);
 }
 
 void vout_UpdateDisplaySourceProperties(vout_display_t *vd, const video_format_t *source)

@@ -85,7 +85,7 @@ set_capability("video decoder",800)
 set_callbacks(OpenDecoder, CloseDecoder)
 
 add_bool("videotoolbox-temporal-deinterlacing", true, VT_TEMPO_DEINTERLACE, VT_TEMPO_DEINTERLACE_LONG, false)
-add_bool("videotoolbox-hw-decoder-only", false, VT_REQUIRE_HW_DEC, VT_REQUIRE_HW_DEC, false)
+add_bool("videotoolbox-hw-decoder-only", true, VT_REQUIRE_HW_DEC, VT_REQUIRE_HW_DEC, false)
 add_string("videotoolbox-cvpx-chroma", "", VT_FORCE_CVPX_CHROMA, VT_FORCE_CVPX_CHROMA_LONG, true);
 vlc_module_end()
 
@@ -159,7 +159,7 @@ struct decoder_sys_t
 
     int                         i_forced_cvpx_format;
 
-    poc_context_t               pocctx;
+    h264_poc_context_t          pocctx;
     date_t                      pts;
 };
 
@@ -399,8 +399,9 @@ static frame_info_t * CreateReorderInfo(decoder_t *p_dec, const block_t *p_block
 
     if (p_sys->b_poc_based_reorder)
     {
-        if(p_sys->codec != kCMVideoCodecType_H264 ||
-           !ParseH264NAL(p_dec, p_block->p_buffer, p_block->i_buffer, 4, p_info))
+        if (p_sys->codec != kCMVideoCodecType_H264 ||
+            !ParseH264NAL(p_dec, p_block->p_buffer, p_block->i_buffer,
+                          p_sys->hh.i_nal_length_size , p_info))
         {
             assert(p_sys->codec == kCMVideoCodecType_H264);
             free(p_info);
@@ -625,10 +626,10 @@ static bool VideoToolboxNeedsToRestartH264(decoder_t *p_dec,
     unsigned w, h, vw, vh;
     int sarn, sard;
 
-    if (h264_helper_get_current_picture_size(hh, &w, &h, &vw, &vh) != VLC_SUCCESS)
+    if (hxxx_helper_get_current_picture_size(hh, &w, &h, &vw, &vh) != VLC_SUCCESS)
         return true;
 
-    if (h264_helper_get_current_sar(hh, &sarn, &sard) != VLC_SUCCESS)
+    if (hxxx_helper_get_current_sar(hh, &sarn, &sard) != VLC_SUCCESS)
         return true;
 
     CFMutableDictionaryRef extradataInfo = H264ExtradataInfoCreate(hh);
@@ -1151,19 +1152,19 @@ static int SetH264DecoderInfo(decoder_t *p_dec, CFMutableDictionaryRef extradata
     unsigned i_h264_width, i_h264_height, i_video_width, i_video_height;
     int i_sar_num, i_sar_den, i_ret;
 
-    i_ret = h264_helper_get_current_profile_level(&p_sys->hh, &i_profile, &i_level);
+    i_ret = hxxx_helper_get_current_profile_level(&p_sys->hh, &i_profile, &i_level);
     if (i_ret != VLC_SUCCESS)
         return i_ret;
     if (!IsH264ProfileLevelSupported(p_dec, i_profile, i_level))
         return VLC_ENOMOD; /* This error is critical */
 
-    i_ret = h264_helper_get_current_picture_size(&p_sys->hh,
+    i_ret = hxxx_helper_get_current_picture_size(&p_sys->hh,
                                                  &i_h264_width, &i_h264_height,
                                                  &i_video_width, &i_video_height);
     if (i_ret != VLC_SUCCESS)
         return i_ret;
 
-    i_ret = h264_helper_get_current_sar(&p_sys->hh, &i_sar_num, &i_sar_den);
+    i_ret = hxxx_helper_get_current_sar(&p_sys->hh, &i_sar_num, &i_sar_den);
     if (i_ret != VLC_SUCCESS)
         return i_ret;
 
@@ -1282,7 +1283,7 @@ static int HandleVTStatus(decoder_t *p_dec, OSStatus status,
 
     switch (status)
     {
-        case 0:
+        case noErr:
             return VLC_SUCCESS;
 
         VTERRCASE(kVTPropertyNotSupportedErr)
@@ -1328,6 +1329,7 @@ static int HandleVTStatus(decoder_t *p_dec, OSStatus status,
         switch (status)
         {
             case -8960 /* codecErr */:
+            case kVTParameterErr:
             case kCVReturnInvalidArgument:
             case kVTVideoDecoderMalfunctionErr:
                 *p_vtsession_status = VTSESSION_STATUS_ABORT;
@@ -1608,7 +1610,12 @@ static int UpdateVideoFormat(decoder_t *p_dec, CVPixelBufferRef imageBuffer)
             p_dec->p_sys->vtsession_status = VTSESSION_STATUS_ABORT;
             return -1;
     }
-    return decoder_UpdateVideoFormat(p_dec);
+    if (decoder_UpdateVideoFormat(p_dec) != 0)
+    {
+        p_dec->p_sys->vtsession_status = VTSESSION_STATUS_ABORT;
+        return -1;
+    }
+    return 0;
 }
 
 static void DecoderCallback(void *decompressionOutputRefCon,

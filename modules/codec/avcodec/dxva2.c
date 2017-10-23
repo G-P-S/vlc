@@ -228,6 +228,7 @@ static int Get(vlc_va_t *va, picture_t *pic, uint8_t **data)
     /* Check the device */
     HRESULT hr = IDirect3DDeviceManager9_TestDevice(sys->devmng, sys->device);
     if (hr == DXVA2_E_NEW_VIDEO_DEVICE) {
+        msg_Warn(va, "New video device detected.");
         if (DxResetVideoDecoder(va))
             return VLC_EGENERIC;
     } else if (FAILED(hr)) {
@@ -335,7 +336,6 @@ static int D3dCreateDevice(vlc_va_t *va)
 
     if (sys->dx_sys.d3ddev) {
         msg_Dbg(va, "Reusing Direct3D9 device");
-        IDirect3DDevice9_AddRef(sys->dx_sys.d3ddev);
         return VLC_SUCCESS;
     }
 
@@ -493,19 +493,6 @@ static int DxCreateVideoService(vlc_va_t *va)
 {
     vlc_va_sys_t *sys = va->sys;
     directx_sys_t *dx_sys = &va->sys->dx_sys;
-
-    HRESULT (WINAPI *CreateVideoService)(IDirect3DDevice9 *,
-                                         REFIID riid,
-                                         void **ppService);
-    CreateVideoService =
-      (void *)GetProcAddress(dx_sys->hdecoder_dll, "DXVA2CreateVideoService");
-
-    if (!CreateVideoService) {
-        msg_Err(va, "cannot load function");
-        return 4;
-    }
-    msg_Info(va, "DXVA2CreateVideoService Success!");
-
     HRESULT hr;
 
     HANDLE device;
@@ -535,7 +522,11 @@ static void DxDestroyVideoService(vlc_va_t *va)
 {
     directx_sys_t *dx_sys = &va->sys->dx_sys;
     if (va->sys->device)
-        IDirect3DDeviceManager9_CloseDeviceHandle(va->sys->devmng, va->sys->device);
+    {
+        HRESULT hr = IDirect3DDeviceManager9_CloseDeviceHandle(va->sys->devmng, va->sys->device);
+        if (FAILED(hr))
+            msg_Warn(va, "Failed to release device handle %x. (hr=0x%lX)", va->sys->device, hr);
+    }
     if (dx_sys->d3ddec)
         IDirectXVideoDecoderService_Release(dx_sys->d3ddec);
 }

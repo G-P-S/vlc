@@ -1134,7 +1134,7 @@ AC_CACHE_CHECK([if linker supports -z,defs], [ac_cv_ld_z_defs], [
     ac_cv_ld_z_defs="no"
   ])
 ])
-AS_IF([test "${ac_cv_ld_z_defs}" = "no" -o "x$with_sanitizer" != xno], [VLC_RESTORE_FLAGS])
+AS_IF([test "${ac_cv_ld_z_defs}" = "no" -o "${with_sanitizer}" != "no"], [VLC_RESTORE_FLAGS])
 
 dnl Check for __attribute__((packed))
 AC_CACHE_CHECK([for __attribute__((packed))],
@@ -2046,8 +2046,15 @@ AC_ARG_ENABLE(gme,
     [use Game Music Emu (default auto)])])
 AS_IF([test "${enable_gme}" != "no"], [
   AC_CHECK_HEADER([gme/gme.h], [
+    AC_CHECK_LIB([gme], [gme_identify_header], [
+      VLC_ADD_PLUGIN([gme])
+    ], [
+      AC_CHECK_LIB([gme], [gme_identify_extension], [
+         VLC_ADD_LIBS([gme], [-lstdc++ $LIBM])
+         VLC_ADD_PLUGIN([gme])
+      ],, [-lstdc++ $LIBM])
+    ])
     VLC_ADD_LIBS([gme], [-lgme])
-    VLC_ADD_PLUGIN([gme])
   ], [
     AS_IF([test "x${enable_gme}" != "x"], [
       AC_MSG_ERROR([GME cannot be found. Please install the development files.])
@@ -2479,7 +2486,7 @@ AM_CONDITIONAL([HAVE_AVCODEC_D3D11VA], [test "${have_avcodec_d3d11va}" = "yes"])
 dnl
 dnl DXGI debug
 dnl
-AC_CHECK_HEADERS(dxgidebug.h)
+AC_CHECK_HEADERS(dxgidebug.h dxgi1_6.h)
 
 dnl
 dnl  avformat demuxer/muxer plugin
@@ -3365,14 +3372,14 @@ AC_ARG_ENABLE(mmal,
 if test "${enable_mmal}" != "no"; then
   VLC_SAVE_FLAGS
   LDFLAGS="${LDFLAGS} -L/opt/vc/lib -lvchostif"
-  CPPFLAGS="${CPPFLAGS} -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux"
+  CPPFLAGS="${CPPFLAGS} -isystem /opt/vc/include -isystem /opt/vc/include/interface/vcos/pthreads -isystem /opt/vc/include/interface/vmcs_host/linux"
   AC_CHECK_HEADERS(interface/mmal/mmal.h,
     [ AC_CHECK_LIB(bcm_host, vc_tv_unregister_callback_full, [
         have_mmal="yes"
         VLC_ADD_PLUGIN([mmal])
         VLC_ADD_LDFLAGS([mmal],[ -L/opt/vc/lib ])
-        VLC_ADD_CFLAGS([mmal],[ -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux ])
-        VLC_ADD_LIBS([mmal],[ -lbcm_host -lmmal -lvchostif ]) ], [
+        VLC_ADD_CFLAGS([mmal],[ -isystem /opt/vc/include -isystem /opt/vc/include/interface/vcos/pthreads -isystem /opt/vc/include/interface/vmcs_host/linux ])
+        VLC_ADD_LIBS([mmal],[ -lbcm_host -lmmal -lmmal_core -lmmal_components -lmmal_util -lvchostif ]) ], [
           AS_IF([test "${enable_mmal}" = "yes"],
             [ AC_MSG_ERROR([Cannot find bcm library...]) ],
             [ AC_MSG_WARN([Cannot find bcm library...]) ])
@@ -3648,7 +3655,7 @@ AC_ARG_ENABLE(qt, [
 ])
 have_qt5_x11="no"
 AS_IF([test "${enable_qt}" != "no"], [
-  PKG_CHECK_MODULES([QT], [Qt5Core >= 5.2.0 Qt5Widgets Qt5Gui], [
+  PKG_CHECK_MODULES([QT], [Qt5Core >= 5.5.0 Qt5Widgets Qt5Gui Qt5Svg], [
       PKG_CHECK_MODULES([QT5_X11], [Qt5X11Extras], [
           have_qt5_x11="yes"
       ],[
@@ -3661,20 +3668,15 @@ AS_IF([test "${enable_qt}" != "no"], [
       AC_PATH_PROGS(RCC, [rcc-qt5 rcc], rcc, ["${QT_HOST_PATH}" "${QT_PATH}/bin"])
       AC_PATH_PROGS(UIC, [uic-qt5 uic], uic, ["${QT_HOST_PATH}" "${QT_PATH}/bin"])
     ], [
-      PKG_CHECK_MODULES([QT], [QtCore QtGui >= 4.8.0],, [
-        AS_IF([test -n "${enable_qt}"],[
-          AC_MSG_ERROR([${QT_PKG_ERRORS}.])
-        ],[
-          AC_MSG_WARN([${QT_PKG_ERRORS}.])
-        ])
-        enable_qt="no"
+      AS_IF([test -n "${enable_qt}"],[
+        AC_MSG_ERROR([${QT_PKG_ERRORS}.])
+      ],[
+        AC_MSG_WARN([${QT_PKG_ERRORS}.])
       ])
-      QT_PATH="$(eval $PKG_CONFIG --variable=exec_prefix QtCore)"
-      AC_PATH_PROGS(MOC, [moc-qt4 moc], moc, ["${QT_PATH}/bin"])
-      AC_PATH_PROG(RCC, rcc, rcc, ["${QT_PATH}/bin"])
-      AC_PATH_PROGS(UIC, [uic-qt4 uic], uic, ["${QT_PATH}/bin"])
+      enable_qt="no"
     ])
 ])
+
 AS_IF([test "${enable_qt}" != "no"], [
   ALIASES="${ALIASES} qvlc"
 ])
@@ -3877,6 +3879,11 @@ AS_IF([test "${enable_lirc}" = "yes"], [
   ])
 ])
 AM_CONDITIONAL([HAVE_LIRC], [test "${have_lirc}" = "yes"])
+
+dnl
+dnl  SRT plugin
+dnl
+PKG_ENABLE_MODULES_VLC([SRT], [access_srt access_output_srt], [srt >= 1.2.0], [SRT input/output plugin], [auto], [], [], [-DENABLE_SRT])
 
 EXTEND_HELP_STRING([Visualisations and Video filter plugins:])
 dnl

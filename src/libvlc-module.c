@@ -611,6 +611,11 @@ static const char *const ppsz_clock_descriptions[] =
 #define INPUT_SUBTRACK_ID_LONGTEXT N_( \
     "Stream ID of the subtitle track to use.")
 
+#define INPUT_CAPTIONS_TEXT N_(N_("Closed Captions decoder"))
+#define INPUT_CAPTIONS_LONGTEXT N_("Preferred closed captions decoder")
+static const int pi_captions[] = { 608, 708 };
+static const char *const ppsz_captions[] = { N_("EIA/CEA 608"), N_("CEA 708") };
+
 #define INPUT_PREFERREDRESOLUTION_TEXT N_("Preferred video resolution")
 #define INPUT_PREFERREDRESOLUTION_LONGTEXT N_( \
     "When several video formats are available, select one whose " \
@@ -689,6 +694,9 @@ static const char *const ppsz_prefres[] = {
     "$a: Artist<br>$b: Album<br>$c: Copyright<br>$t: Title<br>$g: Genre<br>"  \
     "$n: Track num<br>$p: Now playing<br>$A: Date<br>$D: Duration<br>"  \
     "$Z: \"Now playing\" (Fall back on Title - Artist)" )
+
+#define INPUT_LUA_TEXT N_( "Disable lua" )
+#define INPUT_LUA_LONGTEXT N_( "Disable all lua plugins" )
 
 // DEPRECATED
 #define SUB_CAT_LONGTEXT N_( \
@@ -1728,6 +1736,10 @@ vlc_module_begin ()
     add_integer( "sub-track-id", -1,
                  INPUT_SUBTRACK_ID_TEXT, INPUT_SUBTRACK_ID_LONGTEXT, true )
         change_safe ()
+    add_integer( "captions", 608,
+                 INPUT_CAPTIONS_TEXT, INPUT_CAPTIONS_LONGTEXT, true )
+        change_integer_list( pi_captions, ppsz_captions )
+        change_safe ()
     add_integer( "preferred-resolution", -1, INPUT_PREFERREDRESOLUTION_TEXT,
                  INPUT_PREFERREDRESOLUTION_LONGTEXT, false )
         change_safe ()
@@ -1899,6 +1911,8 @@ vlc_module_begin ()
                  INPUT_TIMESHIFT_GRANULARITY_LONGTEXT, true )
 
     add_string( "input-title-format", "$Z", INPUT_TITLE_FORMAT_TEXT, INPUT_TITLE_FORMAT_LONGTEXT, false );
+
+    add_bool( "lua", true, INPUT_LUA_TEXT, INPUT_LUA_LONGTEXT, true );
 
 /* Decoder options */
     set_subcategory( SUBCAT_INPUT_VCODEC )
@@ -2094,6 +2108,9 @@ vlc_module_begin ()
                 IGNORE_TEXT, IGNORE_LONGTEXT, false )
     add_bool( "show-hiddenfiles", false,
               SHOW_HIDDENFILES_TEXT, SHOW_HIDDENFILES_LONGTEXT, false )
+    add_bool( "extractor-flatten", false,
+              "Flatten files listed by extractors (archive)", NULL, true )
+        change_volatile()
 
     set_subcategory( SUBCAT_PLAYLIST_SD )
     add_string( "services-discovery", "", SD_TEXT, SD_LONGTEXT, true )

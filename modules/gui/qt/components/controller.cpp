@@ -49,6 +49,8 @@
 #include <QRegion>
 #include <QSignalMapper>
 #include <QTimer>
+#include <QApplication>
+#include <QScreen>
 
 //#define DEBUG_LAYOUT 1
 
@@ -207,7 +209,7 @@ void AbstractController::createAndAddWidget( QBoxLayout *controlLayout_,
     a_button->setIcon( QIcon( iconL[button] ) );
 #define BUTTON_SET_BAR2( button, image, tooltip ) \
     button->setToolTip( tooltip );          \
-    button->setIcon( QIcon( ":/"#image ) );
+    button->setIcon( QIcon( ":/"#image ".svg" ) );
 
 #define ENABLE_ON_VIDEO( a ) \
     CONNECT( THEMIM->getIM(), voutChanged( bool ), a, setEnabled( bool ) ); \
@@ -641,7 +643,14 @@ QFrame *AbstractController::telexFrame()
     QSignalMapper *contextButtonMapper = new QSignalMapper( this );
     QToolButton *contextButton = NULL;
     int i_iconminsize = __MAX( 16, telexOn->minimumHeight() );
+
+#if HAS_QT56
+    qreal f_ratio = QApplication::primaryScreen()->devicePixelRatio();
+    QPixmap iconPixmap( i_iconminsize * f_ratio, i_iconminsize * f_ratio );
+#else
     QPixmap iconPixmap( i_iconminsize, i_iconminsize );
+#endif
+
     iconPixmap.fill( Qt::transparent );
     QPainter iconPixmapPainter( &iconPixmap );
     QLinearGradient iconPixmapPainterGradient( iconPixmap.rect().center() / 2,

@@ -93,8 +93,12 @@ struct es_out_id_t
     decoder_t   *p_dec_record;
 
     /* Fields for Video with CC */
-    bool  pb_cc_present[4];
-    es_out_id_t  *pp_cc_es[4];
+    struct
+    {
+        vlc_fourcc_t type;
+        uint64_t     i_bitmap;    /* channels bitmap */
+        es_out_id_t  *pp_es[64]; /* a max of 64 chans for CEA708 */
+    } cc;
 
     /* Field for CC track from a master video */
     es_out_id_t *p_master;
@@ -208,6 +212,8 @@ static inline int EsOutGetClosedCaptionsChannel( const es_format_t *p_fmt )
 {
     int i_channel;
     if( p_fmt->i_codec == VLC_CODEC_CEA608 && p_fmt->subs.cc.i_channel < 4 )
+        i_channel = p_fmt->subs.cc.i_channel;
+    else if( p_fmt->i_codec == VLC_CODEC_CEA708 && p_fmt->subs.cc.i_channel < 64 )
         i_channel = p_fmt->subs.cc.i_channel;
     else
         i_channel = -1;
@@ -1624,8 +1630,8 @@ static es_out_id_t *EsOutAddSlave( es_out_t *out, const es_format_t *fmt, es_out
     es->psz_language_code = LanguageGetCode( es->fmt.psz_language );
     es->p_dec = NULL;
     es->p_dec_record = NULL;
-    for( i = 0; i < 4; i++ )
-        es->pb_cc_present[i] = false;
+    es->cc.type = 0;
+    es->cc.i_bitmap = 0;
     es->p_master = p_master;
 
     TAB_APPEND( p_sys->i_es, p_sys->es, es );
@@ -1660,8 +1666,8 @@ static bool EsIsSelected( es_out_id_t *es )
         if( es->p_master->p_dec )
         {
             int i_channel = EsOutGetClosedCaptionsChannel( &es->fmt );
-            if( i_channel != -1 )
-                input_DecoderGetCcState( es->p_master->p_dec, &b_decode, i_channel );
+            input_DecoderGetCcState( es->p_master->p_dec, es->fmt.i_codec,
+                                     i_channel, &b_decode );
         }
         return b_decode;
     }
@@ -1727,7 +1733,9 @@ static void EsSelect( es_out_t *out, es_out_id_t *es )
 
         i_channel = EsOutGetClosedCaptionsChannel( &es->fmt );
 
-        if( i_channel == -1 || input_DecoderSetCcState( es->p_master->p_dec, true, i_channel ) )
+        if( i_channel == -1 ||
+            input_DecoderSetCcState( es->p_master->p_dec, es->fmt.i_codec,
+                                     i_channel, true ) )
             return;
     }
     else
@@ -1772,6 +1780,34 @@ static void EsSelect( es_out_t *out, es_out_id_t *es )
     input_SendEventTeletextSelect( p_input, EsFmtIsTeletext( &es->fmt ) ? es->i_id : -1 );
 }
 
+static void EsDeleteCCChannels( es_out_t *out, es_out_id_t *parent )
+{
+    es_out_sys_t   *p_sys = out->p_sys;
+    input_thread_t *p_input = p_sys->p_input;
+
+    if( parent->cc.type == 0 )
+        return;
+
+    const int i_spu_id = var_GetInteger( p_input, "spu-es");
+
+    uint64_t i_bitmap = parent->cc.i_bitmap;
+    for( int i = 0; i_bitmap > 0; i++, i_bitmap >>= 1 )
+    {
+        if( (i_bitmap & 1) == 0 || !parent->cc.pp_es[i] )
+            continue;
+
+        if( i_spu_id == parent->cc.pp_es[i]->i_id )
+        {
+            /* Force unselection of the CC */
+            input_SendEventEsSelect( p_input, SPU_ES, -1 );
+        }
+        EsOutDel( out, parent->cc.pp_es[i] );
+    }
+
+    parent->cc.i_bitmap = 0;
+    parent->cc.type = 0;
+}
+
 static void EsUnselect( es_out_t *out, es_out_id_t *es, bool b_update )
 {
     es_out_sys_t   *p_sys = out->p_sys;
@@ -1789,27 +1825,13 @@ static void EsUnselect( es_out_t *out, es_out_id_t *es, bool b_update )
         {
             int i_channel = EsOutGetClosedCaptionsChannel( &es->fmt );
             if( i_channel != -1 )
-                input_DecoderSetCcState( es->p_master->p_dec, false, i_channel );
+                input_DecoderSetCcState( es->p_master->p_dec, es->fmt.i_codec,
+                                         i_channel, false );
         }
     }
     else
     {
-        const int i_spu_id = var_GetInteger( p_input, "spu-es");
-        int i;
-        for( i = 0; i < 4; i++ )
-        {
-            if( !es->pb_cc_present[i] || !es->pp_cc_es[i] )
-                continue;
-
-            if( i_spu_id == es->pp_cc_es[i]->i_id )
-            {
-                /* Force unselection of the CC */
-                input_SendEventEsSelect( p_input, SPU_ES, -1 );
-            }
-            EsOutDel( out, es->pp_cc_es[i] );
-
-            es->pb_cc_present[i] = false;
-        }
+        EsDeleteCCChannels( out, es );
         EsDestroyDecoder( out, es );
     }
 
@@ -1965,6 +1987,46 @@ static void EsOutSelect( es_out_t *out, es_out_id_t *es, bool b_force )
     }
 }
 
+static void EsOutCreateCCChannels( es_out_t *out, vlc_fourcc_t codec, uint64_t i_bitmap,
+                                   const char *psz_descfmt, es_out_id_t *parent )
+{
+    es_out_sys_t   *p_sys = out->p_sys;
+    input_thread_t *p_input = p_sys->p_input;
+
+    /* Only one type of captions is allowed ! */
+    if( parent->cc.type && parent->cc.type != codec )
+        return;
+
+    uint64_t i_existingbitmap = parent->cc.i_bitmap;
+    for( int i = 0; i_bitmap > 0; i++, i_bitmap >>= 1, i_existingbitmap >>= 1 )
+    {
+        es_format_t fmt;
+
+        if( (i_bitmap & 1) == 0 || (i_existingbitmap & 1) )
+            continue;
+
+        msg_Dbg( p_input, "Adding CC track %d for es[%d]", 1+i, parent->i_id );
+
+        es_format_Init( &fmt, SPU_ES, codec );
+        fmt.subs.cc.i_channel = i;
+        fmt.i_group = parent->fmt.i_group;
+        if( asprintf( &fmt.psz_description, psz_descfmt, 1 + i ) == -1 )
+            fmt.psz_description = NULL;
+
+        es_out_id_t **pp_es = &parent->cc.pp_es[i];
+        *pp_es = EsOutAddSlave( out, &fmt, parent );
+        es_format_Clean( &fmt );
+
+        /* */
+        parent->cc.i_bitmap |= (1ULL << i);
+        parent->cc.type = codec;
+
+        /* Enable if user specified on command line */
+        if (p_sys->sub.i_channel == i)
+            EsOutSelect(out, *pp_es, true);
+    }
+}
+
 /**
  * Send a block for the given es_out
  *
@@ -2060,33 +2122,14 @@ static int EsOutSend( es_out_t *out, es_out_id_t *es, block_t *p_block )
     }
 
     /* Check CC status */
-    bool pb_cc[4];
+    decoder_cc_desc_t desc;
 
-    input_DecoderIsCcPresent( es->p_dec, pb_cc );
-    for( int i = 0; i < 4; i++ )
-    {
-        es_format_t fmt;
-
-        if(  es->pb_cc_present[i] || !pb_cc[i] )
-            continue;
-        msg_Dbg( p_input, "Adding CC track %d for es[%d]", 1+i, es->i_id );
-
-        es_format_Init( &fmt, SPU_ES, VLC_CODEC_CEA608 );
-        fmt.subs.cc.i_channel = i;
-        fmt.i_group = es->fmt.i_group;
-        if( asprintf( &fmt.psz_description,
-                      _("Closed captions %u"), 1 + i ) == -1 )
-            fmt.psz_description = NULL;
-        es->pp_cc_es[i] = EsOutAddSlave( out, &fmt, es );
-        es_format_Clean( &fmt );
-
-        /* */
-        es->pb_cc_present[i] = true;
-
-        /* Enable if user specified on command line */
-        if (p_sys->sub.i_channel == i)
-            EsOutSelect(out, es->pp_cc_es[i], true);
-    }
+    input_DecoderGetCcDesc( es->p_dec, &desc );
+    if( var_InheritInteger( p_input, "captions" ) == 708 )
+        EsOutCreateCCChannels( out, VLC_CODEC_CEA708, desc.i_708_channels,
+                               _("DTVCC Closed captions %u"), es );
+    EsOutCreateCCChannels( out, VLC_CODEC_CEA608, desc.i_608_channels,
+                           _("Closed captions %u"), es );
 
     vlc_mutex_unlock( &p_sys->lock );
 
@@ -3146,60 +3189,67 @@ static void EsOutUpdateInfo( es_out_t *out, es_out_id_t *es, const es_format_t *
        }
        if( fmt->video.primaries != COLOR_PRIMARIES_UNDEF )
        {
-           static const char *primaries_names[] = { N_("Undefined"),
-               N_("ITU-R BT.601 (525 lines, 60 Hz)"),
-               N_("ITU-R BT.601 (625 lines, 50 Hz)"),
-               "ITU-R BT.709",
-               "ITU-R BT.2020",
-               "DCI/P3 D65",
-               "ITU-R BT.470 M",
+           static const char primaries_names[][32] = {
+               [COLOR_PRIMARIES_UNDEF] = N_("Undefined"),
+               [COLOR_PRIMARIES_BT601_525] =
+                   N_("ITU-R BT.601 (525 lines, 60 Hz)"),
+               [COLOR_PRIMARIES_BT601_625] =
+                   N_("ITU-R BT.601 (625 lines, 50 Hz)"),
+               [COLOR_PRIMARIES_BT709] = "ITU-R BT.709",
+               [COLOR_PRIMARIES_BT2020] = "ITU-R BT.2020",
+               [COLOR_PRIMARIES_DCI_P3] = "DCI/P3 D65",
+               [COLOR_PRIMARIES_BT470_M] = "ITU-R BT.470 M",
            };
-           if( fmt->video.primaries < ARRAY_SIZE(primaries_names) )
-                info_category_AddInfo( p_cat, _("Color primaries"), "%s",
-                                      _(primaries_names[fmt->video.primaries]) );
+           static_assert(ARRAY_SIZE(primaries_names) == COLOR_PRIMARIES_MAX+1,
+                         "Color primiaries table mismatch");
+           info_category_AddInfo( p_cat, _("Color primaries"), "%s",
+                                  _(primaries_names[fmt->video.primaries]) );
        }
        if( fmt->video.transfer != TRANSFER_FUNC_UNDEF )
        {
-           static const char *func_names[] = { N_("Undefined"),
-               N_("Linear"),
-               "sRGB",
-               "ITU-R BT.470 BG",
-               "ITU-R BT.470 M",
-               "ITU-R BT.709, ITU-R BT.2020",
-               "SMPTE ST2084",
-               "SMPTE 240M",
-               "Hybrid Log-Gamma",
+           static const char func_names[][20] = {
+               [TRANSFER_FUNC_UNDEF] = N_("Undefined"),
+               [TRANSFER_FUNC_LINEAR] = N_("Linear"),
+               [TRANSFER_FUNC_SRGB] = "sRGB",
+               [TRANSFER_FUNC_BT470_BG] = "ITU-R BT.470 BG",
+               [TRANSFER_FUNC_BT470_M] = "ITU-R BT.470 M",
+               [TRANSFER_FUNC_BT709] = "ITU-R BT.709",
+               [TRANSFER_FUNC_SMPTE_ST2084] = "SMPTE ST2084",
+               [TRANSFER_FUNC_SMPTE_240] = "SMPTE 240M",
+               [TRANSFER_FUNC_HLG] = N_("Hybrid Log-Gamma"),
            };
-           if( fmt->video.transfer < ARRAY_SIZE(func_names) )
-                info_category_AddInfo( p_cat, _("Color transfer function"), "%s",
-                                      _(func_names[fmt->video.transfer]) );
+           static_assert(ARRAY_SIZE(func_names) == TRANSFER_FUNC_MAX+1,
+                         "Transfer functions table mismatch");
+           info_category_AddInfo( p_cat, _("Color transfer function"), "%s",
+                                  _(func_names[fmt->video.transfer]) );
        }
        if( fmt->video.space != COLOR_SPACE_UNDEF )
        {
-           static const char *space_names[] = { N_("Undefined"),
-               "ITU-R BT.601",
-               "ITU-R BT.709",
-               "ITU-R BT.2020",
+           static const char space_names[][16] = {
+               [COLOR_SPACE_UNDEF] = N_("Undefined"),
+               [COLOR_SPACE_BT601] = "ITU-R BT.601",
+               [COLOR_SPACE_BT709] = "ITU-R BT.709",
+               [COLOR_SPACE_BT2020] = "ITU-R BT.2020",
            };
-           static const char *range_names[] = {
-               N_("Limited Range"),
-               N_("Full Range"),
-           };
-           if( fmt->video.space < ARRAY_SIZE(space_names) )
-                info_category_AddInfo( p_cat, _("Color space"), "%s %s",
-                                      _(space_names[fmt->video.space]),
-                                      _(range_names[fmt->video.b_color_range_full]) );
+           static_assert(ARRAY_SIZE(space_names) == COLOR_SPACE_MAX+1,
+                         "Color space table mismatch");
+           info_category_AddInfo( p_cat, _("Color space"), _("%s Range"),
+                                  _(space_names[fmt->video.space]),
+                       _(fmt->video.b_color_range_full ? "Full" : "Limited") );
        }
        if( fmt->video.chroma_location != CHROMA_LOCATION_UNDEF )
        {
-           static const char *c_loc_names[] = { N_("Undefined"),
-               N_("Left"),
-               N_("Center"),
-               N_("Top Left"),
-               N_("Top Center"),
-               N_("Bottom Left"),
-               N_("Bottom Center"),
+           static const char c_loc_names[][16] = {
+               [CHROMA_LOCATION_UNDEF] = N_("Undefined"),
+               [CHROMA_LOCATION_LEFT] = N_("Left"),
+               [CHROMA_LOCATION_CENTER] = N_("Center"),
+               [CHROMA_LOCATION_TOP_LEFT] = N_("Top Left"),
+               [CHROMA_LOCATION_TOP_CENTER] = N_("Top Center"),
+               [CHROMA_LOCATION_BOTTOM_LEFT] =N_("Bottom Left"),
+               [CHROMA_LOCATION_BOTTOM_CENTER] = N_("Bottom Center"),
            };
+           static_assert(ARRAY_SIZE(c_loc_names) == CHROMA_LOCATION_MAX+1,
+                         "Chroma location table mismatch");
            info_category_AddInfo( p_cat, _("Chroma location"), "%s",
                    _(c_loc_names[fmt->video.chroma_location]) );
        }

@@ -121,17 +121,10 @@ QStringList DialogsProvider::getOpenURL( QWidget *parent,
                                          QString *selectedFilter )
 {
     QStringList res;
-
-#if HAS_QT5
     QList<QUrl> urls = QFileDialog::getOpenFileUrls( parent, caption, QUrl::fromUserInput( dir ), filter, selectedFilter );
 
     foreach( const QUrl& url, urls )
         res.append( url.toEncoded() );
-#else
-    QStringList files = QFileDialog::getOpenFileNames( parent, caption, dir, filter, selectedFilter );
-    foreach ( const QString& file, files )
-        res.append( toURI( toNativeSeparators( file ) ) );
-#endif
 
     return res;
 }
@@ -806,7 +799,7 @@ void DialogsProvider::loadSubtitlesFile()
     free( path2 );
     foreach( const QString &qsUrl, qsl )
     {
-        if( input_AddSlave( p_input, SLAVE_TYPE_SPU, qtu( qsUrl ), true, true ) )
+        if( input_AddSlave( p_input, SLAVE_TYPE_SPU, qtu( qsUrl ), true, true, true ) )
             msg_Warn( p_intf, "unable to load subtitles from '%s'",
                       qtu( qsUrl ) );
     }

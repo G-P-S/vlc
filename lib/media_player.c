@@ -1014,21 +1014,16 @@ void libvlc_media_player_set_pause( libvlc_media_player_t *p_mi, int paused )
     if( !p_input_thread )
         return;
 
-    libvlc_state_t state = libvlc_media_player_get_state( p_mi );
-    if( state == libvlc_Playing )
+    if( paused )
     {
-        if( paused )
-        {
-            if( libvlc_media_player_can_pause( p_mi ) )
-                input_Control( p_input_thread, INPUT_SET_STATE, PAUSE_S );
-            else
-                input_Stop( p_input_thread );
-        }
+        if( libvlc_media_player_can_pause( p_mi ) )
+            input_Control( p_input_thread, INPUT_SET_STATE, PAUSE_S );
+        else
+            input_Stop( p_input_thread );
     }
     else
     {
-        if( !paused )
-            input_Control( p_input_thread, INPUT_SET_STATE, PLAYING_S );
+        input_Control( p_input_thread, INPUT_SET_STATE, PLAYING_S );
     }
 
     vlc_object_release( p_input_thread );
@@ -1207,7 +1202,7 @@ void libvlc_media_player_set_xwindow( libvlc_media_player_t *p_mi,
     assert (p_mi != NULL);
 
     var_SetString (p_mi, "avcodec-hw", "");
-    var_SetString (p_mi, "vout", drawable ? "xid" : "");
+    var_SetString (p_mi, "vout", "");
     var_SetString (p_mi, "window", drawable ? "embed-xid,any" : "");
     var_SetInteger (p_mi, "drawable-xid", drawable);
 }
@@ -1968,7 +1963,7 @@ int libvlc_media_player_add_slave( libvlc_media_player_t *p_mi,
     else
     {
         int i_ret = input_AddSlave( p_input_thread, (enum slave_type) i_type,
-                                    psz_uri, b_select, false );
+                                    psz_uri, b_select, false, false );
         vlc_object_release( p_input_thread );
 
         return i_ret == VLC_SUCCESS ? 0 : -1;

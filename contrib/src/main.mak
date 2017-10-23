@@ -29,8 +29,8 @@ CONTRIB_VIDEOLAN := http://downloads.videolan.org/pub/contrib
 ##########################################################################################
 # WARNING if you change these urls you will have to clean your repo to be sure to download contribs from the new url
 #   => on buildbot, manually delete the slave directory to ensure no errors (first build should be more longer than usual because it download all contribs one time)
-CONTRIB_VIDEOLAN_20170926_WIN := https://nightlies.videolan.org/build/win64/vlc-3.0.0-20170926-0457/vlc-contrib-x86_64-w64-mingw32-20170926.tar.bz2
-CONTRIB_VIDEOLAN_20170927_MAC := https://nightlies.videolan.org/build/macosx-intel/vlc-3.0.0-20170927-0500/vlc-contrib-x86_64-apple-darwin16-20170927.tar.bz2
+CONTRIB_VIDEOLAN_WIN := https://nightlies.videolan.org/build/win64/vlc-3.0.0-20171008-0457/vlc-contrib-x86_64-w64-mingw32-20171008.tar.bz2
+CONTRIB_VIDEOLAN_MAC := https://nightlies.videolan.org/build/macosx-intel/vlc-3.0.0-20171008-0453/vlc-contrib-x86_64-apple-darwin16-20171008.tar.bz2
 ##########################################################################################
 
 GITHUB := https://github.com/
@@ -249,11 +249,11 @@ download = $(error Neither curl nor wget found!)
 endif
 
 ifdef HAVE_WIN64
-download_pkg = $(call download,$(CONTRIB_VIDEOLAN_20170926_WIN)) || \
+download_pkg = $(call download,$(CONTRIB_VIDEOLAN_WIN)) || \
 	( $(call download,$(1)) && echo "Please upload this package $(lastword $(subst /, ,$(@))) to our FTP" )
 else
 ifdef HAVE_MACOSX
-download_pkg = $(call download,$(CONTRIB_VIDEOLAN_20170927_MAC)) || \
+download_pkg = $(call download,$(CONTRIB_VIDEOLAN_MAC)) || \
 	( $(call download,$(1)) && echo "Please upload this package $(lastword $(subst /, ,$(@))) to our FTP" )
 endif
 endif
@@ -423,10 +423,10 @@ distclean: clean
 	unlink Makefile
 
 ifdef HAVE_WIN64
-PREBUILT_URL=$(CONTRIB_VIDEOLAN_20170926_WIN)
+PREBUILT_URL=$(CONTRIB_VIDEOLAN_WIN)
 else
 ifdef HAVE_MACOSX
-PREBUILT_URL=$(CONTRIB_VIDEOLAN_20170927_MAC)
+PREBUILT_URL=$(CONTRIB_VIDEOLAN_MAC)
 endif
 endif
 
