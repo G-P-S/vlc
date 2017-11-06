@@ -45,6 +45,7 @@ unsigned int videoBufferSize = 0;
 
  extern bool bindtex;
  bool bindtextureVLC(IDirect3DDevice9* pDX9, LPDIRECT3DSURFACE9 dxSurf, HANDLE  dxHandle, GLuint texture, HANDLE& hDevice, HANDLE& hTexture);
+ bool unbindtexture();
 
  //Frames
 #ifdef VTUNE_axeFRAME
@@ -93,6 +94,11 @@ void gpuopen(void *opaque,
 
 	bindtex  = bindtextureVLC(vlc_DX9dev, vlc_pSurface, vlc_SharedHandle, m_h264TextureArray[0], m_hH264DeviceArray[0], m_hH264TextureArray[0]); //Bind a DirectX surface to an OpenGL texture 
 	
+}
+
+void gpuclose(void *data)
+{
+	unbindtexture();
 }
 
 void gpunewframe(void *opaque,
@@ -217,7 +223,7 @@ int main(int argc, char **argv)
 #ifdef OGL
 	 libvlc_video_set_gpu_callbacks(media_player,
 		gpuopen,
-		NULL /* gpuclose*/,
+		gpuclose,
 		gpunewframe,
 		&fps);
 
