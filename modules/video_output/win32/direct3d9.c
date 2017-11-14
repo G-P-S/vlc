@@ -524,7 +524,13 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
 	// call gpu newframe callback if exists, else do common rendering in window
 	if (sys->gpunewframe != NULL)
 	{
-		sys->gpunewframe(sys->opaque, surface, &sys->sys.rect_src);
+            // correct clip coordinates and send it to client
+            RECT copy_rect = sys->sys.rect_src_clipped;
+            if (copy_rect.right & 1) copy_rect.right--;
+            if (copy_rect.left & 1) copy_rect.left++;
+            if (copy_rect.bottom & 1) copy_rect.bottom--;
+            if (copy_rect.top & 1) copy_rect.top++;
+            sys->gpunewframe(sys->opaque, surface, &copy_rect);
 	}
 	 else  
 	{
