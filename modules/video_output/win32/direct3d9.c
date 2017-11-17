@@ -320,7 +320,18 @@ static int Open(vlc_object_t *object)
     sys->opaque             = var_InheritAddress(vd, "vmem-opaque");
 
     // call gpu open callback
-    if (sys->gpuopen != NULL) sys->gpuopen(sys->opaque, sys->d3ddev, &vd->fmt.i_width, &vd->fmt.i_height);
+    if (sys->gpuopen != NULL)
+    {
+        // correct clip coordinates and send it to client
+        RECT copy_rect = sys->sys.rect_src_clipped;
+        if (copy_rect.right & 1) copy_rect.right--;
+        if (copy_rect.left & 1) copy_rect.left++;
+        if (copy_rect.bottom & 1) copy_rect.bottom--;
+        if (copy_rect.top & 1) copy_rect.top++;
+        int frameContentWidth = copy_rect.right - copy_rect.left;
+        int frameContentHeight = copy_rect.bottom - copy_rect.top;
+        sys->gpuopen(sys->opaque, sys->d3ddev, &frameContentWidth, &frameContentHeight);
+    }
 
     /* Fix state in case of desktop mode */
     if (sys->sys.use_desktop && vd->cfg->is_fullscreen)
