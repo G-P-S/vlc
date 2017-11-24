@@ -947,6 +947,18 @@
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Default</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</CompileAs>
     </ClCompile>
+	<ClCompile Include="..\src\revision.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='ReleaseN|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='ReleaseN|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='ReleaseN|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='ReleaseN|x64'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Default</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</CompileAs>
+    </ClCompile>
     <ClCompile Include="..\src\modules\bank.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">HAVE_DYNAMIC_PLUGINS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">HAVE_DYNAMIC_PLUGINS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -1282,7 +1294,6 @@
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Default</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Default</CompileAs>
     </ClCompile>
-    <ClCompile Include="..\src\revision.c" />
     <ClCompile Include="..\src\stream_output\sap.c">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
@@ -2008,7 +2019,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libiconvd.lib;libintl.a;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libiconvd.lib;Synchronization.lib;libgpg-errord.lib;Normaliz.lib;Ws2_32.lib;libgcryptd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>
@@ -2040,7 +2051,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgcc.a;libiconv.lib;libintl.a;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libiconv.lib;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\libvlccore.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)/$(TargetName)$(TargetExt)</OutputFile>
       <IgnoreSpecificDefaultLibraries>
@@ -2078,7 +2089,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_WINDOWS;_USRDLL;LIBVLCCORE_EXPORTS;%(PreprocessorDefinitions);HAVE_NANF; HAVE_STRUCT_POLLFD; HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
+      <PreprocessorDefinitions>COMPILE_VS2013;HAVE_STRUCT_TIMESPEC;HAVE_SENDMSG;HAVE_RECVMSG;HAVE_GETDELIM;WIN32;HAVE_DYNAMIC_PLUGINS;HAVE_INET_PTON;UPDATE_CHECK;NDEBUG;_WINDOWS;_USRDLL;LIBVLCCORE_EXPORTS;%(PreprocessorDefinitions);HAVE_NANF; HAVE_STRUCT_POLLFD; HAVE_STRUCT_POLLFD</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <SDLCheck>false</SDLCheck>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -2088,8 +2099,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libgcc.a;libiconv.lib;libintl.a;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../win32/lib/x64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libiconv.lib;Synchronization.lib;libgpg-error.lib;Normaliz.lib;Ws2_32.lib;libgcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../win32/lib/x64;../win32/cygwin;../win32/cygwin/mingw</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -13,6 +13,11 @@
 *.vlt
 *.class
 *.dmg
+*.obj
+*.tlog
+*.idb
+*.pdb
+*.dll
 .DS_Store
 .deps
 .libs
@@ -52,4 +57,4 @@ include/vlc/libvlc_version.h
 build*
 contrib-*
 install-*
-
+x64/*

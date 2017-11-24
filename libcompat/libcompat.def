@@ -51,7 +51,7 @@ tdestroy
 tfind
 tsearch
 twalk
-timespec_get
+;timespec_get
 ffsll
 memrchr
 recvmsg

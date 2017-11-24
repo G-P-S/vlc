@@ -469,9 +469,6 @@
     <ClCompile Include="..\src\network\http_auth.c">
       <Filter>Source Files\src\network</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\revision.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\playlist\threadlink.c">
       <Filter>Source Files\src\playlist</Filter>
     </ClCompile>

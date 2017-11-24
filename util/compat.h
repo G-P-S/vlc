@@ -3,7 +3,10 @@
 
 #define strcasecmp		_stricmp  //vz
 #define strncasecmp		_strnicmp  //vz
+
+#if _MSC_VER<1900	// 1900=Visual2015
 #define snprintf		_snprintf
+#endif
 #define snwprintf		_snwprintf
 
 #ifndef __cplusplus

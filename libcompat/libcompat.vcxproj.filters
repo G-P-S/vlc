@@ -106,9 +106,6 @@
     <ClCompile Include="..\compat\timegm.c">
       <Filter>Source Files\compat</Filter>
     </ClCompile>
-    <ClCompile Include="..\compat\timespec_get.c">
-      <Filter>Source Files\compat</Filter>
-    </ClCompile>
     <ClCompile Include="..\compat\aligned_alloc.c">
       <Filter>Source Files\compat</Filter>
     </ClCompile>

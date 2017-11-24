@@ -229,7 +229,7 @@ module_t *vlc_module_load(vlc_object_t *obj, const char *capability,
 
     /* Find matching modules */
     module_t **mods;
-    ssize_t total = module_list_cap (&mods, capability);
+    ssize_t total = vlc_module_list_cap (&mods, capability);
 
     msg_Dbg (obj, "looking for %s module matching \"%s\": %zd candidates",
              capability, name, total);

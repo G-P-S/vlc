@@ -174,8 +174,7 @@ int vlc_sdp_Start(struct vlc_memstream *restrict stream,
 
         gethostname(hostname, sizeof (hostname));
 
-        vlc_memstream_printf(stream, "o=- %"PRIu64" %"PRIu64" IN IP%c %s\r\n",
-                             now, now, connection[5], hostname);
+//        vlc_memstream_printf(stream, "o=- %"PRIu64" %"PRIu64" IN IP%c %s\r\n", now, now, connection[5], hostname);
     }
 
     strcpy(subvar, "name");
