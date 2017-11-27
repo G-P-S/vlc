@@ -11,7 +11,7 @@ cp -Rf build/vlc_install_dir/include temp_Mac
 find temp_Mac/plugins -type f -name '*.la' -delete
 rm -f temp_Mac/plugins/plugins.dat
 
-# apply script to filter plugins
+# apply script to filter plugins non-LGPL or non-royaltyFree
 cd temp_Mac
 python ../VLC-make-free.py
 cd ..
