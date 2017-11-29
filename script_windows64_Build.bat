@@ -2,6 +2,7 @@
 set "FFMPEG_ARCHIVE=ffmpeg_visual_x64_3.3.5.r89114"
 set "WGET_EXE=C:\Program Files (x86)\GnuWin32\bin\wget.exe"	
 set "SEVENZ_EXE=C:\Program Files\7-Zip\7z.exe"
+set "MSBUILD_EXE=C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
 
 :: download and unzip FFmpeg Visual libs
 if exist "contrib/win32" (
@@ -13,7 +14,7 @@ if exist "contrib/win32" (
 )
 
 :: build VLC project
-msbuild winvlc.sln /p:Configuration=Release /p:Platform=x64 /t:Clean,Build
+"%MSBUILD_EXE%" winvlc.sln /p:Configuration=Release /p:Platform=x64 /t:Clean,Build
 
 :: clean directories
 rd /S /Q "contrib/win32"
