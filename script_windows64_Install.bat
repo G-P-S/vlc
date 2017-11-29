@@ -16,7 +16,7 @@ if exist temp_Windows\include\vlc\plugins\.gitignore ( del temp_Windows\include\
 
 :: apply script to filter plugins
 cd temp_Windows
-python ../VLC-make-free.py
+python ..\VLC-make-free.py
 cd ..
 
 :: clean Gaia and copy
