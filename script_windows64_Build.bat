@@ -18,8 +18,6 @@ if exist "contrib\win32" (
 
 :: clean directories
 rd /S /Q "contrib\win32"
-rd /S /Q "win32\include"
 rd /S /Q "win32\lib"
 if exist "contrib\win32" ( rmdir /S /Q "contrib\in32" )
-if exist "win32\include" ( rmdir /S /Q "win32\include" )
 if exist "win32\lib" ( rmdir /S /Q "win32\lib" )

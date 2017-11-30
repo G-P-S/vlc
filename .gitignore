@@ -59,4 +59,3 @@ contrib-*
 install-*
 x64/*
 win32/lib/*
-win32/include/*
