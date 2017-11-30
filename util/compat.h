@@ -4,9 +4,14 @@
 #define strcasecmp		_stricmp  //vz
 #define strncasecmp		_strnicmp  //vz
 
+#ifdef _WIN32
 #if _MSC_VER<1900	// 1900=Visual2015
 #define snprintf		_snprintf
 #endif
+#else
+#define snprintf		_snprintf
+#endif // COMPILE_VS2013
+
 #define snwprintf		_snwprintf
 
 #ifndef __cplusplus

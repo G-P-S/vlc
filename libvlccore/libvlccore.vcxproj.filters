@@ -481,6 +481,9 @@
     <ClCompile Include="..\src\misc\objres.c">
       <Filter>Source Files\src\misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\revision.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="libvlccore.def">

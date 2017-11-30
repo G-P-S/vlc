@@ -154,7 +154,6 @@ int putc_unlocked (int, FILE *);
 int putchar_unlocked (int);
 #endif
 
-#undef HAVE_GETDELIM 
 #ifndef HAVE_GETDELIM
 ssize_t getdelim (char **, size_t *, int, FILE *);
 ssize_t getline (char **, size_t *, FILE *);
@@ -255,7 +254,12 @@ struct tm *localtime_r (const time_t *, struct tm *);
 time_t timegm(struct tm *);
 #endif
 
+#ifdef _WIN32
+#if _MSC_VER>=1900	// 1900=Visual2015
 #define HAVE_TIMESPEC_GET
+#endif
+#endif
+
 #ifndef HAVE_TIMESPEC_GET
 #define TIME_UTC 1
 struct timespec;
@@ -429,7 +433,12 @@ struct if_nameindex
 # define if_freenameindex(list) (void)0
 #endif
 
+#ifdef _WIN32
+#if _MSC_VER>=1900	// 1900=Visual2015
 #define HAVE_STRUCT_TIMESPEC
+#endif
+#endif
+
 #ifndef HAVE_STRUCT_TIMESPEC
 struct timespec {
     time_t  tv_sec;   /* Seconds */
