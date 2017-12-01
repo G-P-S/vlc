@@ -470,7 +470,7 @@ struct vlc_common_members
  * It checks if the compound type actually starts with an embedded
  * \ref vlc_object_t structure.
  */
-#if !defined(__cplusplus)
+#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
 # define VLC_OBJECT(x) \
     _Generic((x)->obj, \
         struct vlc_common_members: (vlc_object_t *)(&(x)->obj), \
@@ -744,18 +744,19 @@ static inline bool umulll_overflow(unsigned long long a, unsigned long long b,
 #endif
 }
 
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
 #define mul_overflow(a,b,r) \
     _Generic(*(r), \
         unsigned: umul_overflow(a, b, (unsigned *)(r)), \
         unsigned long: umull_overflow(a, b, (unsigned long *)(r)), \
         unsigned long long: umulll_overflow(a, b, (unsigned long long *)(r)))
 #else
+/*
 static inline bool mul_overflow(unsigned a, unsigned b, unsigned *res)
 {
     return umul_overflow(a, b, res);
 }
-
+*/
 static inline bool mul_overflow(unsigned long a, unsigned long b,
                                 unsigned long *res)
 {

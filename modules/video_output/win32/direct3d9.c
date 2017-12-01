@@ -159,6 +159,12 @@ struct vout_display_sys_t
     bool                    lost_not_ready;
     bool                    clear_scene;
 
+	// gpu callbacks
+	void(*gpuopen)(void *opaque, void *pDXDevice, unsigned *width, unsigned *height);
+	void(*gpuclose)(void *opaque);
+	void(*gpunewframe)(void *opaque, void *source, void *sourceRect);
+	void* opaque;
+
     /* It protects the following variables */
     vlc_mutex_t    lock;
     bool           ch_desktop;
@@ -245,8 +251,8 @@ static int Open(vlc_object_t *object)
     vout_display_t *vd = (vout_display_t *)object;
     vout_display_sys_t *sys;
 
-    if ( !vd->obj.force && vd->source.projection_mode != PROJECTION_MODE_RECTANGULAR)
-        return VLC_EGENERIC; /* let a module who can handle it do it */
+//    if ( !vd->obj.force && vd->source.projection_mode != PROJECTION_MODE_RECTANGULAR)
+//        return VLC_EGENERIC; /* let a module who can handle it do it */
 
     OSVERSIONINFO winVer;
     winVer.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
@@ -327,6 +333,26 @@ static int Open(vlc_object_t *object)
     vd->control = Control;
     vd->manage  = Manage;
 
+	// get gpu callbacks
+	sys->gpuopen = var_InheritAddress(vd, "vmem-gpuopen");
+	sys->gpuclose = var_InheritAddress(vd, "vmem-gpuclose");
+	sys->gpunewframe = var_InheritAddress(vd, "vmem-gpunewframe");
+	sys->opaque = var_InheritAddress(vd, "vmem-opaque");
+
+	// call gpu open callback
+	if (sys->gpuopen != NULL)
+	{
+		// correct clip coordinates and send it to client
+		RECT copy_rect = sys->sys.rect_src_clipped;
+		if (copy_rect.right & 1) copy_rect.right--;
+		if (copy_rect.left & 1) copy_rect.left++;
+		if (copy_rect.bottom & 1) copy_rect.bottom--;
+		if (copy_rect.top & 1) copy_rect.top++;
+		int frameContentWidth = copy_rect.right - copy_rect.left;
+		int frameContentHeight = copy_rect.bottom - copy_rect.top;
+		sys->gpuopen(sys->opaque, sys->d3d_dev.dev, &frameContentWidth, &frameContentHeight);
+	}
+
     /* Fix state in case of desktop mode */
     if (sys->sys.use_desktop && vd->cfg->is_fullscreen)
         vout_display_SendEventFullscreen(vd, false, false);
@@ -346,6 +372,9 @@ error:
 static void Close(vlc_object_t *object)
 {
     vout_display_t * vd = (vout_display_t *)object;
+
+	// call gpu close callback
+	if (vd != NULL && vd->sys != NULL && vd->sys->gpuclose != NULL) vd->sys->gpuclose(vd->sys->opaque);
 
     var_DelCallback(vd, "video-wallpaper", DesktopCallback, NULL);
     vlc_mutex_destroy(&vd->sys->lock);
@@ -533,23 +562,37 @@ static void Prepare(vout_display_t *vd, picture_t *picture, subpicture_t *subpic
         return;
     }
 
-    d3d_region_t picture_region;
-    if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
-        picture_region.width = picture->format.i_visible_width;
-        picture_region.height = picture->format.i_visible_height;
-        int subpicture_region_count     = 0;
-        d3d_region_t *subpicture_region = NULL;
-        if (subpicture)
-            Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
-                                     subpicture);
+	// call gpu newframe callback if exists, else do common rendering in window
+	if (sys->gpunewframe != NULL)
+	{
+		// correct clip coordinates and send it to client
+		RECT copy_rect = sys->sys.rect_src_clipped;
+		if (copy_rect.right & 1) copy_rect.right--;
+		if (copy_rect.left & 1) copy_rect.left++;
+		if (copy_rect.bottom & 1) copy_rect.bottom--;
+		if (copy_rect.top & 1) copy_rect.top++;
+		sys->gpunewframe(sys->opaque, surface, &copy_rect);
+	}
+	else
+	{
+		d3d_region_t picture_region;
+		if (!Direct3D9ImportPicture(vd, &picture_region, surface)) {
+			picture_region.width = picture->format.i_visible_width;
+			picture_region.height = picture->format.i_visible_height;
+			int subpicture_region_count = 0;
+			d3d_region_t *subpicture_region = NULL;
+			if (subpicture)
+				Direct3D9ImportSubpicture(vd, &subpicture_region_count, &subpicture_region,
+					subpicture);
 
-        Direct3D9RenderScene(vd, &picture_region,
-                            subpicture_region_count, subpicture_region);
+			Direct3D9RenderScene(vd, &picture_region,
+				subpicture_region_count, subpicture_region);
 
-        Direct3D9DeleteRegions(sys->d3dregion_count, sys->d3dregion);
-        sys->d3dregion_count = subpicture_region_count;
-        sys->d3dregion       = subpicture_region;
-    }
+			Direct3D9DeleteRegions(sys->d3dregion_count, sys->d3dregion);
+			sys->d3dregion_count = subpicture_region_count;
+			sys->d3dregion = subpicture_region;
+		}
+	}
 }
 
 static void Display(vout_display_t *vd, picture_t *picture, subpicture_t *subpicture)
@@ -1308,7 +1351,7 @@ static void Direct3D9DestroyShaders(vout_display_t *vd)
  * Vertex 0 should be assigned coordinates at index 2 from the
  * unrotated order and so on, thus yielding order: 2 3 0 1.
  */
-static void orientationVertexOrder(video_orientation_t orientation, int vertex_order[static 4])
+static void orientationVertexOrder(video_orientation_t orientation, int vertex_order[4])
 {
     switch (orientation) {
         case ORIENT_ROTATED_90:      /* ORIENT_RIGHT_TOP */

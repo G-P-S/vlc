@@ -271,7 +271,7 @@ static inline size_t vlc_array_count( vlc_array_t * p_array )
     return p_array->i_count;
 }
 
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
 # define vlc_array_item_at_index(ar, idx) \
     _Generic((ar), \
         const vlc_array_t *: ((ar)->pp_elems[idx]), \
