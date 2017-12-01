@@ -17,7 +17,7 @@ if exist "contrib\win32" (
 "%MSBUILD_EXE%" winvlc.sln /p:Configuration=Release /p:Platform=x64 /t:Clean,Build
 
 :: clean directories
-rd /S /Q "contrib\win32"
-rd /S /Q "win32\lib"
-if exist "contrib\win32" ( rmdir /S /Q "contrib\in32" )
-if exist "win32\lib" ( rmdir /S /Q "win32\lib" )
+::rd /S /Q "contrib\win32"
+::rd /S /Q "win32\lib"
+::if exist "contrib\win32" ( rmdir /S /Q "contrib\in32" )
+::if exist "win32\lib" ( rmdir /S /Q "win32\lib" )
