@@ -89,6 +89,8 @@ static block_t *BuildSsaFrame( const AVPacket *p_pkt, unsigned i_order );
 static void UpdateSeekPoint( demux_t *p_demux, int64_t i_time );
 static void ResetTime( demux_t *p_demux, int64_t i_time );
 
+void CloseDemux( vlc_object_t *p_this );
+
 static vlc_fourcc_t CodecTagToFourcc( uint32_t codec_tag )
 {
     // convert from little-endian avcodec codec_tag to VLC native-endian fourcc
