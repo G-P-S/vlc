@@ -70,8 +70,10 @@ static gme_err_t ReaderBlock (void *, void *, int);
 static int Open (vlc_object_t *obj)
 {
     demux_t *demux = (demux_t *)obj;
+    uint64_t size;
 
-    int64_t size = stream_Size (demux->s);
+    if (vlc_stream_GetSize(demux->s, &size))
+        return VLC_EGENERIC;
     if (size > LONG_MAX /* too big for GME */)
         return VLC_EGENERIC;
 
@@ -131,7 +133,7 @@ static int Open (vlc_object_t *obj)
 
     /* Titles */
     unsigned n = gme_track_count (sys->emu);
-    sys->titlev = malloc (n * sizeof (*sys->titlev));
+    sys->titlev = vlc_alloc (n, sizeof (*sys->titlev));
     if (unlikely(sys->titlev == NULL))
         n = 0;
     sys->titlec = n;
@@ -309,7 +311,7 @@ static int Control (demux_t *demux, int query, va_list args)
             *(va_arg (args, int *)) = 0; /* Chapter offset */
 
             unsigned n = sys->titlec;
-            *titlev = malloc (sizeof (**titlev) * n);
+            *titlev = vlc_alloc (n, sizeof (**titlev));
             if (unlikely(*titlev == NULL))
                 n = 0;
             *titlec = n;

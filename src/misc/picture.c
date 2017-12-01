@@ -38,6 +38,8 @@
 #include <vlc_image.h>
 #include <vlc_block.h>
 
+#define PICTURE_SW_SIZE_MAX (1<<28) /* 256MB: 8K * 8K * 4*/
+
 /**
  * Allocate a new picture in the heap.
  *
@@ -60,6 +62,12 @@ static int AllocatePicture( picture_t *p_pic )
             return VLC_ENOMEM;
         }
         i_bytes += p->i_pitch * p->i_lines;
+    }
+
+    if( i_bytes >= PICTURE_SW_SIZE_MAX )
+    {
+        p_pic->i_planes = 0;
+        return VLC_ENOMEM;
     }
 
     uint8_t *p_data = aligned_alloc( 16, i_bytes );
@@ -308,13 +316,6 @@ void picture_Release( picture_t *p_picture )
     priv->gc.destroy( p_picture );
 }
 
-bool picture_IsReferenced( picture_t *p_picture )
-{
-    picture_priv_t *priv = (picture_priv_t *)p_picture;
-
-    return atomic_load( &priv->gc.refs ) > 1;
-}
-
 /*****************************************************************************
  *
  *****************************************************************************/
@@ -381,6 +382,38 @@ void picture_Copy( picture_t *p_dst, const picture_t *p_src )
     picture_CopyProperties( p_dst, p_src );
 }
 
+static void picture_DestroyClone(picture_t *clone)
+{
+    picture_t *picture = ((picture_priv_t *)clone)->gc.opaque;
+
+    free(clone);
+    picture_Release(picture);
+}
+
+picture_t *picture_Clone(picture_t *picture)
+{
+    /* TODO: merge common code with picture_pool_ClonePicture(). */
+    picture_resource_t res = {
+        .p_sys = picture->p_sys,
+        .pf_destroy = picture_DestroyClone,
+    };
+
+    for (int i = 0; i < picture->i_planes; i++) {
+        res.p[i].p_pixels = picture->p[i].p_pixels;
+        res.p[i].i_lines = picture->p[i].i_lines;
+        res.p[i].i_pitch = picture->p[i].i_pitch;
+    }
+
+    picture_t *clone = picture_NewFromResource(&picture->format, &res);
+    if (likely(clone != NULL)) {
+        ((picture_priv_t *)clone)->gc.opaque = picture;
+        picture_Hold(picture);
+
+        if (picture->context != NULL)
+            clone->context = picture->context->copy(picture->context);
+    }
+    return clone;
+}
 
 /*****************************************************************************
  *

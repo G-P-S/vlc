@@ -214,7 +214,7 @@ static int Open( vlc_object_t *p_this )
             if( DVDISOVolumeInfo( p_dvdread, rgsz_volid, 32, NULL, 0 ) == 0 )
             {
                 vlc_dialog_display_error( p_demux, _("Playback failure"),
-                              _("Cannot play a non UDF mastered DVD. (Found ISO9660 '%s')"), rgsz_volid );
+                              _("Cannot play a non-UDF mastered DVD." ) );
                 msg_Err( p_demux, "Invalid UDF DVD. (Found ISO9660 '%s')", rgsz_volid );
             }
         }
@@ -401,7 +401,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
 
             /* Duplicate title infos */
             *pi_int = p_sys->i_titles;
-            *ppp_title = malloc( p_sys->i_titles * sizeof(input_title_t *) );
+            *ppp_title = vlc_alloc( p_sys->i_titles, sizeof(input_title_t *) );
             for( i = 0; i < p_sys->i_titles; i++ )
             {
                 (*ppp_title)[i] = vlc_input_title_Duplicate(p_sys->titles[i]);

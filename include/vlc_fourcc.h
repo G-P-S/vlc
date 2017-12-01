@@ -352,6 +352,7 @@
 
 /* VAAPI opaque surface */
 #define VLC_CODEC_VAAPI_420 VLC_FOURCC('V','A','O','P') /* 4:2:0  8 bpc */
+#define VLC_CODEC_VAAPI_420_10BPP VLC_FOURCC('V','A','O','0') /* 4:2:0 10 bpc */
 
 /* MediaCodec/IOMX opaque buffer type */
 #define VLC_CODEC_ANDROID_OPAQUE  VLC_FOURCC('A','N','O','P')
@@ -543,6 +544,7 @@
 #define VLC_CODEC_CEA608    VLC_FOURCC('c','6','0','8')
 #define VLC_CODEC_CEA708    VLC_FOURCC('c','7','0','8')
 #define VLC_CODEC_TTML      VLC_FOURCC('T','T','M','L')
+#define VLC_CODEC_WEBVTT    VLC_FOURCC('w','v','t','t')
 
 /* XYZ colorspace 12 bits packed in 16 bits, organisation |XXX0|YYY0|ZZZ0| */
 #define VLC_CODEC_XYZ12     VLC_FOURCC('X','Y','1','2')

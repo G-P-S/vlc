@@ -51,6 +51,7 @@ class FullscreenControllerWidget;
 class QVBoxLayout;
 class QMenu;
 class QSize;
+class QScreen;
 class QTimer;
 class StandardPLPanel;
 struct vout_window_t;
@@ -94,6 +95,7 @@ public:
     int getControlsVisibilityStatus();
     bool isPlDocked() { return ( b_plDocked != false ); }
     bool isInterfaceFullScreen() { return b_interfaceFullScreen; }
+    bool isInterfaceAlwaysOnTop() { return b_interfaceOnTop; }
     StandardPLPanel* getPlaylistView();
 
 protected:
@@ -109,6 +111,7 @@ protected:
     void wheelEvent( QWheelEvent * ) Q_DECL_OVERRIDE;
     bool eventFilter(QObject *, QEvent *) Q_DECL_OVERRIDE;
     virtual void toggleUpdateSystrayMenuWhenVisible();
+    void resizeWindow(int width, int height);
 
 protected:
     /* Main Widgets Creation */
@@ -165,6 +168,7 @@ protected:
     QWidget             *stackCentralOldWidget;
     QPoint              lastWinPosition;
     QSize               lastWinSize;  /// To restore the same window size when leaving fullscreen
+    QScreen             *lastWinScreen;
 
     QMap<QWidget *, QSize> stackWidgetsSizes;
 
@@ -176,8 +180,10 @@ protected:
     bool                 b_hideAfterCreation;
     bool                 b_minimalView;         ///< Minimal video
     bool                 b_interfaceFullScreen;
+    bool                 b_interfaceOnTop;      ///keep UI on top
     bool                 b_pauseOnMinimize;
     bool                 b_maximizedView;
+    bool                 b_isWindowTiled;
 
     /* States */
     bool                 playlistVisible;       ///< Is the playlist visible ?
@@ -201,6 +207,7 @@ public slots:
     void toggleAdvancedButtons();
     void toggleInterfaceFullScreen();
     void toggleFSC();
+    void setInterfaceAlwaysOnTop( bool );
 
     void setStatusBarVisibility(bool b_visible);
     void setPlaylistVisibility(bool b_visible);
@@ -232,14 +239,14 @@ protected slots:
 
     void resizeStack( int w, int h )
     {
-        if( !isFullScreen() && !isMaximized() )
+        if( !isFullScreen() && !isMaximized() && !b_isWindowTiled )
         {
             if( b_minimalView )
-                resize( w, h ); /* Oh yes, it shouldn't
+                resizeWindow( w, h ); /* Oh yes, it shouldn't
                                    be possible that size() - stackCentralW->size() < 0
                                    since stackCentralW is contained in the QMW... */
             else
-                resize( size() - stackCentralW->size() + QSize( w, h ) );
+                resizeWindow( width() - stackCentralW->width() + w, height() - stackCentralW->height() + h );
         }
         debug();
     }
@@ -251,6 +258,7 @@ protected slots:
     void setVideoOnTop( bool );
     void setBoss();
     void setRaise();
+    void voutReleaseMouseEvents();
 
     void showResumePanel( int64_t);
     void hideResumePanel();

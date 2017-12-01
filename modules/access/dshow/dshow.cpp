@@ -136,7 +136,7 @@ static const char *const ppsz_standards_list_text[] =
 #define ADEV_LONGTEXT N_( \
     "Name of the audio device that will be used by the " \
     "DirectShow plugin. If you don't specify anything, the default device " \
-    "will be used. ")
+    "will be used.")
 #define SIZE_TEXT N_("Video size")
 #define SIZE_LONGTEXT N_( \
     "Size of the video that will be displayed by the " \
@@ -659,12 +659,6 @@ static int CommonOpen( vlc_object_t *p_this, access_sys_t *p_sys,
 
     if( p_sys->pp_streams.empty() ) return VLC_EGENERIC;
 
-    if( vlc_mta_acquire( p_this ) == false )
-    {
-        msg_Err( p_this, "Failed to acquire MTA" );
-        return VLC_EGENERIC;
-    }
-
     return VLC_SUCCESS;
 }
 
@@ -682,6 +676,12 @@ static int DemuxOpen( vlc_object_t *p_this )
     p_demux->p_sys = (demux_sys_t *)p_sys;
 
     ComContext ctx( COINIT_MULTITHREADED );
+
+    if( vlc_mta_acquire( p_this ) == false )
+    {
+        msg_Err( p_this, "Failed to acquire MTA" );
+        return VLC_EGENERIC;
+    }
 
     if( CommonOpen( p_this, p_sys, true ) != VLC_SUCCESS )
     {
@@ -789,6 +789,12 @@ static int AccessOpen( vlc_object_t *p_this )
         return VLC_ENOMEM;
 
     ComContext ctx( COINIT_MULTITHREADED );
+
+    if( vlc_mta_acquire( p_this ) == false )
+    {
+        msg_Err( p_this, "Failed to acquire MTA" );
+        return VLC_EGENERIC;
+    }
 
     if( CommonOpen( p_this, p_sys, false ) != VLC_SUCCESS )
     {
@@ -2072,9 +2078,9 @@ static int FindDevices( vlc_object_t *p_this, const char *psz_name,
     char **texts = (char **)xmalloc( count * sizeof(*texts) );
 
     values[0] = strdup( "" );
-    texts[0] = strdup( N_("Default") );
+    texts[0] = strdup( _("Default") );
     values[1] = strdup( "none" );
-    texts[1] = strdup( N_("None") );
+    texts[1] = strdup( _("None") );
 
     for( std::list<std::string>::iterator iter = list_devices.begin();
          iter != list_devices.end();

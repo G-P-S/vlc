@@ -271,26 +271,18 @@ static inline size_t vlc_array_count( vlc_array_t * p_array )
     return p_array->i_count;
 }
 
-#if defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#ifndef __cplusplus
 # define vlc_array_item_at_index(ar, idx) \
     _Generic((ar), \
         const vlc_array_t *: ((ar)->pp_elems[idx]), \
         vlc_array_t *: ((ar)->pp_elems[idx]))
 #else
-#if defined (COMPILE_VS2013) || defined (__cplusplus)
 static inline void *vlc_array_item_at_index( vlc_array_t *ar, size_t idx )
 {
     return ar->pp_elems[idx];
 }
 #endif
-#ifndef COMPILE_VS2013
-static inline const void *vlc_array_item_at_index( const vlc_array_t *ar,
-                                                   size_t idx )
-{
-    return ar->pp_elems[idx];
-}
-#endif
-#endif
+
 static inline ssize_t vlc_array_index_of_item( const vlc_array_t *ar,
                                                const void *elem )
 {
@@ -303,12 +295,12 @@ static inline ssize_t vlc_array_index_of_item( const vlc_array_t *ar,
 }
 
 /* Write */
-static inline void vlc_array_insert( vlc_array_t *ar, void *elem, int idx )
+static inline int vlc_array_insert( vlc_array_t *ar, void *elem, int idx )
 {
     void **pp = (void **)realloc( ar->pp_elems,
                                   sizeof( void * ) * (ar->i_count + 1) );
     if( unlikely(pp == NULL) )
-        abort();
+        return -1;
 
     size_t tail = ar->i_count - idx;
     if( tail > 0 )
@@ -317,17 +309,31 @@ static inline void vlc_array_insert( vlc_array_t *ar, void *elem, int idx )
     pp[idx] = elem;
     ar->i_count++;
     ar->pp_elems = pp;
+    return 0;
 }
 
-static inline void vlc_array_append( vlc_array_t *ar, void *elem )
+static inline void vlc_array_insert_or_abort( vlc_array_t *ar, void *elem, int idx )
+{
+    if( vlc_array_insert( ar, elem, idx ) )
+        abort();
+}
+
+static inline int vlc_array_append( vlc_array_t *ar, void *elem )
 {
     void **pp = (void **)realloc( ar->pp_elems,
                                   sizeof( void * ) * (ar->i_count + 1) );
     if( unlikely(pp == NULL) )
-        abort();
+        return -1;
 
     pp[ar->i_count++] = elem;
     ar->pp_elems = pp;
+    return 0;
+}
+
+static inline void vlc_array_append_or_abort( vlc_array_t *ar, void *elem )
+{
+    if( vlc_array_append( ar, elem ) != 0 )
+        abort();
 }
 
 static inline void vlc_array_remove( vlc_array_t *ar, size_t idx )

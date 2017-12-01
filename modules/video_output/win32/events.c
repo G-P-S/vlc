@@ -122,9 +122,12 @@ static void MousePressed( event_thread_t *p_event, HWND hwnd, unsigned button );
 
 static void CALLBACK HideMouse(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
-    VLC_UNUSED(hwnd); VLC_UNUSED(uMsg); VLC_UNUSED(dwTime);
-    event_thread_t *p_event = (event_thread_t *)idEvent;
-    UpdateCursor( p_event, false );
+    VLC_UNUSED(uMsg); VLC_UNUSED(dwTime);
+    if (hwnd)
+    {
+        event_thread_t *p_event = (event_thread_t *)idEvent;
+        UpdateCursor( p_event, false );
+    }
 }
 
 static void UpdateCursorMoved( event_thread_t *p_event )
@@ -355,7 +358,7 @@ static void *EventThread( void *p_this )
             if( p_event->psz_title )
             {
                 const size_t i_length = strlen(p_event->psz_title);
-                pwz_title = malloc( 2 * (i_length + 1) );
+                pwz_title = vlc_alloc( i_length + 1, 2 );
                 if( pwz_title )
                 {
                     mbstowcs( pwz_title, p_event->psz_title, 2 * i_length );
@@ -808,7 +811,8 @@ static int Win32VoutCreateWindow( event_thread_t *p_event )
     /* Ensure to hide the window */
     ShowWindow( p_event->hwnd, SW_HIDE );
 
-    InitGestures( p_event->hwnd, &p_event->p_gesture );
+    bool b_isProjected  = (vd->fmt.projection_mode != PROJECTION_MODE_RECTANGULAR);
+    InitGestures( p_event->hwnd, &p_event->p_gesture, b_isProjected );
 
     p_event->p_sensors = HookWindowsSensors(vd, p_event->hwnd);
 

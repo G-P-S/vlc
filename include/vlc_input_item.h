@@ -149,12 +149,12 @@ enum slave_priority
     "usf", "jss",  "cdg", \
     "psb", "mpsub","mpl2", \
     "pjs", "dks", "stl", \
-    "vtt", "sbv", "ttml" \
-    "scc"
+    "vtt", "sbv", "ttml",\
+    "scc", "webvtt"
 #define SLAVE_AUDIO_EXTENSIONS \
     "ac3", "m4a", "aac", \
     "eac3",  "dtshd", "flac", \
-    "pcm", "dts"
+    "pcm", "dts", "mp3"
 
 struct input_item_slave
 {

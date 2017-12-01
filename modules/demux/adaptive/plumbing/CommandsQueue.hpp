@@ -59,6 +59,7 @@ namespace adaptive
             virtual ~EsOutSendCommand();
             virtual void Execute( es_out_t *out );
             virtual mtime_t getTime() const;
+            const void * esIdentifier() const;
 
         protected:
             EsOutSendCommand( FakeESOutID *, block_t * );
@@ -160,7 +161,7 @@ namespace adaptive
             bool isEmpty() const;
             void setDrop( bool );
             void setDraining();
-            void setEOF();
+            void setEOF( bool );
             bool isDraining() const;
             bool isEOF() const;
             mtime_t getDemuxedAmount() const;

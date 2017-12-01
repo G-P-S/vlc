@@ -47,8 +47,8 @@
 
 #define DEFAULT_HRTF_PATH "hrtfs" DIR_SEP "dodeca_and_7channel_FHK_HRTF.sofa"
 
-#define HRTF_FILE_TEXT N_("HRTF SOFA file for the binauralization")
-#define HRTF_FILE_LONGTEXT N_("To use a custom HRTF (Head-related transfer function)" \
+#define HRTF_FILE_TEXT N_("HRTF file for the binauralization")
+#define HRTF_FILE_LONGTEXT N_("Custom HRTF (Head-related transfer function) file" \
                               "in the SOFA format.")
 
 #define HEADPHONES_TEXT N_("Headphones mode (binaural)")
@@ -284,7 +284,7 @@ static int allocateBuffers(filter_sys_t *p_sys)
 
     for (unsigned i = 0; i < p_sys->i_inputNb; ++i)
     {
-        p_sys->inBuf[i] = (float *)malloc(AMB_BLOCK_TIME_LEN * sizeof(float));
+        p_sys->inBuf[i] = (float *)vlc_alloc(AMB_BLOCK_TIME_LEN, sizeof(float));
         if (p_sys->inBuf[i] == NULL)
             return VLC_ENOMEM;
     }
@@ -295,7 +295,7 @@ static int allocateBuffers(filter_sys_t *p_sys)
 
     for (unsigned i = 0; i < p_sys->i_outputNb; ++i)
     {
-        p_sys->outBuf[i] = (float *)malloc(AMB_BLOCK_TIME_LEN * sizeof(float));
+        p_sys->outBuf[i] = (float *)vlc_alloc(AMB_BLOCK_TIME_LEN, sizeof(float));
         if (p_sys->outBuf[i] == NULL)
             return VLC_ENOMEM;
     }

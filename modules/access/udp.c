@@ -100,7 +100,7 @@ static int Open( vlc_object_t *p_this )
     if( p_access->b_preparsing )
         return VLC_EGENERIC;
 
-    sys = vlc_malloc( p_this, sizeof( *sys ) );
+    sys = vlc_obj_malloc( p_this, sizeof( *sys ) );
     if( unlikely( sys == NULL ) )
         return VLC_ENOMEM;
 

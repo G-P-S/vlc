@@ -49,8 +49,8 @@ static void Close( vlc_object_t * );
 
 #define CFG_PREFIX "mp4-"
 
-#define MP4_M4A_TEXT     "M4A audio only"
-#define MP4_M4A_LONGTEXT "Ignore non audio tracks from iTunes audio files"
+#define MP4_M4A_TEXT     N_("M4A audio only")
+#define MP4_M4A_LONGTEXT N_("Ignore non audio tracks from iTunes audio files")
 
 vlc_module_begin ()
     set_category( CAT_INPUT )
@@ -400,7 +400,7 @@ static int CreateTracks( demux_t *p_demux, unsigned i_tracks )
     if( SIZE_MAX / i_tracks < sizeof(mp4_track_t) )
         return VLC_EGENERIC;
 
-    p_sys->track = malloc( i_tracks * sizeof(mp4_track_t)  );
+    p_sys->track = vlc_alloc( i_tracks, sizeof(mp4_track_t)  );
     if( p_sys->track == NULL )
         return VLC_ENOMEM;
     p_sys->i_tracks = i_tracks;
@@ -409,38 +409,6 @@ static int CreateTracks( demux_t *p_demux, unsigned i_tracks )
         MP4_TrackInit( &p_sys->track[i] );
 
     return VLC_SUCCESS;
-}
-
-static block_t * MP4_WebVTT_Convert( demux_t *p_demux, block_t * p_block )
-{
-    stream_t *p_stream =
-            vlc_stream_MemoryNew( p_demux, p_block->p_buffer,
-                                  p_block->i_buffer, true );
-    if( p_stream )
-    {
-        MP4_Box_t *p_vroot = MP4_BoxNew(ATOM_wvtt);
-        if( p_vroot )
-        {
-            p_vroot->i_size = p_block->i_buffer;
-            if ( MP4_ReadBoxContainerChildren( p_stream, p_vroot, NULL ) == 1 )
-            {
-                MP4_Box_t *p_payl = MP4_BoxGet( p_vroot, "vttc/payl" );
-                if( p_payl && p_payl->i_size >= 9 )
-                {
-                    p_block->p_buffer += p_payl->i_pos + 8;
-                    p_block->i_buffer = p_payl->i_size - 8;
-                    p_block->p_buffer[p_block->i_buffer - 1] = '\0';
-                }
-                else p_block->i_buffer = 0;
-#ifndef NDEBUG
-                MP4_BoxDumpStructure(p_stream, p_vroot);
-#endif
-            }
-            MP4_BoxFree(p_vroot);
-        }
-        vlc_stream_Delete( p_stream );
-     }
-    return p_block;
 }
 
 static block_t * MP4_EIA608_Convert( block_t * p_block )
@@ -584,17 +552,15 @@ static block_t * MP4_Block_Convert( demux_t *p_demux, const mp4_track_t *p_track
     {
         switch( p_track->fmt.i_codec )
         {
+            case VLC_CODEC_WEBVTT:
             case VLC_CODEC_TTML:
             case VLC_CODEC_TX3G:
             case VLC_CODEC_SPU:
+            case VLC_CODEC_SUBT:
             /* accept as-is */
             break;
             case VLC_CODEC_CEA608:
                 p_block = MP4_EIA608_Convert( p_block );
-            break;
-            case VLC_CODEC_SUBT:
-                if( p_track->fmt.i_original_fourcc == ATOM_wvtt )
-                    p_block = MP4_WebVTT_Convert( p_demux, p_block );
             break;
         default:
             p_block->i_buffer = 0;
@@ -662,7 +628,6 @@ static int Open( vlc_object_t * p_this )
     const uint8_t   *p_peek;
 
     MP4_Box_t       *p_ftyp;
-    MP4_Box_t       *p_rmra;
     const MP4_Box_t *p_mvhd = NULL;
     const MP4_Box_t *p_mvex = NULL;
 
@@ -797,7 +762,8 @@ static int Open( vlc_object_t * p_this )
         goto error;
     }
 
-    if( ( p_rmra = MP4_BoxGet( p_sys->p_root,  "/moov/rmra" ) ) )
+    MP4_Box_t *p_rmra = MP4_BoxGet( p_sys->p_root, "/moov/rmra" );
+    if( p_rmra != NULL && p_demux->p_input != NULL )
     {
         int        i_count = MP4_BoxCount( p_rmra, "rmda" );
         int        i;
@@ -1978,7 +1944,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                 return VLC_EGENERIC;
 
             *ppp_attach = (input_attachment_t**)
-                    malloc( sizeof(input_attachment_t*) * i_count );
+                    vlc_alloc( i_count, sizeof(input_attachment_t*) );
             if( !(*ppp_attach) ) return VLC_ENOMEM;
 
             /* First add cover attachments */

@@ -99,7 +99,7 @@ static void Close ( vlc_object_t * );
 #define CPKT_TEXT N_("Packet size in bytes to decrypt")
 #define CPKT_LONGTEXT N_("Specify the size of the TS packet to decrypt. " \
     "The decryption routines subtract the TS-header from the value before " \
-    "decrypting. " )
+    "decrypting." )
 
 #define SPLIT_ES_TEXT N_("Separate sub-streams")
 #define SPLIT_ES_LONGTEXT N_( \
@@ -120,7 +120,7 @@ static const char *const ts_standards_list_text[] =
   { N_("Auto"), "MPEG", "DVB", "ARIB", "ATSC", "T-DMB" };
 
 #define STANDARD_TEXT N_("Digital TV Standard")
-#define STANDARD_LONGTEXT N_( "Selects mode for digital TV standard." \
+#define STANDARD_LONGTEXT N_( "Selects mode for digital TV standard. " \
                               "This feature affects EPG information and subtitles." )
 
 vlc_module_begin ()
@@ -262,6 +262,7 @@ static int DetectPVRHeadersAndHeaderSize( demux_t *p_demux, unsigned *pi_header_
         vlc_stream_Peek( p_demux->s, &p_peek, TOPFIELD_HEADER_SIZE + TS_PACKET_SIZE_MAX )
             == TOPFIELD_HEADER_SIZE + TS_PACKET_SIZE_MAX )
     {
+        const int i_service = GetWBE(&p_peek[18]);
         i_packet_size = DetectPacketSize( p_demux, pi_header_size, TOPFIELD_HEADER_SIZE );
         if( i_packet_size != -1 )
         {
@@ -329,7 +330,7 @@ static int DetectPVRHeadersAndHeaderSize( demux_t *p_demux, unsigned *pi_header_
             msg_Dbg( p_demux, "extended event text=%s", psz_ext_text );
             // 52 bytes reserved Bslbf
 #endif
-            p_vdr->i_service = GetWBE(&p_peek[18]);
+            p_vdr->i_service = i_service;
 
             return i_packet_size;
             //return TS_PACKET_SIZE_188;
@@ -415,7 +416,7 @@ static int Open( vlc_object_t *p_this )
     p_sys->b_access_control = ( VLC_SUCCESS == SetPIDFilter( p_sys, patpid, true ) );
 
     p_sys->i_pmt_es = 0;
-    p_sys->b_es_all = false;
+    p_sys->seltype = PROGRAM_AUTO_DEFAULT;
 
     /* Read config */
     p_sys->b_es_id_pid = var_CreateGetBool( p_demux, "ts-es-id-pid" );
@@ -609,6 +610,7 @@ static int Demux( demux_t *p_demux )
     {
         MissingPATPMTFixup( p_demux );
         p_sys->patfix.status = PAT_FIXTRIED;
+        GetPID(p_sys, 0)->u.p_pat->b_generated = true;
     }
 
     /* We read at most 100 TS packet or until a frame is completed */
@@ -698,7 +700,7 @@ static int Demux( demux_t *p_demux )
             {
                 msg_Dbg( p_demux, "Creating delayed ES" );
                 AddAndCreateES( p_demux, p_pid, true );
-                UpdatePESFilters( p_demux, p_sys->b_es_all );
+                UpdatePESFilters( p_demux, p_demux->p_sys->seltype == PROGRAM_ALL );
             }
 
             /* Emulate HW filter */
@@ -1055,27 +1057,32 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
 
             if( i_int != -1 )
             {
-                p_sys->b_es_all = false;
+                p_sys->seltype = PROGRAM_LIST;
                 ARRAY_APPEND( p_sys->programs, i_int );
                 UpdatePESFilters( p_demux, false );
             }
             else if( likely( p_list != NULL ) )
             {
-                p_sys->b_es_all = false;
+                p_sys->seltype = PROGRAM_LIST;
                 for( int i = 0; i < p_list->i_count; i++ )
                    ARRAY_APPEND( p_sys->programs, p_list->p_values[i].i_int );
                 UpdatePESFilters( p_demux, false );
             }
             else // All ES Mode
             {
-                p_sys->b_es_all = true;
                 p_pat = GetPID(p_sys, 0)->u.p_pat;
                 for( int i = 0; i < p_pat->programs.i_size; i++ )
                    ARRAY_APPEND( p_sys->programs, p_pat->programs.p_elems[i]->i_pid );
+                p_sys->seltype = PROGRAM_ALL;
                 UpdatePESFilters( p_demux, true );
             }
 
             p_sys->b_default_selection = false;
+        }
+        else
+        {
+            ARRAY_RESET( p_sys->programs );
+            p_sys->seltype = PROGRAM_AUTO_DEFAULT;
         }
 
         return VLC_SUCCESS;
@@ -1086,7 +1093,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         i_int = va_arg( args, int );
         msg_Dbg( p_demux, "DEMUX_SET_ES %d", i_int );
 
-        if( !p_sys->b_es_all ) /* Won't change anything */
+        if( p_demux->p_sys->seltype != PROGRAM_ALL ) /* Won't change anything */
             UpdatePESFilters( p_demux, false );
 
         return VLC_SUCCESS;
@@ -1139,7 +1146,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
         if( *pi_int <= 0 )
             return VLC_EGENERIC;
 
-        *ppp_attach = malloc( sizeof(input_attachment_t*) * *pi_int );
+        *ppp_attach = vlc_alloc( *pi_int, sizeof(input_attachment_t*) );
         if( !*ppp_attach )
             return VLC_EGENERIC;
 
@@ -1917,11 +1924,13 @@ static int SeekToTime( demux_t *p_demux, const ts_pmt_t *p_pmt, int64_t i_scaled
                 {
                     if( p_pkt->i_buffer >= 4 + 2 + 5 )
                     {
-                        i_pcr = GetPCR( p_pkt );
-                        i_skip += 1 + p_pkt->p_buffer[4];
+                        if( p_pmt->i_pid_pcr == i_pid )
+                            i_pcr = GetPCR( p_pkt );
+                        i_skip += 1 + __MIN(p_pkt->p_buffer[4], 182);
                     }
                 }
-                else
+
+                if( i_pcr == -1 )
                 {
                     mtime_t i_dts = -1;
                     mtime_t i_pts = -1;
@@ -2013,7 +2022,7 @@ static int ProbeChunk( demux_t *p_demux, int i_program, bool b_end, int64_t *pi_
                 uint8_t i_stream_id;
                 unsigned i_skip = 4;
                 if ( b_adaptfield ) // adaptation field
-                    i_skip += 1 + p_pkt->p_buffer[4];
+                    i_skip += 1 + __MIN(p_pkt->p_buffer[4], 182);
 
                 if ( VLC_SUCCESS == ParsePESHeader( VLC_OBJECT(p_demux), &p_pkt->p_buffer[i_skip],
                                                     p_pkt->i_buffer - i_skip, &i_skip,
@@ -2369,7 +2378,7 @@ static void PCRFixHandle( demux_t *p_demux, ts_pmt_t *p_pmt, block_t *p_block )
                 p_pmt->pcr.b_disable = true;
             msg_Warn( p_demux, "No PCR received for program %d, set up workaround using pid %d",
                       p_pmt->i_number, i_cand );
-            UpdatePESFilters( p_demux, p_demux->p_sys->b_es_all );
+            UpdatePESFilters( p_demux, p_demux->p_sys->seltype == PROGRAM_ALL );
         }
         p_pmt->pcr.b_fix_done = true;
     }
@@ -2746,6 +2755,9 @@ void TsChangeStandard( demux_sys_t *p_sys, ts_standards_e v )
 
 bool ProgramIsSelected( demux_sys_t *p_sys, uint16_t i_pgrm )
 {
+    if( p_sys->seltype == PROGRAM_ALL )
+        return true;
+
     for(int i=0; i<p_sys->programs.i_size; i++)
         if( p_sys->programs.p_elems[i] == i_pgrm )
             return true;

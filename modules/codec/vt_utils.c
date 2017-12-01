@@ -22,6 +22,8 @@
 # include "config.h"
 #endif
 
+#include <vlc_atomic.h>
+
 #include "vt_utils.h"
 
 CFMutableDictionaryRef
@@ -44,6 +46,10 @@ struct cvpxpic_ctx
 {
     picture_context_t s;
     CVPixelBufferRef cvpx;
+
+    atomic_uint ref_count;
+    void (*on_released_cb)(void *);
+    void *on_released_data;
 };
 
 static void
@@ -51,38 +57,59 @@ cvpxpic_destroy_cb(picture_context_t *opaque)
 {
     struct cvpxpic_ctx *ctx = (struct cvpxpic_ctx *)opaque;
 
-    CFRelease(ctx->cvpx);
-    free(opaque);
+    if (atomic_fetch_sub(&ctx->ref_count, 1) == 1)
+    {
+        CFRelease(ctx->cvpx);
+        if (ctx->on_released_cb)
+            ctx->on_released_cb(ctx->on_released_data);
+        free(opaque);
+    }
 }
 
 static picture_context_t *
 cvpxpic_copy_cb(struct picture_context_t *opaque)
 {
-    struct cvpxpic_ctx *src_ctx = (struct cvpxpic_ctx *)opaque;
-    struct cvpxpic_ctx *dst_ctx = malloc(sizeof(struct cvpxpic_ctx));
-    if (dst_ctx == NULL)
-        return NULL;
-    *dst_ctx = *src_ctx;
-    dst_ctx->cvpx = CVPixelBufferRetain(dst_ctx->cvpx);
-    return &dst_ctx->s;
+    struct cvpxpic_ctx *ctx = (struct cvpxpic_ctx *)opaque;
+    atomic_fetch_add(&ctx->ref_count, 1);
+    return opaque;
 }
 
-int
-cvpxpic_attach(picture_t *p_pic, CVPixelBufferRef cvpx)
+static int
+cvpxpic_attach_common(picture_t *p_pic, CVPixelBufferRef cvpx,
+                      void (*pf_destroy)(picture_context_t *),
+                      void (*on_released_cb)(void *), void *on_released_data)
 {
-    /* will be freed by the vout */
     struct cvpxpic_ctx *ctx = malloc(sizeof(struct cvpxpic_ctx));
     if (ctx == NULL)
     {
         picture_Release(p_pic);
         return VLC_ENOMEM;
     }
-    ctx->s.destroy = cvpxpic_destroy_cb;
+    ctx->s.destroy = pf_destroy;
     ctx->s.copy = cvpxpic_copy_cb;
     ctx->cvpx = CVPixelBufferRetain(cvpx);
+    atomic_init(&ctx->ref_count, 1);
+
+    ctx->on_released_cb = on_released_cb;
+    ctx->on_released_data = on_released_data;
+
     p_pic->context = &ctx->s;
 
     return VLC_SUCCESS;
+}
+
+int
+cvpxpic_attach(picture_t *p_pic, CVPixelBufferRef cvpx)
+{
+    return cvpxpic_attach_common(p_pic, cvpx, cvpxpic_destroy_cb, NULL, NULL);
+}
+
+int cvpxpic_attach_with_cb(picture_t *p_pic, CVPixelBufferRef cvpx,
+                           void (*on_released_cb)(void *),
+                           void *on_released_data)
+{
+    return cvpxpic_attach_common(p_pic, cvpx, cvpxpic_destroy_cb, on_released_cb,
+                                 on_released_data);
 }
 
 CVPixelBufferRef
@@ -93,21 +120,21 @@ cvpxpic_get_ref(picture_t *pic)
 }
 
 static void
-cvpxpic_destroy_mapped_ro_cb(picture_t *pic)
+cvpxpic_destroy_mapped_ro_cb(picture_context_t *opaque)
 {
-    CVPixelBufferRef cvpx = (void *) pic->p_sys;
-    CVPixelBufferUnlockBaseAddress(cvpx, kCVPixelBufferLock_ReadOnly);
-    CFRelease(cvpx);
-    free(pic);
+    struct cvpxpic_ctx *ctx = (struct cvpxpic_ctx *)opaque;
+
+    CVPixelBufferUnlockBaseAddress(ctx->cvpx, kCVPixelBufferLock_ReadOnly);
+    cvpxpic_destroy_cb(opaque);
 }
 
 static void
-cvpxpic_destroy_mapped_rw_cb(picture_t *pic)
+cvpxpic_destroy_mapped_rw_cb(picture_context_t *opaque)
 {
-    CVPixelBufferRef cvpx = (void *) pic->p_sys;
-    CVPixelBufferUnlockBaseAddress(cvpx, 0);
-    CFRelease(cvpx);
-    free(pic);
+    struct cvpxpic_ctx *ctx = (struct cvpxpic_ctx *)opaque;
+
+    CVPixelBufferUnlockBaseAddress(ctx->cvpx, 0);
+    cvpxpic_destroy_cb(opaque);
 }
 
 picture_t *
@@ -126,11 +153,7 @@ cvpxpic_create_mapped(const video_format_t *fmt, CVPixelBufferRef cvpx,
 
     CVPixelBufferLockFlags lock = readonly ? kCVPixelBufferLock_ReadOnly : 0;
     CVPixelBufferLockBaseAddress(cvpx, lock);
-    picture_resource_t rsc = {
-        .p_sys = (void *)cvpx,
-        .pf_destroy = readonly ? cvpxpic_destroy_mapped_ro_cb
-                               : cvpxpic_destroy_mapped_rw_cb,
-    };
+    picture_resource_t rsc = { };
 
 #ifndef NDEBUG
     assert(CVPixelBufferGetPlaneCount(cvpx) == planes_count);
@@ -152,13 +175,16 @@ cvpxpic_create_mapped(const video_format_t *fmt, CVPixelBufferRef cvpx,
         }
     }
 
+    void (*pf_destroy)(picture_context_t *) = readonly ?
+        cvpxpic_destroy_mapped_ro_cb : cvpxpic_destroy_mapped_rw_cb;
+
     picture_t *pic = picture_NewFromResource(fmt, &rsc);
-    if (pic == NULL)
+    if (pic == NULL
+     || cvpxpic_attach_common(pic, cvpx, pf_destroy, NULL, NULL) != VLC_SUCCESS)
     {
         CVPixelBufferUnlockBaseAddress(cvpx, lock);
         return NULL;
     }
-    CVPixelBufferRetain(cvpx);
     return pic;
 }
 
@@ -177,7 +203,7 @@ cvpxpic_unmap(picture_t *mapped_pic)
             picture_Release(mapped_pic);
             return NULL;
     }
-    assert(mapped_pic->p_sys != NULL);
+    assert(mapped_pic->context != NULL);
 
     picture_t *hw_pic = picture_NewFromFormat(&fmt);
     if (hw_pic == NULL)
@@ -186,7 +212,7 @@ cvpxpic_unmap(picture_t *mapped_pic)
         return NULL;
     }
 
-    cvpxpic_attach(hw_pic, (void *)mapped_pic->p_sys);
+    cvpxpic_attach(hw_pic, cvpxpic_get_ref(mapped_pic));
     picture_CopyProperties(hw_pic, mapped_pic);
     picture_Release(mapped_pic);
     return hw_pic;

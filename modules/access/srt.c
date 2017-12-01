@@ -70,7 +70,6 @@ static void srt_wait_interrupted(void *p_data)
 
 static int Control(stream_t *p_stream, int i_query, va_list args)
 {
-    stream_sys_t *p_sys = p_stream->p_sys;
     int i_ret = VLC_SUCCESS;
 
     switch( i_query )
@@ -173,7 +172,7 @@ static int Open(vlc_object_t *p_this)
     }, *res = NULL;
     int stat;
 
-    p_sys = vlc_malloc( p_this, sizeof( *p_sys ) );
+    p_sys = vlc_obj_malloc( p_this, sizeof( *p_sys ) );
     if( unlikely( p_sys == NULL ) )
         return VLC_ENOMEM;
 
@@ -217,7 +216,7 @@ static int Open(vlc_object_t *p_this)
     srt_setsockopt( p_sys->sock, 0, SRTO_TSBPDMODE, &(int) { 1 }, sizeof( int ) );
 
     /* Set latency */
-    srt_setsockopt( p_sys->sock, 0, SRTO_TSBPDDELAY, &p_sys->latency, sizeof( int ) );
+    srt_setsockopt( p_sys->sock, 0, SRTO_TSBPDDELAY, &p_sys->i_latency, sizeof( int ) );
 
     p_sys->i_poll_id = srt_epoll_create();
     if ( p_sys->i_poll_id == -1 )
