@@ -308,7 +308,7 @@ static int Open (vlc_object_t *this)
 
         /* Setup vout_display_t once everything is fine */
         vd->info = info;
-        
+
         vd->pool = Pool;
         vd->prepare = PictureRender;
         vd->display = PictureDisplay;
@@ -374,8 +374,9 @@ static int Open (vlc_object_t *this)
 #else
         vout_display_SendEventDisplaySize (vd, vd->fmt.i_visible_width, vd->fmt.i_visible_height);
 #endif
+
         return VLC_SUCCESS;
-        
+
     error:
         Close(this);
         return VLC_EGENERIC;
@@ -503,9 +504,6 @@ static int Control (vout_display_t *vd, int query, va_list ap)
     vout_display_sys_t *sys = vd->sys;
 
     if (!vd->sys)
-        return VLC_EGENERIC;
-
-    if (!sys->embed)
         return VLC_EGENERIC;
 
     @autoreleasepool {
