@@ -34,6 +34,8 @@
 
 #include "d3d9_filters.h"
 
+const char vlc_module_name[] = MODULE_STRING;
+
 static vlc_mutex_t inst_lock = VLC_STATIC_MUTEX;
 static d3d9_device_t device = { .dev = NULL };
 static size_t instances = 0;

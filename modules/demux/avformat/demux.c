@@ -328,9 +328,12 @@ int avformat_OpenDemux( vlc_object_t *p_this )
     free( psz_url );
 
     char *psz_opts = var_InheritString( p_demux, "avformat-options" );
-    unsigned nb_streams = p_sys->ic->nb_streams;
 
-    AVDictionary *options[nb_streams ? nb_streams : 1];
+	//vz AVDictionary *options[p_sys->ic->nb_streams ? p_sys->ic->nb_streams : 1];
+	AVDictionary **options = NULL;
+	int len = p_sys->ic->nb_streams ? p_sys->ic->nb_streams : 1;
+	options = malloc(sizeof(AVDictionary *)*len);
+    unsigned nb_streams = p_sys->ic->nb_streams;
     options[0] = NULL;
     for (unsigned i = 1; i < nb_streams; i++)
         options[i] = NULL;

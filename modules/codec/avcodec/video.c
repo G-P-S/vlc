@@ -48,6 +48,7 @@
 
 #ifdef COMPILE_VS2013
  #include "../cc.h" //vz
+#include "src/misc/picture.c"
 #else
 #include "../codec/cc.h"
 #endif
@@ -1528,15 +1529,14 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
             can_hwaccel = true;
     }
 #if defined(_WIN32) && LIBAVUTIL_VERSION_CHECK(54, 13, 1, 24, 100)
-    size_t count;
-    for (count = 0; pi_fmt[count] != AV_PIX_FMT_NONE; count++);
-    enum PixelFormat p_fmts[count + 1];
-    if (pi_fmt[0] == AV_PIX_FMT_DXVA2_VLD && pi_fmt[1] == AV_PIX_FMT_D3D11VA_VLD)
+	//vz  enum PixelFormat p_fmts[i+1];
+	enum PixelFormat p_fmts[AV_PIX_FMT_NB + 1]; //vz ugly
+	if (pi_fmt[0] == AV_PIX_FMT_DXVA2_VLD && pi_fmt[1] == AV_PIX_FMT_D3D11VA_VLD)
     {
         /* favor D3D11VA over DXVA2 as the order will decide which vout will be
          * used */
-        memcpy(p_fmts, pi_fmt, sizeof(p_fmts));
-        p_fmts[0] = AV_PIX_FMT_D3D11VA_VLD;
+		memcpy(p_fmts, pi_fmt, sizeof(p_fmts));
+		p_fmts[0] = AV_PIX_FMT_D3D11VA_VLD;
         p_fmts[1] = AV_PIX_FMT_DXVA2_VLD;
         pi_fmt = p_fmts;
     }

@@ -14,7 +14,7 @@
 
 #define snwprintf		_snwprintf
 
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
 #define inline			__inline
 #endif
 

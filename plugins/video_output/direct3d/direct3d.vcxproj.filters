@@ -34,5 +34,8 @@
     <ClCompile Include="..\..\..\modules\video_output\win32\sensors.cpp">
       <Filter>Source Files\modules\video_output</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

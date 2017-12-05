@@ -40,6 +40,7 @@
 /*****************************************************************************
  * Required system headers
  *****************************************************************************/
+
 #include <stdlib.h>
 #include <stdarg.h>
 
@@ -683,13 +684,14 @@ static inline bool uaddll_overflow(unsigned long long a, unsigned long long b,
 #endif
 }
 
-#ifndef __cplusplus
+#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
 # define add_overflow(a,b,r) \
     _Generic(*(r), \
         unsigned: uadd_overflow(a, b, (unsigned *)(r)), \
         unsigned long: uaddl_overflow(a, b, (unsigned long *)(r)), \
         unsigned long long: uaddll_overflow(a, b, (unsigned long long *)(r)))
 #else
+/*
 static inline bool add_overflow(unsigned a, unsigned b, unsigned *res)
 {
     return uadd_overflow(a, b, res);
@@ -700,7 +702,7 @@ static inline bool add_overflow(unsigned long a, unsigned long b,
 {
     return uaddl_overflow(a, b, res);
 }
-
+*/
 static inline bool add_overflow(unsigned long long a, unsigned long long b,
                                 unsigned long long *res)
 {
@@ -756,13 +758,13 @@ static inline bool mul_overflow(unsigned a, unsigned b, unsigned *res)
 {
     return umul_overflow(a, b, res);
 }
-*/
+
 static inline bool mul_overflow(unsigned long a, unsigned long b,
                                 unsigned long *res)
 {
     return umull_overflow(a, b, res);
 }
-
+*/
 static inline bool mul_overflow(unsigned long long a, unsigned long long b,
                                 unsigned long long *res)
 {

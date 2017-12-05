@@ -284,7 +284,7 @@ picture_CopyPixels
 picture_CopyProperties
 picture_Export
 picture_Hold
-picture_IsReferenced
+;picture_IsReferenced
 picture_New
 picture_NewFromFormat
 picture_NewFromResource
@@ -437,7 +437,7 @@ video_format_TransformBy
 video_format_TransformTo
 video_splitter_Delete
 video_splitter_New
-vlc_calloc
+vlc_obj_calloc
 vlc_CPU
 vlc_GetCPUCount
 vlc_Log
@@ -573,7 +573,7 @@ vlc_list_release
 vlc_loaddir
 vlc_lrand48
 vlc_lstat
-vlc_malloc
+vlc_obj_malloc
 vlc_memfd
 vlc_memstream_close
 vlc_memstream_flush

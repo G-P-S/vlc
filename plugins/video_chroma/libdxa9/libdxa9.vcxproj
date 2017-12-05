@@ -307,8 +307,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dllsrc\dllmain.cpp" />
+    <ClCompile Include="..\..\..\modules\hw\d3d9\d3d9_instance.c" />
     <ClCompile Include="..\..\..\modules\video_chroma\copy.c" />
-    <ClCompile Include="..\..\..\modules\video_chroma\dxa9.c" />
+    <ClCompile Include="..\..\..\modules\hw\d3d9\dxa9.c" />
+    <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\libvlccore\libvlccore.vcxproj">

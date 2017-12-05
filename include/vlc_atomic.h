@@ -32,9 +32,10 @@
 # endif
 #endif
 
-
+ 
 # ifndef __cplusplus
-#  if !defined (__STDC_NO_ATOMICS__)
+
+#  if !defined (__STDC_NO_ATOMICS__) && !defined(COMPILE_VS2013)
 /*** Native C11 atomics ***/
 #   include <stdatomic.h>
 

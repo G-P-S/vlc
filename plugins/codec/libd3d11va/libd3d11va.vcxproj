@@ -283,7 +283,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBD3D11VA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MODULE_STRING="d3d11va";WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBD3D11VA_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
@@ -299,6 +299,7 @@
     <ClCompile Include="..\..\..\modules\codec\avcodec\va_surface.c" />
     <ClCompile Include="..\..\..\modules\packetizer\h264_nal.c" />
     <ClCompile Include="..\..\..\modules\packetizer\hevc_nal.c" />
+    <ClCompile Include="..\..\..\modules\video_chroma\d3d11_fmt.c" />
     <ClCompile Include="..\..\..\modules\video_chroma\dxgi_fmt.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

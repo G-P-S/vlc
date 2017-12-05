@@ -378,7 +378,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>COMPILE_VS2013;HAVE_STRUCT_TIMESPEC;HAVE_SENDMSG;HAVE_RECVMSG;WIN32; HAVE_STRUCT_POLLFD;NDEBUG;_WINDOWS;_USRDLL;LIBVLC_EXPORTS;%(PreprocessorDefinitions);HAVE_NANF</PreprocessorDefinitions>
+      <PreprocessorDefinitions>COMPILE_VS2013;HAVE_STRUCT_TIMESPEC;HAVE_SENDMSG;HAVE_RECVMSG;WIN32; HAVE_STRUCT_POLLFD;NDEBUG;_WINDOWS;_USRDLL;LIBVLC_EXPORTS;%(PreprocessorDefinitions);HAVE_NANF;</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
