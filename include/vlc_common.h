@@ -957,7 +957,7 @@ VLC_API bool vlc_ureduce( unsigned *, unsigned *, uint64_t, uint64_t, uint64_t )
 VLC_USED VLC_MALLOC
 static inline void *vlc_alloc(size_t count, size_t size)
 {
-    return mul_overflow(count, size, &size) ? NULL : malloc(size);
+    return mul_overflow((unsigned long long)count, (unsigned long long)size, (unsigned long long *)&size) ? NULL : malloc(size);
 }
 
 /*****************************************************************************
