@@ -230,8 +230,10 @@ int D3D9_Create(vlc_object_t *o, d3d9_handle_t *hd3d)
     if (OurDirect3DCreate9Ex) {
         HRESULT hr = OurDirect3DCreate9Ex(D3D_SDK_VERSION, &hd3d->objex);
         if(!FAILED(hr)) {
-            msg_Dbg(o, "Using Direct3D9 Extended API!");
-            hd3d->use_ex = true;
+            /* prevent using Direct3D9 EX , crash when create Direct3D9 EX Device
+			msg_Dbg(o, "Using Direct3D9 Extended API!");
+			hd3d->use_ex = true;
+			*/
         }
     }
 
