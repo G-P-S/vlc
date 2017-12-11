@@ -49,16 +49,13 @@
 
 #define SPHERE_RADIUS 1.f
 
-#ifndef NDEBUG
-# define HAVE_GL_ASSERT_NOERROR
-#endif
-
-#ifdef __APPLE__
 /* FIXME: GL_ASSERT_NOERROR disabled for now because:
+ * Proper GL error handling need to be implemented
  * glClear(GL_COLOR_BUFFER_BIT) throws a GL_INVALID_FRAMEBUFFER_OPERATION on macOS
  * assert fails on vout_display_opengl_Delete on iOS
  */
-# undef HAVE_GL_ASSERT_NOERROR
+#if 0
+# define HAVE_GL_ASSERT_NOERROR
 #endif
 
 #ifdef HAVE_GL_ASSERT_NOERROR
@@ -371,29 +368,30 @@ static GLuint BuildVertexShader(const opengl_tex_converter_t *tc,
     /* Basic vertex shader */
     static const char *template =
         "#version %u\n"
-        "varying vec2 TexCoord0;attribute vec4 MultiTexCoord0;"
+        "varying vec2 TexCoord0;\n"
+        "attribute vec4 MultiTexCoord0;\n"
         "%s%s"
-        "attribute vec3 VertexPosition;"
-        "uniform mat4 OrientationMatrix;"
-        "uniform mat4 ProjectionMatrix;"
-        "uniform mat4 XRotMatrix;"
-        "uniform mat4 YRotMatrix;"
-        "uniform mat4 ZRotMatrix;"
-        "uniform mat4 ZoomMatrix;"
-        "void main() {"
-        " TexCoord0 = vec4(OrientationMatrix * MultiTexCoord0).st;"
+        "attribute vec3 VertexPosition;\n"
+        "uniform mat4 OrientationMatrix;\n"
+        "uniform mat4 ProjectionMatrix;\n"
+        "uniform mat4 XRotMatrix;\n"
+        "uniform mat4 YRotMatrix;\n"
+        "uniform mat4 ZRotMatrix;\n"
+        "uniform mat4 ZoomMatrix;\n"
+        "void main() {\n"
+        " TexCoord0 = vec4(OrientationMatrix * MultiTexCoord0).st;\n"
         "%s%s"
-        " gl_Position = ProjectionMatrix * ZoomMatrix * ZRotMatrix * XRotMatrix * YRotMatrix * vec4(VertexPosition, 1.0);"
+        " gl_Position = ProjectionMatrix * ZoomMatrix * ZRotMatrix * XRotMatrix * YRotMatrix * vec4(VertexPosition, 1.0);\n"
         "}";
 
     const char *coord1_header = plane_count > 1 ?
-        "varying vec2 TexCoord1;attribute vec4 MultiTexCoord1;" : "";
+        "varying vec2 TexCoord1;\nattribute vec4 MultiTexCoord1;\n" : "";
     const char *coord1_code = plane_count > 1 ?
-        " TexCoord1 = vec4(OrientationMatrix * MultiTexCoord1).st;" : "";
+        " TexCoord1 = vec4(OrientationMatrix * MultiTexCoord1).st;\n" : "";
     const char *coord2_header = plane_count > 2 ?
-        "varying vec2 TexCoord2;attribute vec4 MultiTexCoord2;" : "";
+        "varying vec2 TexCoord2;\nattribute vec4 MultiTexCoord2;\n" : "";
     const char *coord2_code = plane_count > 2 ?
-        " TexCoord2 = vec4(OrientationMatrix * MultiTexCoord2).st;" : "";
+        " TexCoord2 = vec4(OrientationMatrix * MultiTexCoord2).st;\n" : "";
 
     char *code;
     if (asprintf(&code, template, tc->glsl_version, coord1_header, coord2_header,
@@ -402,6 +400,9 @@ static GLuint BuildVertexShader(const opengl_tex_converter_t *tc,
 
     GLuint shader = tc->vt->CreateShader(GL_VERTEX_SHADER);
     tc->vt->ShaderSource(shader, 1, (const char **) &code, NULL);
+    if (tc->b_dump_shaders)
+        msg_Dbg(tc->gl, "\n=== Vertex shader for fourcc: %4.4s ===\n%s\n",
+                (const char *)&tc->fmt.i_chroma, code);
     tc->vt->CompileShader(shader);
     free(code);
     return shader;
@@ -565,14 +566,37 @@ opengl_deinit_program(vout_display_opengl_t *vgl, struct prgm *prgm)
         module_unneed(tc, tc->p_module);
     else if (tc->priv != NULL)
         opengl_tex_converter_generic_deinit(tc);
-    vlc_object_release(tc);
     if (prgm->id != 0)
         vgl->vt.DeleteProgram(prgm->id);
+
+#ifdef HAVE_LIBPLACEBO
+    FREENULL(tc->uloc.pl_vars);
+    if (tc->pl_ctx)
+        pl_context_destroy(&tc->pl_ctx);
+#endif
+
+    vlc_object_release(tc);
 }
+
+#ifdef HAVE_LIBPLACEBO
+static void
+log_cb(void *priv, enum pl_log_level level, const char *msg)
+{
+    opengl_tex_converter_t *tc = priv;
+    switch (level) {
+    case PL_LOG_FATAL: // fall through
+    case PL_LOG_ERR:  msg_Err(tc->gl, "%s", msg); break;
+    case PL_LOG_WARN: msg_Warn(tc->gl,"%s", msg); break;
+    case PL_LOG_INFO: msg_Info(tc->gl,"%s", msg); break;
+    default: break;
+    }
+}
+#endif
 
 static int
 opengl_init_program(vout_display_opengl_t *vgl, struct prgm *prgm,
-                    const char *glexts, const video_format_t *fmt, bool subpics)
+                    const char *glexts, const video_format_t *fmt, bool subpics,
+                    bool b_dump_shaders)
 {
     opengl_tex_converter_t *tc =
         vlc_object_create(vgl->gl, sizeof(opengl_tex_converter_t));
@@ -581,6 +605,7 @@ opengl_init_program(vout_display_opengl_t *vgl, struct prgm *prgm,
 
     tc->gl = vgl->gl;
     tc->vt = &vgl->vt;
+    tc->b_dump_shaders = b_dump_shaders;
     tc->pf_fragment_shader_init = opengl_fragment_shader_init_impl;
     tc->glexts = glexts;
 #if defined(USE_OPENGL_ES2)
@@ -594,6 +619,20 @@ opengl_init_program(vout_display_opengl_t *vgl, struct prgm *prgm,
 #endif
     tc->fmt = *fmt;
 
+#ifdef HAVE_LIBPLACEBO
+    // create the main libplacebo context
+    if (!subpics)
+    {
+        tc->pl_ctx = pl_context_create(PL_API_VER, &(struct pl_context_params) {
+            .log_cb    = log_cb,
+            .log_priv  = tc,
+            .log_level = PL_LOG_INFO,
+        });
+        if (tc->pl_ctx)
+            tc->pl_sh = pl_shader_alloc(tc->pl_ctx, NULL, 0);
+    }
+#endif
+
     int ret;
     if (subpics)
     {
@@ -601,6 +640,9 @@ opengl_init_program(vout_display_opengl_t *vgl, struct prgm *prgm,
         /* Normal orientation and no projection for subtitles */
         tc->fmt.orientation = ORIENT_NORMAL;
         tc->fmt.projection_mode = PROJECTION_MODE_RECTANGULAR;
+        tc->fmt.primaries = COLOR_PRIMARIES_UNDEF;
+        tc->fmt.transfer = TRANSFER_FUNC_UNDEF;
+        tc->fmt.space = COLOR_SPACE_UNDEF;
 
         ret = opengl_tex_converter_generic_init(tc, false);
     }
@@ -723,7 +765,7 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
 } while(0)
 #if defined(USE_OPENGL_ES2)
 #define GET_PROC_ADDR(name) GET_PROC_ADDR_CORE(name)
-#define GET_PROC_ADDR_CORE_GL(name) vgl->vt.name = NULL /* GL only functions (not GLES) */
+#define GET_PROC_ADDR_CORE_GL(name) GET_PROC_ADDR_EXT(name, false) /* optional for GLES */
 #else
 #define GET_PROC_ADDR(name) GET_PROC_ADDR_EXT(name, true)
 #define GET_PROC_ADDR_CORE_GL(name) GET_PROC_ADDR_CORE(name)
@@ -760,9 +802,13 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
     GET_PROC_ADDR(VertexAttribPointer);
     GET_PROC_ADDR(EnableVertexAttribArray);
     GET_PROC_ADDR(UniformMatrix4fv);
+    GET_PROC_ADDR(UniformMatrix3fv);
+    GET_PROC_ADDR(UniformMatrix2fv);
     GET_PROC_ADDR(Uniform4fv);
     GET_PROC_ADDR(Uniform4f);
+    GET_PROC_ADDR(Uniform3f);
     GET_PROC_ADDR(Uniform2f);
+    GET_PROC_ADDR(Uniform1f);
     GET_PROC_ADDR(Uniform1i);
 
     GET_PROC_ADDR(CreateProgram);
@@ -805,12 +851,15 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
                          HasExtension(extensions, "GL_APPLE_texture_2D_limited_npot");
 #endif
 
+    bool b_dump_shaders = var_InheritInteger(gl, "verbose") >= 4;
+
     vgl->prgm = &vgl->prgms[0];
     vgl->sub_prgm = &vgl->prgms[1];
 
     GL_ASSERT_NOERROR();
     int ret;
-    ret = opengl_init_program(vgl, vgl->prgm, extensions, fmt, false);
+    ret = opengl_init_program(vgl, vgl->prgm, extensions, fmt, false,
+                              b_dump_shaders);
     if (ret != VLC_SUCCESS)
     {
         msg_Warn(gl, "could not init tex converter for %4.4s",
@@ -820,7 +869,8 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
     }
 
     GL_ASSERT_NOERROR();
-    ret = opengl_init_program(vgl, vgl->sub_prgm, extensions, fmt, true);
+    ret = opengl_init_program(vgl, vgl->sub_prgm, extensions, fmt, true,
+                              b_dump_shaders);
     if (ret != VLC_SUCCESS)
     {
         msg_Warn(gl, "could not init subpictures tex converter for %4.4s",
@@ -879,7 +929,7 @@ vout_display_opengl_t *vout_display_opengl_New(video_format_t *fmt,
 
     /* Initial number of allocated buffer objects for subpictures, will grow dynamically. */
     int subpicture_buffer_object_count = 8;
-    vgl->subpicture_buffer_object = malloc(subpicture_buffer_object_count * sizeof(GLuint));
+    vgl->subpicture_buffer_object = vlc_alloc(subpicture_buffer_object_count, sizeof(GLuint));
     if (!vgl->subpicture_buffer_object) {
         vout_display_opengl_Delete(vgl);
         return NULL;
@@ -1165,16 +1215,16 @@ static int BuildSphere(unsigned nbPlanes,
     *nbVertices = (nbLatBands + 1) * (nbLonBands + 1);
     *nbIndices = nbLatBands * nbLonBands * 3 * 2;
 
-    *vertexCoord = malloc(*nbVertices * 3 * sizeof(GLfloat));
+    *vertexCoord = vlc_alloc(*nbVertices * 3, sizeof(GLfloat));
     if (*vertexCoord == NULL)
         return VLC_ENOMEM;
-    *textureCoord = malloc(nbPlanes * *nbVertices * 2 * sizeof(GLfloat));
+    *textureCoord = vlc_alloc(nbPlanes * *nbVertices * 2, sizeof(GLfloat));
     if (*textureCoord == NULL)
     {
         free(*vertexCoord);
         return VLC_ENOMEM;
     }
-    *indices = malloc(*nbIndices * sizeof(GLushort));
+    *indices = vlc_alloc(*nbIndices, sizeof(GLushort));
     if (*indices == NULL)
     {
         free(*textureCoord);
@@ -1248,16 +1298,16 @@ static int BuildCube(unsigned nbPlanes,
     *nbVertices = 4 * 6;
     *nbIndices = 6 * 6;
 
-    *vertexCoord = malloc(*nbVertices * 3 * sizeof(GLfloat));
+    *vertexCoord = vlc_alloc(*nbVertices * 3, sizeof(GLfloat));
     if (*vertexCoord == NULL)
         return VLC_ENOMEM;
-    *textureCoord = malloc(nbPlanes * *nbVertices * 2 * sizeof(GLfloat));
+    *textureCoord = vlc_alloc(nbPlanes * *nbVertices * 2, sizeof(GLfloat));
     if (*textureCoord == NULL)
     {
         free(*vertexCoord);
         return VLC_ENOMEM;
     }
-    *indices = malloc(*nbIndices * sizeof(GLushort));
+    *indices = vlc_alloc(*nbIndices, sizeof(GLushort));
     if (*indices == NULL)
     {
         free(*textureCoord);
@@ -1372,16 +1422,16 @@ static int BuildRectangle(unsigned nbPlanes,
     *nbVertices = 4;
     *nbIndices = 6;
 
-    *vertexCoord = malloc(*nbVertices * 3 * sizeof(GLfloat));
+    *vertexCoord = vlc_alloc(*nbVertices * 3, sizeof(GLfloat));
     if (*vertexCoord == NULL)
         return VLC_ENOMEM;
-    *textureCoord = malloc(nbPlanes * *nbVertices * 2 * sizeof(GLfloat));
+    *textureCoord = vlc_alloc(nbPlanes * *nbVertices * 2, sizeof(GLfloat));
     if (*textureCoord == NULL)
     {
         free(*vertexCoord);
         return VLC_ENOMEM;
     }
-    *indices = malloc(*nbIndices * sizeof(GLushort));
+    *indices = vlc_alloc(*nbIndices, sizeof(GLushort));
     if (*indices == NULL)
     {
         free(*textureCoord);
@@ -1539,6 +1589,55 @@ void vout_display_opengl_SetFboId(vout_display_opengl_t *vgl, GLuint id)
     vgl->fboId = id;
 }
 
+
+static void GetTextureCropParamsForStereo(unsigned i_nbTextures,
+                                          const float *stereoCoefs,
+                                          const float *stereoOffsets,
+                                          float *left, float *top,
+                                          float *right, float *bottom)
+{
+    for (unsigned i = 0; i < i_nbTextures; ++i)
+    {
+        float f_2eyesWidth = right[i] - left[i];
+        left[i] = left[i] + f_2eyesWidth * stereoOffsets[0];
+        right[i] = left[i] + f_2eyesWidth * stereoCoefs[0];
+
+        float f_2eyesHeight = bottom[i] - top[i];
+        top[i] = top[i] + f_2eyesHeight * stereoOffsets[1];
+        bottom[i] = top[i] + f_2eyesHeight * stereoCoefs[1];
+    }
+}
+
+static void TextureCropForStereo(vout_display_opengl_t *vgl,
+                                 float *left, float *top,
+                                 float *right, float *bottom)
+{
+    float stereoCoefs[2];
+    float stereoOffsets[2];
+
+    switch (vgl->fmt.multiview_mode)
+    {
+    case MULTIVIEW_STEREO_TB:
+        // Display only the left eye.
+        stereoCoefs[0] = 1; stereoCoefs[1] = 0.5;
+        stereoOffsets[0] = 0; stereoOffsets[1] = 0;
+        GetTextureCropParamsForStereo(vgl->prgm->tc->tex_count,
+                                      stereoCoefs, stereoOffsets,
+                                      left, top, right, bottom);
+        break;
+    case MULTIVIEW_STEREO_SBS:
+        // Display only the left eye.
+        stereoCoefs[0] = 0.5; stereoCoefs[1] = 1;
+        stereoOffsets[0] = 0; stereoOffsets[1] = 0;
+        GetTextureCropParamsForStereo(vgl->prgm->tc->tex_count,
+                                      stereoCoefs, stereoOffsets,
+                                      left, top, right, bottom);
+        break;
+    default:
+        break;
+    }
+}
+
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,
                                 const video_format_t *source)
 {
@@ -1585,6 +1684,7 @@ int vout_display_opengl_Display(vout_display_opengl_t *vgl,
             bottom[j] = (source->i_y_offset + source->i_visible_height) * scale_h;
         }
 
+        TextureCropForStereo(vgl, left, top, right, bottom);
         int ret = SetupCoords(vgl, left, top, right, bottom);
         if (ret != VLC_SUCCESS)
             return ret;

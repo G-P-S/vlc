@@ -64,6 +64,7 @@ typedef struct
     ttml_length_t   font_size;
     ttml_length_t   extent_h, extent_v;
     int             i_text_align;
+    bool            b_text_align_set;
     int             i_direction;
     bool            b_direction_set;
     bool            b_preserve_space;
@@ -81,6 +82,7 @@ typedef struct
     tt_node_t *      p_rootnode; /* for now. FIXME: split header */
     ttml_length_t    root_extent_h, root_extent_v;
     unsigned         i_cell_resolution_v;
+    unsigned         i_cell_resolution_h;
 } ttml_context_t;
 
 typedef struct
@@ -186,8 +188,9 @@ static ttml_region_t *ttml_region_New( )
 
     SubpictureUpdaterSysRegionInit( &p_ttml_region->updt );
     p_ttml_region->pp_last_segment = &p_ttml_region->updt.p_segments;
-    /* Align to bottom by default. !Warn: center align is obtained with NO flags */
-    p_ttml_region->updt.align = SUBPICTURE_ALIGN_BOTTOM;
+    /* Align to top by default. !Warn: center align is obtained with NO flags */
+    p_ttml_region->updt.align = SUBPICTURE_ALIGN_TOP|SUBPICTURE_ALIGN_LEFT;
+    p_ttml_region->updt.inner_align = SUBPICTURE_ALIGN_TOP|SUBPICTURE_ALIGN_LEFT;
 
     return p_ttml_region;
 }
@@ -350,47 +353,54 @@ static void FillTextStyle( const char *psz_attr, const char *psz_val,
 }
 
 static void FillRegionStyle( const char *psz_attr, const char *psz_val,
-                             ttml_region_t *p_region )
+                             ttml_context_t *p_ctx, ttml_region_t *p_region )
 {
     if( !strcasecmp( "tts:displayAlign", psz_attr ) )
     {
-        if( !strcasecmp ( "top", psz_val ) )
-            p_region->updt.align = SUBPICTURE_ALIGN_TOP;
-        else if( !strcasecmp ( "center", psz_val ) )
-            p_region->updt.align = 0;
-        else
-            p_region->updt.align = SUBPICTURE_ALIGN_BOTTOM;
+        p_region->updt.inner_align &= ~(SUBPICTURE_ALIGN_TOP|SUBPICTURE_ALIGN_BOTTOM);
+        if( !strcasecmp( "after", psz_val ) )
+            p_region->updt.inner_align |= SUBPICTURE_ALIGN_BOTTOM;
+        else if( strcasecmp( "center", psz_val ) )
+            /* "before" */
+            p_region->updt.inner_align |= SUBPICTURE_ALIGN_TOP;
     }
-    else if( !strcasecmp ( "tts:origin", psz_attr ) )
+    else if( !strcasecmp ( "tts:origin", psz_attr ) ||
+             !strcasecmp ( "tts:extent", psz_attr ) )
     {
         const char *psz_token = psz_val;
         while( isspace( *psz_token ) )
             psz_token++;
 
-        const char *psz_separator = strchr( psz_token, ' ' );
-        if( psz_separator == NULL )
-            return;
-        const char *psz_percent_sign = strchr( psz_token, '%' );
+        ttml_length_t x = ttml_read_length( psz_token );
 
-        p_region->updt.origin.x = atoi( psz_token );
-        if( psz_percent_sign != NULL && psz_percent_sign < psz_separator )
+        while( *psz_token && !isspace( *psz_token ) )
+            psz_token++;
+        while( *psz_token && isspace( *psz_token ) )
+            psz_token++;
+
+        ttml_length_t y = ttml_read_length( psz_token );
+
+        if ( x.unit != TTML_UNIT_UNKNOWN && y.unit != TTML_UNIT_UNKNOWN )
         {
-            p_region->updt.origin.x /= 100.0;
-            p_region->updt.flags |= UPDT_REGION_ORIGIN_X_IS_RATIO;
+            ttml_length_t base = { 100.0, TTML_UNIT_PERCENT };
+            x = ttml_rebase_length( x, base, p_ctx->i_cell_resolution_h );
+            y = ttml_rebase_length( y, base, p_ctx->i_cell_resolution_v );
+            if( psz_attr[4] == 'o' )
+            {
+                p_region->updt.origin.x = x.i_value / 100.0;
+                p_region->updt.flags |= UPDT_REGION_ORIGIN_X_IS_RATIO;
+                p_region->updt.origin.y = y.i_value / 100.0;
+                p_region->updt.flags |= UPDT_REGION_ORIGIN_Y_IS_RATIO;
+                p_region->updt.align = SUBPICTURE_ALIGN_TOP|SUBPICTURE_ALIGN_LEFT;
+            }
+            else
+            {
+                p_region->updt.extent.x = x.i_value / 100.0;
+                p_region->updt.flags |= UPDT_REGION_EXTENT_X_IS_RATIO;
+                p_region->updt.extent.y = y.i_value / 100.0;
+                p_region->updt.flags |= UPDT_REGION_EXTENT_Y_IS_RATIO;
+            }
         }
-
-        while( isspace( *psz_separator ) )
-            psz_separator++;
-        psz_token = psz_separator;
-        psz_percent_sign = strchr( psz_token, '%' );
-
-        p_region->updt.origin.y = atoi( psz_token );
-        if( psz_percent_sign != NULL )
-        {
-            p_region->updt.origin.y /= 100.0;
-            p_region->updt.flags |= UPDT_REGION_ORIGIN_Y_IS_RATIO;
-        }
-        p_region->updt.align = SUBPICTURE_ALIGN_TOP|SUBPICTURE_ALIGN_LEFT;
     }
 }
 
@@ -431,7 +441,8 @@ static void ComputeTTMLStyles( ttml_context_t *p_ctx, const vlc_dictionary_t *p_
         p_text_style->f_font_relsize = 100.0 * len.i_value /
                     (p_ctx->i_cell_resolution_v / TTML_LINE_TO_HEIGHT_RATIO);
     else if( len.unit == TTML_UNIT_PERCENT )
-        p_text_style->f_font_relsize = len.i_value;
+        p_text_style->f_font_relsize = len.i_value /
+                    (p_ctx->i_cell_resolution_v / TTML_LINE_TO_HEIGHT_RATIO);
     else if( len.unit == TTML_UNIT_PIXELS )
         p_text_style->i_font_size = (int)( len.i_value + 0.5 );
 }
@@ -446,16 +457,20 @@ static void FillTTMLStyle( const char *psz_attr, const char *psz_val,
     }
     else if( !strcasecmp( "tts:textAlign", psz_attr ) )
     {
+        p_ttml_style->i_text_align &= ~(SUBPICTURE_ALIGN_LEFT|SUBPICTURE_ALIGN_RIGHT);
         if( !strcasecmp ( "left", psz_val ) )
-            p_ttml_style->i_text_align = SUBPICTURE_ALIGN_LEFT;
+            p_ttml_style->i_text_align |= SUBPICTURE_ALIGN_LEFT;
         else if( !strcasecmp ( "right", psz_val ) )
-            p_ttml_style->i_text_align = SUBPICTURE_ALIGN_RIGHT;
-        else if( !strcasecmp ( "center", psz_val ) )
-            p_ttml_style->i_text_align = 0;
-        else if( !strcasecmp ( "start", psz_val ) ) /* FIXME: should be BIDI based */
-            p_ttml_style->i_text_align = SUBPICTURE_ALIGN_LEFT;
+            p_ttml_style->i_text_align |= SUBPICTURE_ALIGN_RIGHT;
         else if( !strcasecmp ( "end", psz_val ) )  /* FIXME: should be BIDI based */
-            p_ttml_style->i_text_align = SUBPICTURE_ALIGN_RIGHT;
+            p_ttml_style->i_text_align |= SUBPICTURE_ALIGN_RIGHT;
+        else if( strcasecmp ( "center", psz_val ) )
+            /* == "start" FIXME: should be BIDI based */
+            p_ttml_style->i_text_align |= SUBPICTURE_ALIGN_LEFT;
+        p_ttml_style->b_text_align_set = true;
+#ifdef TTML_DEBUG
+        printf("**%s %x\n", psz_val, p_ttml_style->i_text_align);
+#endif
     }
     else if( !strcasecmp( "tts:fontSize", psz_attr ) )
     {
@@ -727,7 +742,8 @@ static ttml_region_t *GetTTMLRegion( ttml_context_t *p_ctx, const char *psz_regi
                     for ( vlc_dictionary_entry_t* p_entry = merged.p_entries[i];
                           p_entry != NULL; p_entry = p_entry->p_next )
                     {
-                        FillRegionStyle( p_entry->psz_key, p_entry->p_value, p_region );
+                        FillRegionStyle( p_entry->psz_key, p_entry->p_value,
+                                         p_ctx, p_region );
                     }
                 }
             }
@@ -784,6 +800,15 @@ static void AppendTextToRegion( ttml_context_t *p_ctx, const tt_textnode_t *p_tt
                 p_segment->style->i_features &= ~(STYLE_BACKGROUND|STYLE_OUTLINE|STYLE_STRIKEOUT|STYLE_SHADOW);
                 p_segment->style->i_font_alpha = STYLE_ALPHA_TRANSPARENT;
                 p_segment->style->i_features |= STYLE_HAS_FONT_ALPHA;
+            }
+
+            /* we don't have paragraph, so no per text line alignment.
+             * Text style brings horizontal textAlign to region.
+             * Region itself is styled with vertical displayAlign */
+            if( s->b_text_align_set )
+            {
+                p_region->updt.inner_align &= ~(SUBPICTURE_ALIGN_LEFT|SUBPICTURE_ALIGN_RIGHT);
+                p_region->updt.inner_align |= s->i_text_align;
             }
 
             ttml_style_Delete( s );
@@ -900,6 +925,7 @@ static void InitTTMLContext( tt_node_t *p_rootnode, ttml_context_t *p_ctx )
     p_ctx->root_extent_v.i_value = 100;
     p_ctx->root_extent_v.unit = TTML_UNIT_PERCENT;
     p_ctx->i_cell_resolution_v = TTML_DEFAULT_CELL_RESOLUTION_V;
+    p_ctx->i_cell_resolution_h = TTML_DEFAULT_CELL_RESOLUTION_H;
     /* and override them */
     const char *value = vlc_dictionary_value_for_key( &p_rootnode->attr_dict,
                                                       "tts:extent" );
@@ -914,7 +940,10 @@ static void InitTTMLContext( tt_node_t *p_rootnode, ttml_context_t *p_ctx )
     {
         unsigned w, h;
         if( sscanf( value, "%u %u", &w, &h) == 2 && w && h )
+        {
+            p_ctx->i_cell_resolution_h = w;
             p_ctx->i_cell_resolution_v = h;
+        }
     }
 }
 
@@ -1009,7 +1038,7 @@ static int ParseBlock( decoder_t *p_dec, const block_t *p_block )
             p_spu->i_start    = VLC_TS_0 + tt_time_Convert( &p_timings_array[i] );
             p_spu->i_stop     = VLC_TS_0 + tt_time_Convert( &p_timings_array[i+1] ) - 1;
             p_spu->b_ephemer  = true;
-            p_spu->b_absolute = false;
+            p_spu->b_absolute = true;
 
             subpicture_updater_sys_t *p_spu_sys = p_spu->updater.p_sys;
             subpicture_updater_sys_region_t *p_updtregion = NULL;
@@ -1036,6 +1065,7 @@ static int ParseBlock( decoder_t *p_dec, const block_t *p_block )
                     p_spu_sys->region.align = p_dec->p_sys->i_align & (SUBPICTURE_ALIGN_BOTTOM|SUBPICTURE_ALIGN_TOP);
                     p_spu_sys->region.inner_align = p_dec->p_sys->i_align & (SUBPICTURE_ALIGN_LEFT|SUBPICTURE_ALIGN_RIGHT);
                 }
+                p_spu_sys->margin_ratio = 0.0;
 
                 /* copy and take ownership of pointeds */
                 *p_updtregion = p_region->updt;
@@ -1088,9 +1118,9 @@ static int DecodeBlock( decoder_t *p_dec, block_t *p_block )
 }
 
 /*****************************************************************************
- * OpenDecoder: probe the decoder and return score
+ * tt_OpenDecoder: probe the decoder and return score
  *****************************************************************************/
-int OpenDecoder( vlc_object_t *p_this )
+int tt_OpenDecoder( vlc_object_t *p_this )
 {
     decoder_t *p_dec = (decoder_t*)p_this;
     decoder_sys_t *p_sys;
@@ -1110,9 +1140,9 @@ int OpenDecoder( vlc_object_t *p_this )
 }
 
 /*****************************************************************************
- * CloseDecoder: clean up the decoder
+ * tt_CloseDecoder: clean up the decoder
  *****************************************************************************/
-void CloseDecoder( vlc_object_t *p_this )
+void tt_CloseDecoder( vlc_object_t *p_this )
 {
     decoder_t *p_dec = (decoder_t *)p_this;
     decoder_sys_t *p_sys = p_dec->p_sys;

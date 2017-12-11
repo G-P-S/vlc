@@ -31,6 +31,8 @@
 # include "config.h"
 #endif
 
+#include <limits.h>
+
 #include <vlc_common.h>
 #include <vlc_plugin.h>
 #include <vlc_cpu.h>
@@ -314,7 +316,7 @@ static const char *const ppsz_align_descriptions[] =
 #define VIDEO_ON_TOP_LONGTEXT N_( \
     "Always place the video window on top of other windows." )
 
-#define WALLPAPER_TEXT N_("Enable wallpaper mode ")
+#define WALLPAPER_TEXT N_("Enable wallpaper mode")
 #define WALLPAPER_LONGTEXT N_( \
     "The wallpaper mode allows you to display the video as the desktop " \
     "background." )
@@ -611,10 +613,9 @@ static const char *const ppsz_clock_descriptions[] =
 #define INPUT_SUBTRACK_ID_LONGTEXT N_( \
     "Stream ID of the subtitle track to use.")
 
-#define INPUT_CAPTIONS_TEXT N_(N_("Closed Captions decoder"))
-#define INPUT_CAPTIONS_LONGTEXT N_("Preferred closed captions decoder")
+#define INPUT_CAPTIONS_TEXT N_(N_("Preferred Closed Captions decoder"))
 static const int pi_captions[] = { 608, 708 };
-static const char *const ppsz_captions[] = { N_("EIA/CEA 608"), N_("CEA 708") };
+static const char *const ppsz_captions[] = { "EIA/CEA 608", "CEA 708" };
 
 #define INPUT_PREFERREDRESOLUTION_TEXT N_("Preferred video resolution")
 #define INPUT_PREFERREDRESOLUTION_LONGTEXT N_( \
@@ -695,8 +696,7 @@ static const char *const ppsz_prefres[] = {
     "$n: Track num<br>$p: Now playing<br>$A: Date<br>$D: Duration<br>"  \
     "$Z: \"Now playing\" (Fall back on Title - Artist)" )
 
-#define INPUT_LUA_TEXT N_( "Disable lua" )
-#define INPUT_LUA_LONGTEXT N_( "Disable all lua plugins" )
+#define INPUT_LUA_TEXT N_( "Disable all lua plugins" )
 
 // DEPRECATED
 #define SUB_CAT_LONGTEXT N_( \
@@ -712,7 +712,7 @@ static const char *const ppsz_prefres[] = {
     "instead of over the movie. Try several positions.")
 
 #define SUB_TEXT_SCALE_TEXT N_("Subtitles text scaling factor")
-#define SUB_TEXT_SCALE_LONGTEXT N_("Set value to alter subtitles size where possible")
+#define SUB_TEXT_SCALE_LONGTEXT N_("Changes the subtitles size where possible")
 
 #define SPU_TEXT N_("Enable sub-pictures")
 #define SPU_LONGTEXT N_( \
@@ -1000,11 +1000,11 @@ static const char *const ppsz_prefres[] = {
 
 #define STREAM_FILTER_TEXT N_("Stream filter module")
 #define STREAM_FILTER_LONGTEXT N_( \
-    "Stream filters are used to modify the stream that is being read. " )
+    "Stream filters are used to modify the stream that is being read." )
 
 #define DEMUX_FILTER_TEXT N_("Demux filter module")
 #define DEMUX_FILTER_LONGTEXT N_( \
-    "Demux filters are used to modify/control the stream that is being read. " )
+    "Demux filters are used to modify/control the stream that is being read." )
 
 #define DEMUX_TEXT N_("Demux module")
 #define DEMUX_LONGTEXT N_( \
@@ -1051,8 +1051,7 @@ static const char *const ppsz_prefres[] = {
 
 #define KEYSTORE_TEXT N_("Preferred keystore list")
 #define KEYSTORE_LONGTEXT N_( \
-    "List of keystores that VLC will use in " \
-    "priority. Only advanced users should alter this option." )
+    "List of keystores that VLC will use in priority." )
 
 #define STATS_TEXT N_("Locally collect statistics")
 #define STATS_LONGTEXT N_( \
@@ -1097,8 +1096,8 @@ static const char *const ppsz_prefres[] = {
     "and keep playing current item.")
 
 #define DBUS_TEXT N_("Expose media player via D-Bus")
-#define DBUS_LONGTEXT N_("Allow other applications to control " \
-    "the VLC media player using the D-Bus MPRIS protocol.")
+#define DBUS_LONGTEXT N_("Allow other applications to control VLC " \
+    "using the D-Bus MPRIS protocol.")
 
 /*****************************************************************************
  * Playlist
@@ -1116,7 +1115,7 @@ static const char *const ppsz_prefres[] = {
 
 #define PREPARSE_TIMEOUT_TEXT N_( "Preparsing timeout" )
 #define PREPARSE_TIMEOUT_LONGTEXT N_( \
-    "Maximum time (in milliseconds) allowed to preparse an item" )
+    "Maximum time allowed to preparse an item, in milliseconds" )
 
 #define METADATA_NETWORK_TEXT N_( "Allow metadata network access" )
 
@@ -1737,7 +1736,7 @@ vlc_module_begin ()
                  INPUT_SUBTRACK_ID_TEXT, INPUT_SUBTRACK_ID_LONGTEXT, true )
         change_safe ()
     add_integer( "captions", 608,
-                 INPUT_CAPTIONS_TEXT, INPUT_CAPTIONS_LONGTEXT, true )
+                 INPUT_CAPTIONS_TEXT, INPUT_CAPTIONS_TEXT, true )
         change_integer_list( pi_captions, ppsz_captions )
         change_safe ()
     add_integer( "preferred-resolution", -1, INPUT_PREFERREDRESOLUTION_TEXT,
@@ -1788,6 +1787,7 @@ vlc_module_begin ()
     add_obsolete_bool( "ipv4" ) /* since 2.0.0 */
     add_integer( "ipv4-timeout", 5 * 1000, TIMEOUT_TEXT,
                  TIMEOUT_LONGTEXT, true )
+        change_integer_range( 0, INT_MAX )
 
     add_string( "http-host", NULL, HTTP_HOST_TEXT, HOST_LONGTEXT, true )
     add_integer( "http-port", 8080, HTTP_PORT_TEXT, HTTP_PORT_LONGTEXT, true )
@@ -1912,7 +1912,7 @@ vlc_module_begin ()
 
     add_string( "input-title-format", "$Z", INPUT_TITLE_FORMAT_TEXT, INPUT_TITLE_FORMAT_LONGTEXT, false );
 
-    add_bool( "lua", true, INPUT_LUA_TEXT, INPUT_LUA_LONGTEXT, true );
+    add_bool( "lua", true, INPUT_LUA_TEXT, INPUT_LUA_TEXT, true );
 
 /* Decoder options */
     set_subcategory( SUBCAT_INPUT_VCODEC )
@@ -2806,3 +2806,7 @@ vlc_module_end ()
 /*****************************************************************************
  * End configuration.
  *****************************************************************************/
+
+#ifdef HAVE_DYNAMIC_PLUGINS
+const char vlc_module_name[] = "main";
+#endif

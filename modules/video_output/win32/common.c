@@ -94,6 +94,7 @@ int CommonInit(vout_display_t *vd)
         return VLC_EGENERIC;
 #endif
 
+#if !VLC_WINSTORE_APP
     event_cfg_t cfg;
     memset(&cfg, 0, sizeof(cfg));
 #ifdef MODULE_NAME_IS_direct3d9
@@ -107,7 +108,6 @@ int CommonInit(vout_display_t *vd)
     cfg.width  = vd->cfg->display.width;
     cfg.height = vd->cfg->display.height;
 
-#if !VLC_WINSTORE_APP
     event_hwnd_t hwnd;
     if (EventThreadStart(sys->event, &hwnd, &cfg))
         return VLC_EGENERIC;
@@ -297,12 +297,6 @@ void UpdateRects(vout_display_t *vd,
     /* Apply overlay hardware constraints */
     if (sys->use_overlay)
         AlignRect(&rect_src_clipped, sys->i_align_src_boundary, sys->i_align_src_size);
-#elif defined(MODULE_NAME_IS_direct3d11)
-    /* Needed at least with YUV content */
-    rect_src_clipped.left &= ~1;
-    rect_src_clipped.right &= ~1;
-    rect_src_clipped.top &= ~1;
-    rect_src_clipped.bottom &= ~1;
 #endif
 
 #ifndef NDEBUG

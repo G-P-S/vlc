@@ -187,7 +187,7 @@ void SLPackets_Section_Handler( demux_t *p_demux,
         }
 
         if( b_changed )
-            UpdatePESFilters( p_demux, p_demux->p_sys->b_es_all );
+            UpdatePESFilters( p_demux, p_demux->p_sys->seltype == PROGRAM_ALL );
     }
 }
 
@@ -251,7 +251,7 @@ static block_t * SL_stream_processor_Push( ts_stream_processor_t *h, uint8_t i_s
         }
         block_ChainLastAppend( &ctx->pp_au_last, p_block );
         p_block = NULL;
-        if( header.b_au_end )
+        if( header.b_au_end && ctx->p_au )
         {
             p_block = block_ChainGather( ctx->p_au );
             ctx->p_au = NULL;

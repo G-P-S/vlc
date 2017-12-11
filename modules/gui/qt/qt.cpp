@@ -119,7 +119,6 @@ static void ShowDialog   ( intf_thread_t *, int, int, intf_dialog_args_t * );
                              " This option only works with Windows and " \
                              "X11 with composite extensions." )
 
-
 #define ERROR_TEXT N_( "Show unimportant error and warnings dialogs" )
 
 #define UPDATER_TEXT N_( "Activate the updates availability notification" )
@@ -136,13 +135,13 @@ static void ShowDialog   ( intf_thread_t *, int, int, intf_dialog_args_t * );
 #define RECENTPLAY_FILTER_LONGTEXT N_( "Regular expression used to filter " \
         "the recent items played in the player" )
 
-#define SLIDERCOL_TEXT N_( "Define the colors of the volume slider " )
+#define SLIDERCOL_TEXT N_( "Define the colors of the volume slider" )
 #define SLIDERCOL_LONGTEXT N_( "Define the colors of the volume slider\n" \
                        "By specifying the 12 numbers separated by a ';'\n" \
             "Default is '255;255;255;20;226;20;255;176;15;235;30;20'\n" \
-            "An alternative can be '30;30;50;40;40;100;50;50;160;150;150;255' ")
+            "An alternative can be '30;30;50;40;40;100;50;50;160;150;150;255'")
 
-#define QT_MODE_TEXT N_( "Selection of the starting mode and look " )
+#define QT_MODE_TEXT N_( "Selection of the starting mode and look" )
 #define QT_MODE_LONGTEXT N_( "Start VLC with:\n" \
                              " - normal mode\n"  \
                              " - a zone always present to show information " \
@@ -211,7 +210,7 @@ static const int i_raise_list[] =
       MainInterface::RAISE_AUDIO, MainInterface::RAISE_AUDIOVIDEO,  };
 
 static const char *const psz_raise_list_text[] =
-    { N_( "Never" ), N_( "Video" ), N_( "Audio" ), _( "Both" ) };
+    { N_( "Never" ), N_( "Video" ), N_( "Audio" ), _( "Audio/Video" ) };
 
 /**********************************************************************/
 vlc_module_begin ()
@@ -557,13 +556,10 @@ static void *ThreadPlatform( void *obj, char *platform_name )
 #endif
             QSettings::UserScope, "vlc", "vlc-qt-interface" );
 
-    /* Icon setting, Mac uses icon from .icns */
-#ifndef Q_OS_MAC
     if( QDate::currentDate().dayOfYear() >= QT_XMAS_JOKE_DAY && var_InheritBool( p_intf, "qt-icon-change" ) )
         app.setWindowIcon( QIcon::fromTheme( "vlc-xmas", QIcon( ":/logo/vlc128-xmas.png" ) ) );
     else
         app.setWindowIcon( QIcon::fromTheme( "vlc", QIcon( ":/logo/vlc256.png" ) ) );
-#endif
 
     /* Initialize the Dialog Provider and the Main Input Manager */
     DialogsProvider::getInstance( p_intf );

@@ -43,7 +43,7 @@ AC_SUBST(vlclibdir)
 dnl
 dnl Check for tools
 dnl
-AC_PROG_CC_C99
+AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 VLC_PROG_CC_C11
 AC_DEFINE([_FORTIFY_SOURCE], 2, [Define to 2 to get glibc warnings.])
@@ -61,11 +61,12 @@ AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_PROG_CPP
 AC_PROG_OBJC
-_AM_DEPENDENCIES([OBJC])
 AC_PROG_EGREP
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AM_PROG_AS
+AC_PROG_LEX
+AC_PROG_YACC
 
 AC_ARG_VAR([DESKTOP_FILE_VALIDATE], [Validator for desktop entry files])
 AC_CHECK_PROGS(DESKTOP_FILE_VALIDATE, [${DESKTOP_FILE_VALIDATE} desktop-file-validate], :)
@@ -787,6 +788,18 @@ AS_IF([test "${SYS}" = "mingw32"], [
   have_dynamic_objects="yes" #assume we can use shared objects
 ])
 
+AC_ARG_WITH([libfuzzer],
+    [AS_HELP_STRING([--with-libfuzzer=DIR],
+        [use libFuzzer library from DIR and triggers sanitize coverage (default disabled)])],
+     [],
+     [with_libfuzzer=no])
+AS_VAR_IF(with_libfuzzer, no, [], [
+    enable_shared=no
+    enable_static=yes
+    enable_vlc=no
+])
+AM_CONDITIONAL(HAVE_LIBFUZZER, [test "${with_libfuzzer}" != "no"])
+
 AS_IF([test "${enable_shared}" = "no"], [
   have_dynamic_objects=no
 ])
@@ -1110,6 +1123,14 @@ AH_BOTTOM([
     ])
     AS_IF([test "${ac_cv_c_omit_frame_pointer}" = "no"], [VLC_RESTORE_FLAGS])
   ])
+
+  AX_APPEND_COMPILE_FLAGS([-fstack-protector-strong])
+  AX_APPEND_COMPILE_FLAGS([-fstack-protector-strong], [CXXFLAGS])
+  dnl Win32 requires linking to ssp for stack-protection
+  AS_IF([test "${SYS}" = "mingw32"], [
+      LDFLAGS="${LDFLAGS} -lssp"
+      AS_IF([test "${vlc_winstore_app}" != 1], [LDFLAGS="${LDFLAGS} -ladvapi32"])
+  ])
 ])
 
 VLC_SAVE_FLAGS
@@ -1134,7 +1155,7 @@ AC_CACHE_CHECK([if linker supports -z,defs], [ac_cv_ld_z_defs], [
     ac_cv_ld_z_defs="no"
   ])
 ])
-AS_IF([test "${ac_cv_ld_z_defs}" = "no" -o "${with_sanitizer}" != "no"], [VLC_RESTORE_FLAGS])
+AS_IF([test "${ac_cv_ld_z_defs}" = "no"], [VLC_RESTORE_FLAGS])
 
 dnl Check for __attribute__((packed))
 AC_CACHE_CHECK([for __attribute__((packed))],
@@ -2591,7 +2612,7 @@ AS_IF([test "${enable_faad}" != "no"], [
 dnl
 dnl  AOM decoder plugin
 dnl
-PKG_ENABLE_MODULES_VLC([AOM], [], [aom], [experimental AV1 codec], [disabled])
+PKG_ENABLE_MODULES_VLC([AOM], [], [aom], [experimental AV1 codec (default auto)])
 
 dnl
 dnl libvpx decoder plugin
@@ -2957,6 +2978,17 @@ AS_IF([test "${enable_tiger}" != "no"], [
   ])
 ])
 
+dnl
+dnl  check if we can build the css selector engine 
+dnl
+AC_ARG_ENABLE(css,
+[  --enable-css            CSS selector engine (default auto)])
+AS_IF([test "${enable_css}" != "no"], [
+  with_css="yes"
+  AC_DEFINE(HAVE_CSS, 1, [Define if CSS engine is built])
+])
+AM_CONDITIONAL([ENABLE_CSS], [test "${with_css}" = "yes"])
+
 
 dnl
 dnl  Video plugins
@@ -3289,7 +3321,7 @@ AS_IF([test "${enable_directx}" != "no"], [
 
   dnl Direct3D11
   AC_CHECK_HEADERS(d3d11.h, [
-    VLC_ADD_PLUGIN([direct3d11 direct3d11_deinterlace direct3d11_adjust])
+    VLC_ADD_PLUGIN([direct3d11 direct3d11_filters])
   ])
 
   dnl Direct3D9
@@ -3306,7 +3338,7 @@ AS_IF([test "${enable_directx}" != "no"], [
           #endif
         ]],[[;]])
       ],[
-        VLC_ADD_PLUGIN([direct3d9_deinterlace direct3d9_adjust])
+        VLC_ADD_PLUGIN([direct3d9_filters])
       ],
       [AC_MSG_WARN([Could not find required IDirectXVideoDecoder in dxva2api.h])])
 
@@ -3804,19 +3836,33 @@ AM_CONDITIONAL(HAVE_SPARKLE, [test "$enable_sparkle" != "no"])
 dnl
 dnl  MacOS X breakpad creash reporter support
 dnl
-AC_ARG_ENABLE(breakpad,
-  [  --enable-breakpad       Breakpad crash reporter support for OS X (default enabled on Mac OS X)])
-if test "x${enable_breakpad}" != "xno" -a "${HAVE_OSX}" = "1"
-then
-  if test ! -d ${CONTRIB_DIR}/Breakpad.framework -a ! -d ${CONTRIB_DIR}/Frameworks/Breakpad.framework
-  then
+AC_ARG_WITH([breakpad],
+  AS_HELP_STRING([--with-breakpad=URL], [Enable Breakpad reporter using given URL]), [], [with_breakpad=no])
+
+AS_IF([test "$with_breakpad" != "no"], [
+
+  AS_IF([test "$with_breakpad" = "yes"], [
+    AC_MSG_ERROR([You need to supply the CrashDragon Server URL as value for --with-breakpad])
+  ])
+
+  AS_IF([test "$HAVE_OSX" != "1"], [
+    AC_MSG_ERROR([Breakpad currently only works on macOS])
+  ])
+
+  AC_MSG_CHECKING([for Breakpad framework])
+  AS_IF([test ! -d ${CONTRIB_DIR}/Breakpad.framework -a \
+              ! -d ${CONTRIB_DIR}/Frameworks/Breakpad.framework], [
+    AC_MSG_RESULT([no])
     AC_MSG_ERROR([Breakpad framework is required and was not found in ${CONTRIB_DIR}])
-  fi
+  ], [
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([HAVE_BREAKPAD], [1], [Define to 1 if breakpad is enabled.])
+    AC_SUBST(BREAKPAD_URL, ["${with_breakpad}"])
+  ])
 
-  AC_DEFINE([HAVE_BREAKPAD], [1], [Define to 1 if breakpad is enabled.])
-fi
-AM_CONDITIONAL(HAVE_BREAKPAD, [test "$enable_breakpad" != "no"])
+])
 
+AM_CONDITIONAL(HAVE_BREAKPAD, [test "$with_breakpad" != "no"])
 
 dnl
 dnl  Minimal Mac OS X module
@@ -3883,7 +3929,7 @@ AM_CONDITIONAL([HAVE_LIRC], [test "${have_lirc}" = "yes"])
 dnl
 dnl  SRT plugin
 dnl
-PKG_ENABLE_MODULES_VLC([SRT], [access_srt access_output_srt], [srt >= 1.2.0], [SRT input/output plugin], [auto], [], [], [-DENABLE_SRT])
+PKG_ENABLE_MODULES_VLC([SRT], [access_srt access_output_srt], [srt >= 1.2.2], [SRT input/output plugin], [auto], [], [], [-DENABLE_SRT])
 
 EXTEND_HELP_STRING([Visualisations and Video filter plugins:])
 dnl
@@ -4044,14 +4090,6 @@ AS_IF([test "${enable_kwallet}" != "no" -a "${have_dbus}" = "yes"], [
 ])
 
 dnl
-dnl  Developers helper modules (should be hidden from configure help)
-dnl
-AC_ARG_ENABLE(devtools, [], [], [enable_devtools="no"])
-AS_IF([test "${enable_devtools}" != "no"], [
-  VLC_ADD_PLUGIN([accesstweaks])
-])
-
-dnl
 dnl update checking system
 dnl
 AC_ARG_ENABLE(update-check,
@@ -4082,6 +4120,26 @@ dnl
 dnl Libnotify notification plugin
 dnl
 PKG_ENABLE_MODULES_VLC([NOTIFY], [], [libnotify gtk+-2.0], [libnotify notification], [auto])
+
+dnl
+dnl  libplacebo support
+dnl
+AC_ARG_ENABLE(libplacebo,
+  [AS_HELP_STRING([--disable-libplacebo],
+      [disable libplacebo support (default auto)])])
+
+AS_IF([test "$enable_libplacebo" != "no"], [
+  PKG_CHECK_MODULES([LIBPLACEBO], [libplacebo >= 0.1], [
+    AC_DEFINE([HAVE_LIBPLACEBO], [1], [Define to 1 if libplacebo is enabled.])
+  ], [
+    AS_IF([test -n "${enable_libplacebo}"], [
+      AC_MSG_ERROR([${LIBPLACEBO_PKG_ERRORS}.])
+    ])
+    enable_libplacebo="no"
+  ])
+])
+AM_CONDITIONAL(HAVE_LIBPLACEBO, [test "$enable_libplacebo" != "no"])
+
 
 dnl
 dnl  Endianness check
@@ -4134,6 +4192,26 @@ dnl
 AC_ARG_ENABLE(vlc,
   [  --enable-vlc            build the VLC media player (default enabled)])
 AM_CONDITIONAL(BUILD_VLC, [test "${enable_vlc}" != "no"])
+
+dnl
+dnl Fuzzer (at the end in order to don't mess dependencies FLAGS)
+dnl
+AS_VAR_IF(with_libfuzzer, no, [], [
+    LIBS="-lstdc++ ${LIBM} ${LIBPTHREAD} -L${with_libfuzzer} -lFuzzer"
+    AX_CHECK_COMPILE_FLAG(-fsanitize-coverage=trace-pc-guard, [
+        AX_APPEND_FLAG([-fsanitize-coverage=trace-pc-guard])
+        AX_APPEND_FLAG([-fsanitize-coverage=trace-pc-guard], [CXXFLAGS])
+        AX_APPEND_COMPILE_FLAGS([-fsanitize-coverage=trace-cmp])
+        AX_APPEND_COMPILE_FLAGS([-fsanitize-coverage=trace-cmp], [CXXFLAGS])
+    ], [
+        AX_CHECK_COMPILE_FLAG(-fsanitize-coverage=trace-pc, [
+            AX_APPEND_FLAG([-fsanitize-coverage=trace-pc])
+            AX_APPEND_FLAG([-fsanitize-coverage=trace-pc], [CXXFLAGS])
+        ], [
+            AC_MSG_ERROR([Sanitizer coverage not supported by your compiler])
+        ])
+    ])
+])
 
 dnl
 dnl  Stuff used by the program

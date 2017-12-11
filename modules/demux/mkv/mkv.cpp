@@ -127,6 +127,8 @@ static int Open( vlc_object_t * p_this )
     if( p_stream == NULL )
     {
         msg_Err( p_demux, "cannot find KaxSegment or missing mandatory KaxInfo" );
+        delete p_io_stream;
+        delete p_io_callback;
         goto error;
     }
     p_sys->streams.push_back( p_stream );
@@ -313,8 +315,8 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                 return VLC_EGENERIC;
 
             *pi_int = p_sys->stored_attachments.size();
-            *ppp_attach = static_cast<input_attachment_t**>( malloc( sizeof(input_attachment_t*) *
-                                                        p_sys->stored_attachments.size() ) );
+            *ppp_attach = static_cast<input_attachment_t**>( vlc_alloc( p_sys->stored_attachments.size(),
+                                                        sizeof(input_attachment_t*) ) );
             if( !(*ppp_attach) )
                 return VLC_ENOMEM;
             for( size_t i = 0; i < p_sys->stored_attachments.size(); i++ )
@@ -371,7 +373,7 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
                 int *pi_int = va_arg( args, int* );
 
                 *pi_int = p_sys->titles.size();
-                *ppp_title = static_cast<input_title_t**>( malloc( sizeof( input_title_t* ) * p_sys->titles.size() ) );
+                *ppp_title = static_cast<input_title_t**>( vlc_alloc( p_sys->titles.size(), sizeof( input_title_t* ) ) );
 
                 for( size_t i = 0; i < p_sys->titles.size(); i++ )
                     (*ppp_title)[i] = vlc_input_title_Duplicate( p_sys->titles[i] );
@@ -606,6 +608,18 @@ void BlockDecode( demux_t *p_demux, KaxBlock *block, KaxSimpleBlock *simpleblock
                 VLC_TS_INVALID;
             continue;
          }
+
+         case VLC_CODEC_WEBVTT:
+            {
+                p_block = block_Realloc( p_block, 16, p_block->i_buffer );
+                if( !p_block )
+                    continue;
+                SetDWBE( p_block->p_buffer, p_block->i_buffer );
+                memcpy( &p_block->p_buffer[4], "vttc", 4 );
+                SetDWBE( &p_block->p_buffer[8], p_block->i_buffer - 8 );
+                memcpy( &p_block->p_buffer[12], "payl", 4 );
+            }
+            break;
 
          case VLC_CODEC_OPUS:
             mtime_t i_length = i_duration * track. f_timecodescale *

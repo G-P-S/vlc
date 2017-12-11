@@ -51,6 +51,7 @@
 #include "input_manager.hpp"
 #include "util/qt_dirs.hpp"
 #include "util/customwidgets.hpp"
+#include "dialogs_provider.hpp"
 
 #include "../../audio_filter/equalizer_presets.h"
 #include <vlc_vout.h>
@@ -357,16 +358,22 @@ void ExtVideo::updateFilters()
 
 void ExtVideo::browseLogo()
 {
+    QString filter = QString( "%1 (*.png *.jpg);;%2 (*)" )
+                        .arg( qtr("Image Files") )
+                        .arg( TITLE_EXTENSIONS_ALL );
     QString file = QFileDialog::getOpenFileName( NULL, qtr( "Logo filenames" ),
-                   p_intf->p_sys->filepath, "Images (*.png *.jpg);;All (*)" );
+                   p_intf->p_sys->filepath, filter );
 
     UPDATE_AND_APPLY_TEXT( logoFileText, file );
 }
 
 void ExtVideo::browseEraseFile()
 {
+    QString filter = QString( "%1 (*.png *.jpg);;%2 (*)" )
+                        .arg( qtr("Image Files") )
+                        .arg( TITLE_EXTENSIONS_ALL );
     QString file = QFileDialog::getOpenFileName( NULL, qtr( "Image mask" ),
-                   p_intf->p_sys->filepath, "Images (*.png *.jpg);;All (*)" );
+                   p_intf->p_sys->filepath, filter );
 
     UPDATE_AND_APPLY_TEXT( eraseMaskText, file );
 }
@@ -901,12 +908,10 @@ void FilterSliderData::writeToConfig()
 }
 
 AudioFilterControlWidget::AudioFilterControlWidget
-( intf_thread_t *_p_intf, QWidget *parent, const char *_shortcut,
-  const char *_name = NULL ) :
-    QWidget( parent ), p_intf( _p_intf ), shortcut( _shortcut ),
-    name( _name ? _name : _shortcut ), i_smallfont(0)
-{
-}
+( intf_thread_t *_p_intf, QWidget *parent, const char *_name ) :
+    QWidget( parent ), slidersBox( NULL ), p_intf( _p_intf ), name( _name ),
+    i_smallfont(0)
+{}
 
 void AudioFilterControlWidget::connectConfigChanged( FilterSliderData *slider )
 {
@@ -949,7 +954,7 @@ void AudioFilterControlWidget::build()
 
     char *psz_af = var_InheritString( THEPL, "audio-filter" );
 
-    if( psz_af && filterIsPresent( qfu(psz_af), shortcut ) )
+    if( psz_af && filterIsPresent( qfu(psz_af), name ) )
         slidersBox->setChecked( true );
     else
         slidersBox->setChecked( false );
@@ -967,10 +972,10 @@ void AudioFilterControlWidget::enable( bool b_enable )
         return;
     }
 
-    QString result = ChangeFiltersString( p_intf, "audio-filter", qtu(shortcut),
+    QString result = ChangeFiltersString( p_intf, "audio-filter", qtu(name),
                                           b_enable );
     emit configChanged( qfu("audio-filter"), result );
-    playlist_EnableAudioFilter( THEPL, qtu(shortcut), b_enable );
+    playlist_EnableAudioFilter( THEPL, qtu(name), b_enable );
 }
 
 /**********************************************************************
@@ -1322,7 +1327,7 @@ StereoWidener::StereoWidener( intf_thread_t *p_intf, QWidget *parent )
  **********************************************************************/
 
 PitchShifter::PitchShifter( intf_thread_t *p_intf, QWidget *parent )
-    : AudioFilterControlWidget( p_intf, parent, "pitch", "scaletempo" )
+    : AudioFilterControlWidget( p_intf, parent, "scaletempo_pitch" )
 {
     i_smallfont = -1;
     controls.append( { "pitch-shift", N_("Adjust pitch"), "semitones",

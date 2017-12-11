@@ -181,21 +181,13 @@ static int Open( vlc_object_t *p_this )
         return VLC_ENOMEM;
 
     /* HDSDI AR */
-    char *psz_ar = var_InheritString( p_demux, "linsys-hdsdi-aspect-ratio" );
-    if ( psz_ar != NULL )
-    {
-        psz_parser = strchr( psz_ar, ':' );
-        if ( psz_parser )
-        {
-            *psz_parser++ = '\0';
-            p_sys->i_forced_aspect = p_sys->i_aspect =
-                 strtol( psz_ar, NULL, 0 ) * VOUT_ASPECT_FACTOR
-                 / strtol( psz_parser, NULL, 0 );
-        }
-        else
-            p_sys->i_forced_aspect = 0;
-        free( psz_ar );
-    }
+    unsigned int i_num, i_den;
+    if ( !var_InheritURational( p_demux, &i_num, &i_den,
+                               "linsys-hdsdi-aspect-ratio" ) && i_den != 0 )
+        p_sys->i_forced_aspect = p_sys->i_aspect =
+                i_num * VOUT_ASPECT_FACTOR / i_den;
+    else
+        p_sys->i_forced_aspect = 0;
 
     /* */
     p_sys->i_id_video = var_InheritInteger( p_demux, "linsys-hdsdi-id-video" );
@@ -840,7 +832,7 @@ static int InitCapture( demux_t *p_demux )
 #ifdef HAVE_MMAP_SDIAUDIO
         i_bufmemsize = ((p_sys->i_abuffer_size + i_page_size - 1) / i_page_size)
                          * i_page_size;
-        p_sys->pp_abuffers = malloc( p_sys->i_abuffers * sizeof(uint8_t *) );
+        p_sys->pp_abuffers = vlc_alloc( p_sys->i_abuffers, sizeof(uint8_t *) );
         if( unlikely( !p_sys->pp_abuffers ) )
             return VLC_ENOMEM;
         for ( unsigned int i = 0; i < p_sys->i_abuffers; i++ )
@@ -895,7 +887,7 @@ static int InitCapture( demux_t *p_demux )
     p_sys->i_current_vbuffer = 0;
     i_bufmemsize = ((p_sys->i_vbuffer_size + i_page_size - 1) / i_page_size)
                      * i_page_size;
-    p_sys->pp_vbuffers = malloc( p_sys->i_vbuffers * sizeof(uint8_t *) );
+    p_sys->pp_vbuffers = vlc_alloc( p_sys->i_vbuffers, sizeof(uint8_t *) );
     if( unlikely( !p_sys->pp_vbuffers ) )
         return VLC_ENOMEM;
     for ( unsigned int i = 0; i < p_sys->i_vbuffers; i++ )

@@ -188,7 +188,12 @@ void DialogsProvider::customEvent( QEvent *event )
            delete popupMenu; popupMenu = NULL;
            bool show = (de->i_arg != 0);
            if( show )
+           {
+               //popping a QMenu prevents mouse release events to be received,
+               //this ensures the coherency of the vout mouse state.
+               emit releaseMouseEvents();
                popupMenu = VLCMenuBar::PopupMenu( p_intf, show );
+           }
            break;
         }
         case INTF_DIALOG_AUDIOPOPUPMENU:
@@ -383,7 +388,7 @@ void DialogsProvider::openFileGenericDialog( intf_dialog_args_t *p_arg )
         if( !file.isEmpty() )
         {
             p_arg->i_results = 1;
-            p_arg->psz_results = (char **)malloc( p_arg->i_results * sizeof( char * ) );
+            p_arg->psz_results = (char **)vlc_alloc( p_arg->i_results, sizeof( char * ) );
             p_arg->psz_results[0] = strdup( qtu( toNativeSepNoSlash( file ) ) );
         }
         else
@@ -394,7 +399,7 @@ void DialogsProvider::openFileGenericDialog( intf_dialog_args_t *p_arg )
         QStringList urls = getOpenURL( NULL, qfu( p_arg->psz_title ),
                                        p_intf->p_sys->filepath, extensions );
         p_arg->i_results = urls.count();
-        p_arg->psz_results = (char **)malloc( p_arg->i_results * sizeof( char * ) );
+        p_arg->psz_results = (char **)vlc_alloc( p_arg->i_results, sizeof( char * ) );
         i = 0;
         foreach( const QString &uri, urls )
             p_arg->psz_results[i++] = strdup( qtu( uri ) );
@@ -488,6 +493,7 @@ QStringList DialogsProvider::showSimpleOpen( const QString& help,
     }
     ADD_EXT_FILTER( fileTypes, EXTENSIONS_ALL );
     fileTypes.replace( ";*", " *");
+    fileTypes.chop(2); //remove trailling ";;"
 
     QStringList urls = getOpenURL( NULL,
         help.isEmpty() ? qtr(I_OP_SEL_FILES ) : help,
@@ -611,7 +617,14 @@ void DialogsProvider::openAPlaylist()
                                         EXT_FILTER_PLAYLIST );
     foreach( const QString &url, urls )
     {
-        playlist_Import( THEPL, qtu( url ) );
+        char* psz_path = vlc_uri2path(qtu( url ));
+        if ( !psz_path )
+        {
+            msg_Warn( p_intf, "unable to load playlist '%s'", qtu( url ) );
+            continue;
+        }
+        playlist_Import( THEPL, psz_path );
+        free( psz_path );
     }
 }
 

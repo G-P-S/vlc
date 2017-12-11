@@ -29,11 +29,17 @@
     <ClCompile Include="..\..\..\dllsrc\dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\modules\video_chroma\dxa9.c">
-      <Filter>Source Files\modules\video_chroma</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\modules\video_chroma\copy.c">
       <Filter>Source Files\modules\video_chroma</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\modules\hw\d3d9\dxa9.c">
+      <Filter>Source Files\modules\video_chroma</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\modules\hw\d3d9\d3d9_instance.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -28,6 +28,8 @@
 #ifndef COMPILE_VS2013
 #include <stdalign.h>
 #endif //vz
+
+#include <stddef.h>
 #include <vlc_common.h>
 
 #include "libvlc.h"
@@ -47,13 +49,13 @@ static struct vlc_res **vlc_obj_res(vlc_object_t *obj)
 
 void *vlc_objres_new(size_t size, void (*release)(void *))
 {
-    if (unlikely(size > SIZE_MAX - sizeof (struct vlc_res)))
+    if (unlikely(add_overflow(sizeof (struct vlc_res), size, &size)))
     {
         errno = ENOMEM;
         return NULL;
     }
 
-    struct vlc_res *res = malloc(sizeof (*res) + size);
+    struct vlc_res *res = malloc(size);
     if (unlikely(res == NULL))
         return NULL;
 
@@ -134,7 +136,7 @@ static bool ptrcmp(void *a, void *b)
     return a == b;
 }
 
-void *vlc_malloc(vlc_object_t *obj, size_t size)
+void *vlc_obj_malloc(vlc_object_t *obj, size_t size)
 {
     void *ptr = vlc_objres_new(size, dummy_release);
     if (likely(ptr != NULL))
@@ -142,11 +144,11 @@ void *vlc_malloc(vlc_object_t *obj, size_t size)
     return ptr;
 }
 
-void *vlc_calloc(vlc_object_t *obj, size_t nmemb, size_t size)
+static void *vlc_obj_alloc_common(vlc_object_t *obj, size_t nmemb, size_t size,
+                                  bool do_memset)
 {
-    size_t tabsize = nmemb * size;
-
-    if (unlikely(tabsize < nmemb))
+    size_t tabsize;
+    if (mul_overflow(nmemb, size, &tabsize))
     {
         errno = ENOMEM;
         return NULL;
@@ -155,13 +157,19 @@ void *vlc_calloc(vlc_object_t *obj, size_t nmemb, size_t size)
     void *ptr = vlc_objres_new(tabsize, dummy_release);
     if (likely(ptr != NULL))
     {
-        memset(ptr, 0, tabsize);
+        if (do_memset)
+            memset(ptr, 0, tabsize);
         vlc_objres_push(obj, ptr);
     }
     return ptr;
 }
 
-void vlc_free(vlc_object_t *obj, void *ptr)
+void *vlc_obj_calloc(vlc_object_t *obj, size_t nmemb, size_t size)
+{
+    return vlc_obj_alloc_common(obj, nmemb, size, true);
+}
+
+void vlc_obj_free(vlc_object_t *obj, void *ptr)
 {
     vlc_objres_remove(obj, ptr, ptrcmp);
 }

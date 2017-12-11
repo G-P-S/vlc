@@ -71,6 +71,7 @@ static const vlc_fourcc_t pi_allowed_chromas[] = {
     VLC_CODEC_I420,
     VLC_CODEC_I422,
     VLC_CODEC_I420_10L,
+    VLC_CODEC_I420_10B,
     VLC_CODEC_I420_16L,
     VLC_CODEC_RGB32,
     VLC_CODEC_RGB24,
@@ -135,27 +136,26 @@ static int Activate( filter_t *p_filter, int (*pf_build)(filter_t *) )
     }
 
     int type = VLC_VAR_INTEGER;
-    if( var_Type( p_filter->obj.parent, MODULE_STRING "-level" ) != 0 )
+    if( var_Type( p_filter->obj.parent, "chain-level" ) != 0 )
         type |= VLC_VAR_DOINHERIT;
 
-    var_Create( p_filter, MODULE_STRING "-level", type );
+    var_Create( p_filter, "chain-level", type );
     /* Note: atomicity is not actually needed here. */
-    var_IncInteger( p_filter, MODULE_STRING "-level" );
+    var_IncInteger( p_filter, "chain-level" );
 
-    int level = var_GetInteger( p_filter, MODULE_STRING "-level" );
+    int level = var_GetInteger( p_filter, "chain-level" );
     if( level < 0 || level > CHAIN_LEVEL_MAX )
         msg_Err( p_filter, "Too high level of recursion (%d)", level );
     else
         i_ret = pf_build( p_filter );
 
-    var_Destroy( p_filter, MODULE_STRING "-level" );
+    var_Destroy( p_filter, "chain-level" );
 
     if( i_ret )
     {
         /* Hum ... looks like this really isn't going to work. Too bad. */
         if (p_sys->p_video_filter)
-            filter_DelProxyCallbacks( p_filter->obj.parent,
-                                      p_sys->p_video_filter,
+            filter_DelProxyCallbacks( p_filter, p_sys->p_video_filter,
                                       RestartFilterCallback );
         filter_chain_Delete( p_sys->p_chain );
         free( p_sys );
@@ -192,6 +192,13 @@ static int ActivateFilter( vlc_object_t *p_this )
     if( !p_filter->b_allow_fmt_out_change || p_filter->psz_name == NULL )
         return VLC_EGENERIC;
 
+    /* Force only one level of iteration when using the chain converter from a
+     * filter. */
+    if( var_InheritInteger( p_filter, "chain-level" ) > 0 )
+        return VLC_EGENERIC;
+    var_Create( p_filter, "chain-level", VLC_VAR_INTEGER );
+    var_SetInteger( p_filter, "chain-level", CHAIN_LEVEL_MAX - 1 );
+
     /* Try to add a converter before the requested filter */
     return Activate( p_filter, BuildFilterChain );
 }
@@ -201,8 +208,7 @@ static void Destroy( vlc_object_t *p_this )
     filter_t *p_filter = (filter_t *)p_this;
 
     if (p_filter->p_sys->p_video_filter)
-        filter_DelProxyCallbacks( p_filter->obj.parent,
-                                  p_filter->p_sys->p_video_filter,
+        filter_DelProxyCallbacks( p_filter, p_filter->p_sys->p_video_filter,
                                   RestartFilterCallback );
     filter_chain_Delete( p_filter->p_sys->p_chain );
     free( p_filter->p_sys );
@@ -346,7 +352,7 @@ static int BuildFilterChain( filter_t *p_filter )
                                            &fmt_mid, &fmt_mid );
             if( p_filter->p_sys->p_video_filter )
             {
-                filter_AddProxyCallbacks( p_filter->obj.parent,
+                filter_AddProxyCallbacks( p_filter,
                                           p_filter->p_sys->p_video_filter,
                                           RestartFilterCallback );
                 if (p_filter->p_sys->p_video_filter->pf_video_mouse != NULL)

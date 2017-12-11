@@ -48,7 +48,7 @@
 
 #define AUTO_GUID_TEXT N_("Set NFS uid/guid automatically")
 #define AUTO_GUID_LONGTEXT N_("If uid/gid are not specified in " \
-    "the url, this module will try to automatically set a uid/gid.")
+    "the url, VLC will automatically set a uid/gid.")
 
 static int Open(vlc_object_t *);
 static void Close(vlc_object_t *);
@@ -621,7 +621,7 @@ static int
 Open(vlc_object_t *p_obj)
 {
     stream_t *p_access = (stream_t *)p_obj;
-    access_sys_t *p_sys = vlc_calloc(p_obj, 1, sizeof (*p_sys));
+    access_sys_t *p_sys = vlc_obj_calloc(p_obj, 1, sizeof (*p_sys));
 
     if (unlikely(p_sys == NULL))
         return VLC_ENOMEM;

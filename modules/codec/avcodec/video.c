@@ -48,6 +48,7 @@
 
 #ifdef COMPILE_VS2013
  #include "../cc.h" //vz
+#include "src/misc/picture.c"
 #else
 #include "../codec/cc.h"
 #endif
@@ -545,7 +546,6 @@ int InitVideoDec( vlc_object_t *obj )
     /* Always use our get_buffer wrapper so we can calculate the
      * PTS correctly */
     p_context->get_buffer2 = lavc_GetFrame;
-    p_context->refcounted_frames = true;
     p_context->opaque = p_dec;
 
     int i_thread_count = var_InheritInteger( p_dec, "avcodec-threads" );
@@ -781,7 +781,7 @@ static void update_late_frame_count( decoder_t *p_dec, block_t *p_block, mtime_t
 }
 
 
-static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p_pic )
+static int DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p_pic )
 {
     decoder_sys_t *p_sys = p_dec->p_sys;
     bool format_changed = false;
@@ -861,8 +861,8 @@ static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p
     }
 #endif
 
-    if (format_changed)
-        decoder_UpdateVideoFormat( p_dec );
+    if (format_changed && decoder_UpdateVideoFormat( p_dec ))
+        return -1;
 
     const AVFrameSideData *p_avcc = av_frame_get_side_data( frame, AV_FRAME_DATA_A53_CC );
     if( p_avcc )
@@ -887,6 +887,7 @@ static void DecodeSidedata( decoder_t *p_dec, const AVFrame *frame, picture_t *p
             cc_Flush( &p_sys->cc );
         }
     }
+    return 0;
 }
 
 /*****************************************************************************
@@ -1181,7 +1182,17 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
         }
         else
         {
-            picture_Hold( p_pic );
+            /* Some codecs can return the same frame multiple times. By the
+             * time that the same frame is returned a second time, it will be
+             * too late to clone the underlying picture. So clone proactively.
+             * A single picture CANNOT be queued multiple times.
+             */
+            p_pic = picture_Clone( p_pic );
+            if( unlikely(p_pic == NULL) )
+            {
+                av_frame_free(&frame);
+                break;
+            }
         }
 
         if( !p_dec->fmt_in.video.i_sar_num || !p_dec->fmt_in.video.i_sar_den )
@@ -1206,7 +1217,8 @@ static picture_t *DecodeBlock( decoder_t *p_dec, block_t **pp_block, bool *error
         p_pic->b_progressive = !frame->interlaced_frame;
         p_pic->b_top_field_first = frame->top_field_first;
 
-        DecodeSidedata( p_dec, frame, p_pic );
+        if (DecodeSidedata(p_dec, frame, p_pic))
+            i_pts = VLC_TS_INVALID;
 
         av_frame_free(&frame);
 
@@ -1497,7 +1509,6 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     decoder_t *p_dec = p_context->opaque;
     decoder_sys_t *p_sys = p_dec->p_sys;
     video_format_t fmt;
-    size_t i;
     
     msg_Info( p_dec, "######## checking video codec = %s", p_sys->p_codec->name);
 
@@ -1505,7 +1516,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     enum PixelFormat swfmt = avcodec_default_get_format(p_context, pi_fmt);
     bool can_hwaccel = false;
 
-    for( i = 0; pi_fmt[i] != AV_PIX_FMT_NONE; i++ )
+    for (size_t i = 0; pi_fmt[i] != AV_PIX_FMT_NONE; i++)
     {
         const AVPixFmtDescriptor *dsc = av_pix_fmt_desc_get(pi_fmt[i]);
         if (dsc == NULL)
@@ -1518,16 +1529,14 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
             can_hwaccel = true;
     }
 #if defined(_WIN32) && LIBAVUTIL_VERSION_CHECK(54, 13, 1, 24, 100)
-    //vz  enum PixelFormat p_fmts[i+1];
+	//vz  enum PixelFormat p_fmts[i+1];
 	enum PixelFormat p_fmts[AV_PIX_FMT_NB + 1]; //vz ugly
-
-    if (i > 1 && pi_fmt[0] == AV_PIX_FMT_DXVA2_VLD && pi_fmt[1] == AV_PIX_FMT_D3D11VA_VLD)
+	if (pi_fmt[0] == AV_PIX_FMT_DXVA2_VLD && pi_fmt[1] == AV_PIX_FMT_D3D11VA_VLD)
     {
         /* favor D3D11VA over DXVA2 as the order will decide which vout will be
          * used */
-        //vz memcpy(p_fmts, pi_fmt, sizeof(p_fmts));
-		memcpy(p_fmts, pi_fmt, sizeof(int) *(i+1));
-        p_fmts[0] = AV_PIX_FMT_D3D11VA_VLD;
+		memcpy(p_fmts, pi_fmt, sizeof(p_fmts));
+		p_fmts[0] = AV_PIX_FMT_D3D11VA_VLD;
         p_fmts[1] = AV_PIX_FMT_DXVA2_VLD;
         pi_fmt = p_fmts;
     }

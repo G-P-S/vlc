@@ -37,6 +37,7 @@ AbstractDemuxer::AbstractDemuxer()
     b_startsfromzero = false;
     b_reinitsonseek = true;
     b_candetectswitches = true;
+    b_alwaysrestarts = false;
 }
 
 AbstractDemuxer::~AbstractDemuxer()
@@ -54,9 +55,19 @@ bool AbstractDemuxer::needsRestartOnSwitch() const
     return !b_candetectswitches;
 }
 
+bool AbstractDemuxer::needsRestartOnEachSegment() const
+{
+    return b_alwaysrestarts;
+}
+
 void AbstractDemuxer::setCanDetectSwitches( bool b )
 {
     b_candetectswitches = b;
+}
+
+void AbstractDemuxer::setRestartsOnEachSegment( bool b )
+{
+    b_alwaysrestarts = b;
 }
 
 bool AbstractDemuxer::needsRestartOnSeek() const
@@ -101,6 +112,11 @@ bool Demuxer::create()
         b_eof = true;
         return false;
     }
+    else
+    {
+        b_eof = false;
+    }
+
     return true;
 }
 

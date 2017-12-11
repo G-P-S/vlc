@@ -643,7 +643,10 @@ static block_t * ParseAUHead(decoder_t *p_dec, uint8_t i_nal_type, block_t *p_na
         case HEVC_NAL_PPS:
         {
             uint8_t i_id;
-            if(hevc_get_xps_id(p_nalb->p_buffer, p_nalb->i_buffer, &i_id))
+            const uint8_t *p_xps = p_nalb->p_buffer;
+            size_t i_xps = p_nalb->i_buffer;
+            if(hxxx_strip_AnnexB_startcode(&p_xps, &i_xps) &&
+               hevc_get_xps_id(p_nalb->p_buffer, p_nalb->i_buffer, &i_id))
                 InsertXPS(p_dec, i_nal_type, i_id, p_nalb);
             break;
         }
@@ -781,8 +784,10 @@ static block_t *ParseNALBlock(decoder_t *p_dec, bool *pb_ts_used, block_t *p_fra
     }
 
     /* Get NALU type */
+    const mtime_t dts = p_frag->i_dts, pts = p_frag->i_pts;
     block_t * p_output = NULL;
     uint8_t i_nal_type = hevc_getNALType(&p_frag->p_buffer[4]);
+
     if (i_nal_type < HEVC_NAL_VPS)
     {
         /* NAL is a VCL NAL */
@@ -799,9 +804,9 @@ static block_t *ParseNALBlock(decoder_t *p_dec, bool *pb_ts_used, block_t *p_fra
     if(p_output)
     {
         SetOutputBlockProperties( p_dec, p_output );
-        if(p_frag->i_dts > VLC_TS_INVALID)
-            date_Set(&p_sys->dts, p_frag->i_dts);
-        p_sys->pts = p_frag->i_pts;
+        if (dts > VLC_TS_INVALID)
+            date_Set(&p_sys->dts, dts);
+        p_sys->pts = pts;
         *pb_ts_used = true;
     }
 

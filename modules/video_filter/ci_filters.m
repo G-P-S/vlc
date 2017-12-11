@@ -41,6 +41,9 @@
 #include <CoreImage/CIFilter.h>
 #include <CoreImage/CIVector.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpartial-availability"
+
 enum    filter_type
 {
     FILTER_NONE = -1,
@@ -83,7 +86,6 @@ struct  ci_filters_ctx
     video_format_t              cvpx_pool_fmt;
     CVPixelBufferPoolRef        outconv_cvpx_pool;
     CIContext *                 ci_ctx;
-    CGColorSpaceRef             color_space;
     struct filter_chain *       fchain;
     filter_t *                  dst_converter;
 };
@@ -403,13 +405,7 @@ Filter(filter_t *filter, picture_t *src)
         }
 
         [ctx->ci_ctx render: ci_img
-#if !TARGET_OS_IPHONE
-                toIOSurface: CVPixelBufferGetIOSurface(cvpx)
-#else
-            toCVPixelBuffer: cvpx
-#endif
-                     bounds: [ci_img extent]
-                 colorSpace: ctx->color_space];
+            toCVPixelBuffer: cvpx];
     } /* autoreleasepool */
 
     CopyInfoAndRelease(dst, src);
@@ -606,10 +602,7 @@ Open(vlc_object_t *obj, char const *psz_filter)
         case VLC_CODEC_CVPX_UYVY:
         case VLC_CODEC_CVPX_I420:
         case VLC_CODEC_CVPX_BGRA:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
             if (&kCGColorSpaceITUR_709 == nil)
-#pragma clang diagnostic pop
             {
                 msg_Warn(obj, "iOS/macOS version is too old, aborting...");
                 return VLC_EGENERIC;
@@ -637,11 +630,6 @@ Open(vlc_object_t *obj, char const *psz_filter)
          && filter->fmt_in.video.i_chroma != VLC_CODEC_CVPX_BGRA
          && Open_AddConverter(filter, ctx))
             goto error;
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpartial-availability"
-        ctx->color_space = CGColorSpaceCreateWithName(kCGColorSpaceITUR_709);
-#pragma clang diagnostic pop
 
 #if !TARGET_OS_IPHONE
         CGLContextObj glctx = var_InheritAddress(filter, "macosx-glcontext");
@@ -694,8 +682,6 @@ Open(vlc_object_t *obj, char const *psz_filter)
 error:
     if (ctx)
     {
-        if (ctx->color_space)
-            CGColorSpaceRelease(ctx->color_space);
         Close_RemoveConverters(filter, ctx);
         if (ctx->cvpx_pool)
             CVPixelBufferPoolRelease(ctx->cvpx_pool);
@@ -765,8 +751,6 @@ Close(vlc_object_t *obj)
         Close_RemoveConverters(filter, ctx);
         if (ctx->cvpx_pool)
             CVPixelBufferPoolRelease(ctx->cvpx_pool);
-        if (ctx->color_space)
-            CGColorSpaceRelease(ctx->color_space);
         free(ctx);
         var_Destroy(filter->obj.parent, "ci-filters-ctx");
     }
@@ -812,3 +796,5 @@ vlc_module_begin()
     add_shortcut("ci")
     add_string("ci-filter", "CIComicEffect", CI_CUSTOM_FILTER_TEXT, CI_CUSTOM_FILTER_LONGTEXT, true);
 vlc_module_end()
+
+#pragma clang diagnostic pop

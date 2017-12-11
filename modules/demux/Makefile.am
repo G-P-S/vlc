@@ -1,15 +1,20 @@
 demuxdir = $(pluginsdir)/demux
 demux_LTLIBRARIES =
 
-libflacsys_plugin_la_SOURCES = demux/flac.c demux/xiph_metadata.h demux/xiph_metadata.c
+libxiph_metadata_la_SOURCES = demux/xiph_metadata.h demux/xiph_metadata.c
+libxiph_metadata_la_LDFLAGS = -static
+noinst_LTLIBRARIES += libxiph_metadata.la
+
+libflacsys_plugin_la_SOURCES = demux/flac.c
 libflacsys_plugin_la_CPPFLAGS = $(AM_CPPFLAGS)
+libflacsys_plugin_la_LIBADD = libxiph_metadata.la
 demux_LTLIBRARIES += libflacsys_plugin.la
 
 libogg_plugin_la_SOURCES = demux/ogg.c demux/ogg.h demux/oggseek.c demux/oggseek.h \
-	demux/xiph_metadata.h demux/xiph.h demux/xiph_metadata.c demux/opus.h
+	demux/xiph.h demux/opus.h
 libogg_plugin_la_CPPFLAGS = $(AM_CPPFLAGS) $(LIBVORBIS_CFLAGS) $(OGG_CFLAGS)
 libogg_plugin_la_LDFLAGS = $(AM_LDFLAGS) -rpath '$(demuxdir)'
-libogg_plugin_la_LIBADD = $(LIBVORBIS_LIBS) $(OGG_LIBS)
+libogg_plugin_la_LIBADD = $(LIBVORBIS_LIBS) $(OGG_LIBS) libxiph_metadata.la
 EXTRA_LTLIBRARIES += libogg_plugin.la
 demux_LTLIBRARIES += $(LTLIBogg)
 
@@ -136,17 +141,13 @@ libcaf_plugin_la_LIBADD = $(LIBM)
 demux_LTLIBRARIES += libcaf_plugin.la
 
 libavformat_plugin_la_SOURCES = demux/avformat/demux.c \
-	codec/avcodec/fourcc.c \
-	codec/avcodec/chroma.c \
-	codec/avcodec/avcommon.h \
-	codec/avcodec/avcommon_compat.h \
 	demux/vobsub.h \
 	demux/avformat/avformat.c demux/avformat/avformat.h
 if ENABLE_SOUT
 libavformat_plugin_la_SOURCES += demux/avformat/mux.c
 endif
 libavformat_plugin_la_CFLAGS = $(AM_CFLAGS) $(AVFORMAT_CFLAGS) $(AVUTIL_CFLAGS)
-libavformat_plugin_la_LIBADD = $(AVFORMAT_LIBS) $(AVUTIL_LIBS) $(LIBM)
+libavformat_plugin_la_LIBADD = $(AVFORMAT_LIBS) $(AVUTIL_LIBS) $(LIBM) libavcodec_common.la
 libavformat_plugin_la_LDFLAGS = $(AM_LDFLAGS) $(SYMBOLIC_LDFLAGS)
 if HAVE_ZLIB
 libavformat_plugin_la_LIBADD += -lz
@@ -157,6 +158,7 @@ endif
 if HAVE_AVFORMAT
 if !MERGE_FFMPEG
 demux_LTLIBRARIES += libavformat_plugin.la
+noinst_LTLIBRARIES += libavcodec_common.la
 endif
 endif
 
@@ -326,6 +328,8 @@ libadaptive_plugin_la_SOURCES = \
     demux/adaptive/logic/Representationselectors.cpp \
     demux/adaptive/mp4/AtomsReader.cpp \
     demux/adaptive/mp4/AtomsReader.hpp \
+    demux/adaptive/http/AuthStorage.cpp \
+    demux/adaptive/http/AuthStorage.hpp \
     demux/adaptive/http/BytesRange.cpp \
     demux/adaptive/http/BytesRange.hpp \
     demux/adaptive/http/Chunk.cpp \
@@ -446,7 +450,7 @@ libadaptive_smooth_SOURCES = \
     demux/smooth/SmoothStream.hpp \
     demux/smooth/SmoothStream.cpp
 libadaptive_smooth_SOURCES += mux/mp4/libmp4mux.c mux/mp4/libmp4mux.h \
-				packetizer/h264_nal.c packetizer/h264_nal.h
+			      packetizer/h264_nal.c packetizer/hevc_nal.c
 
 libadaptive_plugin_la_SOURCES += $(libadaptive_hls_SOURCES)
 libadaptive_plugin_la_SOURCES += $(libadaptive_dash_SOURCES)

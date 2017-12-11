@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\dllsrc\dllmain.cpp" />
     <ClCompile Include="..\..\..\modules\video_chroma\copy.c" />
+    <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c" />
     <ClCompile Include="..\..\..\modules\video_output\win32\common.c" />
     <ClCompile Include="..\..\..\modules\video_output\win32\direct3d9.c" />
     <ClCompile Include="..\..\..\modules\video_output\win32\events.c" />

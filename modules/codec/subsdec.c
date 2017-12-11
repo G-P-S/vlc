@@ -456,7 +456,8 @@ static subpicture_t *ParseText( decoder_t *p_dec, block_t *p_block )
 
     subpicture_updater_sys_t *p_spu_sys = p_spu->updater.p_sys;
 
-    p_spu_sys->region.inner_align = SUBPICTURE_ALIGN_BOTTOM | p_sys->i_align;
+    p_spu_sys->region.align = SUBPICTURE_ALIGN_BOTTOM | p_sys->i_align;
+    p_spu_sys->region.inner_align = p_sys->i_align;
     p_spu_sys->region.p_segments = ParseSubtitles( &p_spu_sys->region.inner_align, psz_subtitle );
 
     free( psz_subtitle );
@@ -586,7 +587,7 @@ static char* GetTag( const char** ppsz_subtitle, bool b_closing )
     size_t tag_size = 1;
     while ( isalnum( psz_subtitle[tag_size] ) || psz_subtitle[tag_size] == '_' )
         tag_size++;
-    char* psz_tagname = malloc( ( tag_size + 1 ) * sizeof( *psz_tagname ) );
+    char* psz_tagname = vlc_alloc( tag_size + 1, sizeof( *psz_tagname ) );
     if ( unlikely( !psz_tagname ) )
         return NULL;
     strncpy( psz_tagname, psz_subtitle, tag_size );
@@ -904,6 +905,15 @@ static text_segment_t* ParseSubtitles( int *pi_align, const char *psz_subtitle )
                     if ( *psz_subtitle == '>' )
                         psz_subtitle++;
                     free( psz_tagname );
+                }
+                else
+                {
+                    /**
+                      * This doesn't appear to be a valid tag closing syntax.
+                      * Simply append the text
+                      */
+                    AppendString( p_segment, "</" );
+                    psz_subtitle += 2;
                 }
             }
             else

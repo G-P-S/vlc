@@ -33,5 +33,8 @@
     <ClCompile Include="..\..\..\modules\codec\avcodec\va_surface.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

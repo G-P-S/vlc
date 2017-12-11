@@ -653,7 +653,7 @@ static int blurayOpen(vlc_object_t *object)
     }
 
     /* */
-    p_demux->p_sys = p_sys = vlc_calloc(object, 1, sizeof(*p_sys));
+    p_demux->p_sys = p_sys = vlc_obj_calloc(object, 1, sizeof(*p_sys));
     if (unlikely(!p_sys))
         return VLC_ENOMEM;
 
@@ -790,8 +790,8 @@ static int blurayOpen(vlc_object_t *object)
                 "BD-J support: %d, JVM found: %d, JVM usable: %d",
                 disc_info->bdj_supported, disc_info->libjvm_detected, disc_info->bdj_handled);
         vlc_dialog_display_error(p_demux, _("Java required"),
-             _("This Blu-ray disc needs Java for menus.%s\nDisc is played without menus."),
-             !disc_info->libjvm_detected ? _(" Java was not found from your system.") : "");
+             _("This Blu-ray disc requires Java for menus support.%s\nThe disc will be played without menus."),
+             !disc_info->libjvm_detected ? _("Java was not found on your system.") : "");
         p_sys->b_menu = false;
     }
 
@@ -1028,7 +1028,7 @@ static es_out_id_t *esOutAdd(es_out_t *p_out, const es_format_t *p_fmt)
                 p_pair->i_id = p_fmt->i_id;
                 p_pair->p_es = p_es;
                 msg_Info(p_demux, "Adding ES %d", p_fmt->i_id);
-                vlc_array_append(&p_sys->es, p_pair);
+                vlc_array_append_or_abort(&p_sys->es, p_pair);
 
                 if (b_select) {
                     if (fmt.i_cat == AUDIO_ES) {
@@ -1853,7 +1853,7 @@ static int blurayControl(demux_t *p_demux, int query, va_list args)
 
         /* Duplicate local title infos */
         *pi_int = 0;
-        *ppp_title = malloc(p_sys->i_title * sizeof(input_title_t *));
+        *ppp_title = vlc_alloc(p_sys->i_title, sizeof(input_title_t *));
         if(!*ppp_title)
             return VLC_EGENERIC;
         for (unsigned int i = 0; i < p_sys->i_title; i++)
@@ -1950,7 +1950,7 @@ static int blurayControl(demux_t *p_demux, int query, va_list args)
             return VLC_EGENERIC;
 
         *pi_int = 0;
-        *ppp_attach = malloc(sizeof(input_attachment_t *) * p_sys->i_attachments);
+        *ppp_attach = vlc_alloc(p_sys->i_attachments, sizeof(input_attachment_t *));
         if(!*ppp_attach)
             return VLC_EGENERIC;
         for (int i = 0; i < p_sys->i_attachments; i++)

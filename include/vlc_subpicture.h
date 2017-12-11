@@ -61,15 +61,17 @@ struct subpicture_region_t
 
     int             i_x;      /**< position of region, relative to alignment */
     int             i_y;      /**< position of region, relative to alignment */
-    int             i_align;      /**< alignment flags of region and content */
+    int             i_align;                  /**< alignment flags of region */
     int             i_alpha;                               /**< transparency */
 
+    /* Parameters for text regions (p_picture to be rendered) */
     text_segment_t  *p_text;         /**< subtitle text, made of a list of segments */
+    int             i_text_align;    /**< alignment flags of region content */
     bool            b_noregionbg;    /**< render background under text only */
     bool            b_gridmode;      /** if the decoder sends row/cols based output */
     bool            b_balanced_text; /** try to balance wrapped text lines */
-    int             i_max_width;     /** horizontal rendering/cropping limit */
-    int             i_max_height;    /** vertical rendering/cropping limit */
+    int             i_max_width;     /** horizontal rendering/cropping target/limit */
+    int             i_max_height;    /** vertical rendering/cropping target/limit */
 
     subpicture_region_t *p_next;                /**< next region in the list */
     subpicture_region_private_t *p_private;  /**< Private data for spu_t *only* */
@@ -80,10 +82,8 @@ struct subpicture_region_t
 #define SUBPICTURE_ALIGN_RIGHT      0x2
 #define SUBPICTURE_ALIGN_TOP        0x4
 #define SUBPICTURE_ALIGN_BOTTOM     0x8
-#define SUBPICTURE_ALIGN_LEAVETEXT  0x10 /**< Align the subpicture, but not the text inside */
 #define SUBPICTURE_ALIGN_MASK ( SUBPICTURE_ALIGN_LEFT|SUBPICTURE_ALIGN_RIGHT| \
-                                SUBPICTURE_ALIGN_TOP |SUBPICTURE_ALIGN_BOTTOM| \
-                                SUBPICTURE_ALIGN_LEAVETEXT )
+                                SUBPICTURE_ALIGN_TOP |SUBPICTURE_ALIGN_BOTTOM )
 /**
  * This function will create a new subpicture region.
  *
