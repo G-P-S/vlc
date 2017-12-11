@@ -260,13 +260,11 @@ int /*APIENTRY*/ _tWinMain_(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevIn
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MMSOGLWIN));
 
-	static bool bindtex = 0;
-
 	unsigned int Last = 0;
 	unsigned int Now = 0;
 	Last = GetTickCount();
 	while (GetMessage(&msg, NULL, 0, 0)) {
-		 //if(bindtex) display();
+		 if(bindtex) display();
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -548,9 +546,6 @@ void display()
 	bool res;
 	//!!!!!!!!!!!!!!!!!!we need to lock our shared surfaces using NV_DX_Interop before we being our OpenGL rendering.
 	res = wglMakeCurrent(hDC, hRC);
-	for(int i = 0; i < MAXVIDEOCLIPS; i++) { //remember MAXVIDEOCLIPS is equal to 1 and the loop is here for general case as a legacy
-		res = wglDXLockObjectsNV(m_hH264DeviceArray[i], 1, &m_hH264TextureArray[i]);
-	}
 #ifdef USESHADER	
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -563,6 +558,10 @@ void display()
 	glClearColor(1.0, 0, 1.0, 1.);
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram (shadercombinedprogram);
+
+	for(int i = 0; i < MAXVIDEOCLIPS; i++) { //remember MAXVIDEOCLIPS is equal to 1 and the loop is here for general case as a legacy
+		res = wglDXLockObjectsNV(m_hH264DeviceArray[i], 1, &m_hH264TextureArray[i]);
+	}
 
 	for(int i = 0; i < MAXVIDEOCLIPS; i++) {
 		glActiveTexture(GL_TEXTURE0 + i);
@@ -612,12 +611,16 @@ void display()
 	glEnd();
 #endif
   glEnd();  /**/
+
 	glPopMatrix();
 	SwapBuffers(hDC);
-   glFlush();
-	for(int i = 0; i < MAXVIDEOCLIPS; i++) {
+   glFlush();	
+   
+   for (int i = 0; i < MAXVIDEOCLIPS; i++) {
 		res = wglDXUnlockObjectsNV(m_hH264DeviceArray[i], 1, &m_hH264TextureArray[i]);
-	}
+	}/**/
+
+
 
 #if 0 //def DEBUG
 	if (firstframe == 1){
@@ -761,7 +764,7 @@ bool bindtextureVLC(IDirect3DDevice9* pDX9, LPDIRECT3DSURFACE9 dxSurf,HANDLE  dx
 		hDevice = wglDXOpenDeviceNV(pDX9);
 		if (hDevice) {
 			BOOL success = wglDXSetResourceShareHandleNV(dxSurf,  dxHandle);
-			hTexture = wglDXRegisterObjectNV(hDevice, dxSurf, texture, GL_TEXTURE_2D, WGL_ACCESS_READ_ONLY_NV);
+			hTexture = wglDXRegisterObjectNV(hDevice, dxSurf, texture, GL_TEXTURE_2D, WGL_ACCESS_READ_WRITE_NV);  //WGL_ACCESS_READ_ONLY_NV
 			if (hTexture == NULL){
 				DWORD dwErr = GetLastError();  
 				if (dwErr == ERROR_OPEN_FAILED){

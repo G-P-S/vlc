@@ -155,9 +155,6 @@ void gpunewframe(void *opaque,
 	}
 #endif
 	//HRESULT hh = D3DXSaveSurfaceToFile(_T("c:\\temp\\dx9.bmp"), D3DXIFF_BMP, vlc_pSurface, NULL, NULL);
-	 
-	display();
-
 }
 
 const char *videoclip = {
@@ -233,7 +230,8 @@ int main(int argc, char **argv)
 	 //create the special "fake" window for vlc
 	HWND hWnd_vlc = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW |
 		 WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
-		 0,0, video_width, video_height,  NULL, NULL, hInstance, NULL);
+		// 0,0, video_width, video_height,  NULL, NULL, hInstance, NULL);
+		 0,0, WINDOWWIDTH, WINDOWHEIGHT,  NULL, NULL, hInstance, NULL);
 
 	//ShowWindow(hWnd_vlc, SW_HIDE);
 	libvlc_media_player_set_hwnd(media_player, hWnd_vlc); 
