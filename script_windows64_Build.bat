@@ -5,13 +5,13 @@ set "SEVENZ_EXE=C:\Program Files\7-Zip\7z.exe"
 set "MSBUILD_EXE=C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
 
 :: download and unzip FFmpeg Visual libs
-if exist "contrib\win32" (
-	echo FOLDER contrib\win32 already exists, skip FFmpeg download
-) else (
+::if exist "contrib\win32" (
+::	echo FOLDER contrib\win32 already exists, skip FFmpeg download
+::) else (
 	mkdir contrib\win32
 	"%WGET_EXE%" --no-check-certificate -P contrib\win32 https://s3-us-west-2.amazonaws.com/kendata/static-libs/FFmpeg_visual_x64/%FFMPEG_ARCHIVE%.zip
 	"%SEVENZ_EXE%" x -y "contrib\win32\%FFMPEG_ARCHIVE%.zip" -owin32 
-)
+::)
 
 :: build VLC project
 "%MSBUILD_EXE%" winvlc.sln /p:Configuration=Release /p:Platform=x64 /t:Clean,Build
