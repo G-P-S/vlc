@@ -865,6 +865,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "direct3d9", "plugins\video_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "inflate", "plugins\stream_filter\inflate\inflate.vcxproj", "{A9B56FD2-BBEB-4FC7-BE65-DFB50F5C95FA}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spatialaudio", "plugins\audio_filter\spatialaudio\spatialaudio.vcxproj", "{A72E7BF3-C6AB-498D-9B27-46005F3E363A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -2033,6 +2035,14 @@ Global
 		{A9B56FD2-BBEB-4FC7-BE65-DFB50F5C95FA}.Release|Win32.Build.0 = Release|Win32
 		{A9B56FD2-BBEB-4FC7-BE65-DFB50F5C95FA}.Release|x64.ActiveCfg = Release|x64
 		{A9B56FD2-BBEB-4FC7-BE65-DFB50F5C95FA}.Release|x64.Build.0 = Release|x64
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Debug|Win32.Build.0 = Debug|Win32
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Debug|x64.ActiveCfg = Debug|x64
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Debug|x64.Build.0 = Debug|x64
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Release|Win32.ActiveCfg = Release|Win32
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Release|Win32.Build.0 = Release|Win32
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Release|x64.ActiveCfg = Release|x64
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2193,5 +2203,6 @@ Global
 		{106775F2-ECE4-4B49-A6F9-970F6F1E7EC5} = {D42755A9-055A-440C-BD88-84FD7F651D34}
 		{4F0DFE88-34D7-4462-8C9C-CBF12C2F923C} = {4B8389F8-72F5-4FB7-9055-C2FBEB058DA0}
 		{A9B56FD2-BBEB-4FC7-BE65-DFB50F5C95FA} = {DDA06138-DD8C-4F17-924B-4211406D9AD6}
+		{A72E7BF3-C6AB-498D-9B27-46005F3E363A} = {930C78F2-34B0-46F9-9012-B706F3CCCFA6}
 	EndGlobalSection
 EndGlobal
