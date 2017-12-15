@@ -19,7 +19,6 @@ OPTIONS="
       --enable-shout
       --enable-goom
       --enable-caca
-      --enable-qt
       --enable-skins2
       --enable-sse --enable-mmx
       --enable-libcddb
@@ -27,6 +26,8 @@ OPTIONS="
       --enable-nls
       --disable-x265
       --disable-qt --disable-skins2
+      --disable-chromecast
+      --disable-css
       --disable-gme"
 
 sh "$(dirname $0)"/../../../configure ${OPTIONS}  "$@"

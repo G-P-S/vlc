@@ -34,7 +34,9 @@
 
 #include "d3d9_filters.h"
 
+#if defined(COMPILE_VS2013)
 const char vlc_module_name[] = MODULE_STRING;
+#endif
 
 static vlc_mutex_t inst_lock = VLC_STATIC_MUTEX;
 static d3d9_device_t device = { .dev = NULL };

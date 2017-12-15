@@ -35,7 +35,9 @@
 
 #include <new>
 
+#if defined(COMPILE_VS2013)
 const char vlc_module_name[] = MODULE_STRING;
+#endif
 
 #ifndef _MSC_VER
 DEFINE_PROPERTYKEY(SENSOR_DATA_TYPE_MAGNETOMETER_ACCURACY, 0x1637d8a2, 0x4248, 0x4275, 0x86, 0x5d, 0x55, 0x8d, 0xe8, 0x4a, 0xed, 0xfd, 22);
