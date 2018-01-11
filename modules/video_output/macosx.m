@@ -87,7 +87,7 @@ vlc_module_begin ()
                 GLHW_TEXT, GLHW_LONGTEXT, true)
 
     add_shortcut ("macosx", "vout_macosx")
-    add_glconv ()
+    add_glopts ()
 vlc_module_end ()
 
 /**
