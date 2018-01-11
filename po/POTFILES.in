@@ -209,7 +209,6 @@ modules/access/rtp/rtp.c
 modules/access/rtsp/access.c
 modules/access/satip.c
 modules/access/screen/screen.c
-modules/access/screen/wayland.c
 modules/access/screen/xcb.c
 modules/access/sdp.c
 modules/access/sftp.c
@@ -292,6 +291,7 @@ modules/codec/adpcm.c
 modules/codec/aes3.c
 modules/codec/aom.c
 modules/codec/araw.c
+modules/codec/audiotoolbox_midi.c
 modules/codec/arib/aribsub.c
 modules/codec/avcodec/avcodec.c
 modules/codec/avcodec/avcodec.h

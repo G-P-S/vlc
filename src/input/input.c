@@ -326,9 +326,7 @@ static input_thread_t *Create( vlc_object_t *p_parent, input_item_t *p_item,
     priv->attachment_demux = NULL;
     priv->p_sout   = NULL;
     priv->b_out_pace_control = false;
-    /* The renderer is passed after its refcount was incremented.
-     * The input thread is now responsible for releasing it */
-    priv->p_renderer = p_renderer;
+    priv->p_renderer = p_renderer ? vlc_renderer_item_hold( p_renderer ) : NULL;
 
     priv->viewpoint_changed = false;
     /* Fetch the viewpoint from the mediaplayer or the playlist if any */
@@ -1710,6 +1708,10 @@ static void ControlRelease( int i_type, vlc_value_t val )
     case INPUT_CONTROL_SET_INITIAL_VIEWPOINT:
     case INPUT_CONTROL_UPDATE_VIEWPOINT:
         free( val.p_address );
+        break;
+    case INPUT_CONTROL_SET_RENDERER:
+        if( val.p_address )
+            vlc_renderer_item_release( val.p_address );
         break;
 
     default:

@@ -24,12 +24,13 @@ OPTIONS:
    -p            Use a Prebuilt contrib package (speeds up compilation)
    -c            Create a Prebuilt contrib package (rarely used)
    -l            Enable translations (can be slow)
-   -i <n|r>      Create an Installer (n: nightly, r: release)
+   -i <n|r|u>    Create an Installer (n: nightly, r: release, u: unsigned release archive)
+   -b <url>      Enable breakpad support and send crash reports to this URL
 EOF
 }
 
 ARCH="x86_64"
-while getopts "hra:pcli:" OPTION
+while getopts "hra:pcli:b:" OPTION
 do
      case $OPTION in
          h)
@@ -55,6 +56,9 @@ do
          i)
              INSTALLER=$OPTARG
          ;;
+         b)
+             BREAKPAD=$OPTARG
+         ;;
      esac
 done
 shift $(($OPTIND - 1))
@@ -78,7 +82,7 @@ esac
 
 #####
 
-JOBS=`nproc --all`
+JOBS=`getconf _NPROCESSORS_ONLN 2>&1`
 TRIPLET=$ARCH-w64-mingw32
 
 info "Building extra tools"
@@ -91,7 +95,10 @@ cd ../../
 info "Building contribs"
 export USE_FFMPEG=1
 mkdir -p contrib/contrib-$SHORTARCH && cd contrib/contrib-$SHORTARCH
-../bootstrap --host=$TRIPLET
+if [ ! -z "$BREAKPAD" ]; then
+     CONTRIBFLAGS="$CONTRIBFLAGS --enable-breakpad"
+fi
+../bootstrap --host=$TRIPLET $CONTRIBFLAGS
 
 # Rebuild the contribs or use the prebuilt ones
 if [ "$PREBUILT" != "yes" ]; then
@@ -125,6 +132,10 @@ fi
 if [ "$I18N" != "yes" ]; then
      CONFIGFLAGS="$CONFIGFLAGS --disable-nls"
 fi
+if [ ! -z "$BREAKPAD" ]; then
+     CONFIGFLAGS="$CONFIGFLAGS --with-breakpad=$BREAKPAD"
+fi
+
 ../extras/package/win32/configure.sh --host=$TRIPLET $CONFIGFLAGS
 
 info "Compiling"
@@ -134,4 +145,7 @@ if [ "$INSTALLER" = "n" ]; then
 make package-win32-debug package-win32
 elif [ "$INSTALLER" = "r" ]; then
 make package-win32
+elif [ "$INSTALLER" = "u" ]; then
+make package-win32-release
+sha512sum vlc-*-release.7z
 fi

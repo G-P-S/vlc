@@ -106,7 +106,7 @@ static char *FromACP( const char *str )
 typedef struct
 {
     vlc_fourcc_t i_fourcc;
-    off_t        i_pos;
+    uint32_t     i_pos;
     uint32_t     i_size;
     vlc_fourcc_t i_type;     /* only for AVIFOURCC_LIST */
 
@@ -121,7 +121,7 @@ typedef struct
 {
     vlc_fourcc_t i_id;
     uint32_t     i_flags;
-    off_t        i_pos;
+    uint32_t     i_pos;
     uint32_t     i_length;
     int64_t      i_lengthtotal;
 
@@ -129,14 +129,14 @@ typedef struct
 
 typedef struct
 {
-    unsigned int    i_size;
-    unsigned int    i_max;
+    uint32_t        i_size;
+    uint32_t        i_max;
     avi_entry_t     *p_entry;
 
 } avi_index_t;
 static void avi_index_Init( avi_index_t * );
 static void avi_index_Clean( avi_index_t * );
-static void avi_index_Append( avi_index_t *, off_t *, avi_entry_t * );
+static void avi_index_Append( avi_index_t *, uint32_t *, avi_entry_t * );
 
 typedef struct
 {
@@ -184,8 +184,8 @@ struct demux_sys_t
 
     bool  b_odml;
 
-    off_t   i_movi_begin;
-    off_t   i_movi_lastchunk_pos;   /* XXX position of last valid chunk */
+    uint32_t i_movi_begin;
+    uint32_t i_movi_lastchunk_pos;   /* XXX position of last valid chunk */
 
     /* number of streams and information */
     unsigned int i_track;
@@ -203,8 +203,8 @@ static inline off_t __EVEN( off_t i )
     return (i & 1) ? i + 1 : i;
 }
 
-static mtime_t AVI_PTSToChunk( avi_track_t *, mtime_t i_pts );
-static mtime_t AVI_PTSToByte ( avi_track_t *, mtime_t i_pts );
+static int64_t AVI_PTSToChunk( avi_track_t *, mtime_t i_pts );
+static int64_t AVI_PTSToByte ( avi_track_t *, mtime_t i_pts );
 static mtime_t AVI_GetDPTS   ( avi_track_t *, int64_t i_count );
 static mtime_t AVI_GetPTS    ( avi_track_t * );
 
@@ -213,7 +213,7 @@ static int AVI_StreamChunkFind( demux_t *, unsigned int i_stream );
 static int AVI_StreamChunkSet ( demux_t *,
                                 unsigned int i_stream, unsigned int i_ck );
 static int AVI_StreamBytesSet ( demux_t *,
-                                unsigned int i_stream, off_t   i_byte );
+                                unsigned int i_stream, uint32_t i_byte );
 
 vlc_fourcc_t AVI_FourccGetCodec( unsigned int i_cat, vlc_fourcc_t );
 static int   AVI_GetKeyFlag    ( vlc_fourcc_t , uint8_t * );
@@ -332,9 +332,6 @@ static int Open( vlc_object_t * p_this )
                         &p_sys->b_fastseekable );
     vlc_stream_Control( p_demux->s, STREAM_CAN_SEEK, &p_sys->b_seekable );
 
-    p_demux->pf_control = Control;
-    p_demux->pf_demux = (p_sys->b_seekable) ? Demux_Seekable : Demux_UnSeekable;
-
     p_sys->b_interleaved = var_InheritBool( p_demux, "avi-interleaved" );
 
     if( AVI_ChunkReadRoot( p_demux->s, &p_sys->ck_root ) )
@@ -404,11 +401,33 @@ static int Open( vlc_object_t * p_this )
 
     p_sys->b_interleaved |= (p_avih->i_flags & AVIF_ISINTERLEAVED);
 
-    if( p_sys->b_interleaved && !p_sys->b_fastseekable )
+    /* Set callbacks */
+    p_demux->pf_control = Control;
+
+    if( p_sys->b_fastseekable )
+    {
+        p_demux->pf_demux = Demux_Seekable;
         p_sys->i_read_increment = READ_LENGTH;
-    else
+    }
+    else if( p_sys->b_seekable && !p_sys->b_interleaved )
+    {
+        p_demux->pf_demux = Demux_Seekable;
         p_sys->i_read_increment = READ_LENGTH_NONINTERLEAVED;
-    /* non seekable and non interleaved case ? well... */
+        msg_Warn( p_demux, "Non seekable non interleaved content over slow seekable, "
+                           "expect bad performance" );
+    }
+    else
+    {
+        p_demux->pf_demux = Demux_UnSeekable;
+        p_sys->i_read_increment = READ_LENGTH_NONINTERLEAVED;
+         /* non seekable and non interleaved case ? well... */
+        if( !p_sys->b_interleaved )
+        {
+            msg_Warn( p_demux, "Non seekable non interleaved content, "
+                               "disabling other tracks" );
+            i_track = __MIN(i_track, 1);
+        }
+    }
 
     AVI_MetaLoad( p_demux, p_riff, p_avih );
     p_sys->i_avih_flags = p_avih->i_flags;
@@ -444,6 +463,11 @@ static int Open( vlc_object_t * p_this )
         tk->i_samplesize = p_strh->i_samplesize;
         msg_Dbg( p_demux, "stream[%u] rate:%u scale:%u samplesize:%u",
                 i, tk->i_rate, tk->i_scale, tk->i_samplesize );
+        if( tk->i_scale > tk->i_rate )
+        {
+            free( tk );
+            continue;
+        }
 
         switch( p_strh->i_type )
         {
@@ -526,10 +550,13 @@ static int Open( vlc_object_t * p_this )
                     p_auds->p_wf->nSamplesPerSec,
                     p_auds->p_wf->wBitsPerSample );
 
-                if( p_auds->p_wf->cbSize > 0 && p_auds->i_chunk_size > sizeof(WAVEFORMATEX) )
+                const size_t i_cboff = sizeof(WAVEFORMATEX);
+                const size_t i_incboff = ( p_auds->p_wf->wFormatTag == WAVE_FORMAT_EXTENSIBLE ) ?
+                                          sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX): 0;
+                if( p_auds->i_chunk_size >= i_cboff + p_auds->p_wf->cbSize &&
+                    p_auds->p_wf->cbSize > i_incboff )
                 {
-                    int i_extra = __MIN( p_auds->p_wf->cbSize,
-                                         p_auds->i_chunk_size - sizeof(WAVEFORMATEX) );
+                    int i_extra = p_auds->p_wf->cbSize - i_incboff;
                     tk->fmt.p_extra = malloc( i_extra );
                     if( unlikely(tk->fmt.p_extra == NULL) )
                     {
@@ -538,7 +565,7 @@ static int Open( vlc_object_t * p_this )
                         goto error;
                     }
                     tk->fmt.i_extra = i_extra;
-                    memcpy( tk->fmt.p_extra, &p_auds->p_wf[1], tk->fmt.i_extra );
+                    memcpy( tk->fmt.p_extra, ((uint8_t *)(&p_auds->p_wf[1])) + i_incboff, i_extra );
                 }
                 break;
             }
@@ -979,9 +1006,9 @@ typedef struct
 {
     bool b_ok;
 
-    int i_toread;
+    int64_t i_toread;
 
-    off_t i_posf; /* where we will read :
+    int64_t i_posf; /* where we will read :
                    if i_idxposb == 0 : begining of chunk (+8 to acces data)
                    else : point on data directly */
 } avi_track_toread_t;
@@ -1084,7 +1111,7 @@ static int Demux_Seekable( demux_t *p_demux )
         avi_track_t     *tk;
         bool       b_done;
         block_t         *p_frame;
-        off_t i_pos;
+        int64_t i_pos;
         unsigned int i;
         size_t i_size;
 
@@ -1219,7 +1246,7 @@ static int Demux_Seekable( demux_t *p_demux )
         /* read thoses data */
         if( tk->i_samplesize )
         {
-            unsigned int i_toread;
+            int64_t i_toread;
 
             if( ( i_toread = toread[i_track].i_toread ) <= 0 )
             {
@@ -1235,7 +1262,7 @@ static int Demux_Seekable( demux_t *p_demux )
             }
             i_size = __MIN( tk->idx.p_entry[tk->i_idxposc].i_length -
                                 tk->i_idxposb,
-                            i_toread );
+                            (size_t) i_toread );
         }
         else
         {
@@ -1774,26 +1801,38 @@ static int Control( demux_t *p_demux, int i_query, va_list args )
  * Function to convert pts to chunk or byte
  *****************************************************************************/
 
-static mtime_t AVI_PTSToChunk( avi_track_t *tk, mtime_t i_pts )
+static int64_t AVI_Rescale( int64_t i_value, uint32_t i_timescale, uint32_t i_newscale )
+{
+    /* TODO: replace (and mp4) with better global helper (recursive checks) */
+    if( i_timescale == i_newscale )
+        return i_value;
+
+    if( (i_value >= 0 && i_value <= INT64_MAX / i_newscale) ||
+        (i_value < 0  && i_value >= INT64_MIN / i_newscale) )
+        return i_value * i_newscale / i_timescale;
+
+    /* overflow */
+    int64_t q = i_value / i_timescale;
+    int64_t r = i_value % i_timescale;
+    return q * i_newscale + r * i_newscale / i_timescale;
+}
+
+static int64_t AVI_PTSToChunk( avi_track_t *tk, mtime_t i_pts )
 {
     if( !tk->i_scale )
-        return (mtime_t)0;
+        return 0;
 
-    return (mtime_t)((int64_t)i_pts *
-                     (int64_t)tk->i_rate /
-                     (int64_t)tk->i_scale /
-                     (int64_t)CLOCK_FREQ );
+    i_pts = AVI_Rescale( i_pts, tk->i_scale, tk->i_rate );
+    return i_pts / CLOCK_FREQ;
 }
-static mtime_t AVI_PTSToByte( avi_track_t *tk, mtime_t i_pts )
+
+static int64_t AVI_PTSToByte( avi_track_t *tk, mtime_t i_pts )
 {
     if( !tk->i_scale || !tk->i_samplesize )
-        return (mtime_t)0;
+        return 0;
 
-    return (mtime_t)((int64_t)i_pts *
-                     (int64_t)tk->i_rate /
-                     (int64_t)tk->i_scale /
-                     (int64_t)1000000 *
-                     (int64_t)tk->i_samplesize );
+    i_pts = AVI_Rescale( i_pts, tk->i_scale, tk->i_rate );
+    return i_pts / CLOCK_FREQ * tk->i_samplesize;
 }
 
 static mtime_t AVI_GetDPTS( avi_track_t *tk, int64_t i_count )
@@ -1803,10 +1842,7 @@ static mtime_t AVI_GetDPTS( avi_track_t *tk, int64_t i_count )
     if( !tk->i_rate )
         return i_dpts;
 
-    i_dpts = (mtime_t)( (int64_t)1000000 *
-                        (int64_t)i_count *
-                        (int64_t)tk->i_scale /
-                        (int64_t)tk->i_rate );
+    i_dpts = AVI_Rescale( CLOCK_FREQ * i_count, tk->i_rate, tk->i_scale );
 
     if( tk->i_samplesize )
     {
@@ -1953,7 +1989,7 @@ static int AVI_StreamChunkSet( demux_t *p_demux, unsigned int i_stream,
 /* XXX FIXME up to now, we assume that all chunk are one after one */
 static int AVI_StreamBytesSet( demux_t    *p_demux,
                                unsigned int i_stream,
-                               off_t   i_byte )
+                               uint32_t  i_byte )
 {
     demux_sys_t *p_sys = p_demux->p_sys;
     avi_track_t *p_stream = p_sys->track[i_stream];
@@ -2330,7 +2366,7 @@ static void avi_index_Clean( avi_index_t *p_index )
 {
     free( p_index->p_entry );
 }
-static void avi_index_Append( avi_index_t *p_index, off_t *pi_last_pos,
+static void avi_index_Append( avi_index_t *p_index, uint32_t *pi_last_pos,
                               avi_entry_t *p_entry )
 {
     /* Update last chunk position */
@@ -2427,7 +2463,7 @@ static int AVI_IndexFind_idx1( demux_t *p_demux,
 }
 
 static int AVI_IndexLoad_idx1( demux_t *p_demux,
-                               avi_index_t p_index[], off_t *pi_last_offset )
+                               avi_index_t p_index[], uint32_t *pi_last_offset )
 {
     demux_sys_t *p_sys = p_demux->p_sys;
 
@@ -2483,7 +2519,7 @@ static int AVI_IndexLoad_idx1( demux_t *p_demux,
     return VLC_SUCCESS;
 }
 
-static void __Parse_indx( demux_t *p_demux, avi_index_t *p_index, off_t *pi_max_offset,
+static void __Parse_indx( demux_t *p_demux, avi_index_t *p_index, uint32_t *pi_max_offset,
                           avi_chunk_indx_t *p_indx )
 {
     avi_entry_t index;
@@ -2524,7 +2560,7 @@ static void __Parse_indx( demux_t *p_demux, avi_index_t *p_index, off_t *pi_max_
 }
 
 static void AVI_IndexLoad_indx( demux_t *p_demux,
-                                avi_index_t p_index[], off_t *pi_last_offset )
+                                avi_index_t p_index[], uint32_t *pi_last_offset )
 {
     demux_sys_t         *p_sys = p_demux->p_sys;
 
@@ -2594,8 +2630,8 @@ static void AVI_IndexLoad( demux_t *p_demux )
         avi_index_Init( &p_idx_indx[i] );
         avi_index_Init( &p_idx_idx1[i] );
     }
-    off_t i_indx_last_pos = p_sys->i_movi_lastchunk_pos;
-    off_t i_idx1_last_pos = p_sys->i_movi_lastchunk_pos;
+    uint32_t i_indx_last_pos = p_sys->i_movi_lastchunk_pos;
+    uint32_t i_idx1_last_pos = p_sys->i_movi_lastchunk_pos;
 
     AVI_IndexLoad_indx( p_demux, p_idx_indx, &i_indx_last_pos );
     if( !p_sys->b_odml )
@@ -2648,7 +2684,7 @@ static void AVI_IndexCreate( demux_t *p_demux )
     avi_chunk_list_t *p_movi;
 
     unsigned int i_stream;
-    off_t i_movi_end;
+    uint32_t i_movi_end;
 
     mtime_t i_dialog_update;
     vlc_dialog_id *p_dialog_id = NULL;
@@ -2665,7 +2701,7 @@ static void AVI_IndexCreate( demux_t *p_demux )
     for( i_stream = 0; i_stream < p_sys->i_track; i_stream++ )
         avi_index_Init( &p_sys->track[i_stream]->idx );
 
-    i_movi_end = __MIN( (off_t)(p_movi->i_chunk_pos + p_movi->i_chunk_size),
+    i_movi_end = __MIN( (uint32_t)(p_movi->i_chunk_pos + p_movi->i_chunk_size),
                         stream_Size( p_demux->s ) );
 
     vlc_stream_Seek( p_demux->s, p_movi->i_chunk_pos + 12 );

@@ -257,6 +257,7 @@ public:
     void toggleFullwidth();
     void updateFullwidthGeometry( int number );
     int targetScreen();
+    void setTargetScreen( int );
 
 private:
     static int FullscreenChanged( vlc_object_t *obj,
@@ -317,6 +318,10 @@ private:
 
     bool isWideFSC;
     int i_sensitivity;
+
+#ifdef QT5_HAS_WAYLAND
+    bool b_hasWayland;
+#endif
 };
 
 #endif

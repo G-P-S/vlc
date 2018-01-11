@@ -1,4 +1,5 @@
 name: vlc
+version-script: cat $SNAPCRAFT_STAGE/version
 version: "daily"
 grade: stable
 summary: Read, capture, broadcast your multimedia streams
@@ -6,11 +7,13 @@ description: |
   VLC is a free and open source cross-platform multimedia player and
   framework that plays most multimedia files as well as DVDs, Audio CDs,
   VCDs, and various streaming protocols.
+  NOTE. This snap contains an untested daily build of VLC
 confinement: strict
 
 apps:
   vlc:
-    command: bin/vlc-snap-wrapper.sh
+    desktop: usr/share/applications/vlc.desktop
+    command: desktop-launch $SNAP/bin/vlc-snap-wrapper.sh
     plugs:
       - unity7
       - network
@@ -29,24 +32,49 @@ apps:
 
 parts:
   vlc:
+    after: [desktop-qt5]
     source: ../../../
     source-type: git
     plugin: autotools
-    configflags: ['--disable-chromecast']
+    prepare: |
+      sed -i 's|0\.19\.8|0\.19\.7|'  configure.ac
+    build: |
+      cd contrib && mkdir linux && cd linux
+      ../bootstrap
+      make -j $(getconf _NPROCESSORS_ONLN) .libplacebo
+      make -j $(getconf _NPROCESSORS_ONLN) .ffmpeg
+      cd ../../
+      export NOCONFIGURE=1
+      autoreconf -fi
+      ./configure \
+          --prefix=$SNAPCRAFT_PART_INSTALL/usr \
+          --disable-chromecast \
+          --disable-wayland
+      make -j $(getconf _NPROCESSORS_ONLN)
+    install: |
+      echo $(git describe HEAD) > $SNAPCRAFT_STAGE/version
+      make install
+      sed -i 's|Icon=vlc|Icon=/usr/share/icons/hicolor/256x256/apps/vlc\.png|' $SNAPCRAFT_PART_INSTALL/usr/share/applications/vlc.desktop
     build-packages:
-      - autopoint
-      - debhelper
-      - dh-autoreconf
-      - dh-buildinfo
-      - gettext
+      - git
+      - g++
+      - make
+      - yasm
+      - autoconf
+      - libtool
+      - cmake
+      - automake
+      - build-essential
+      - libxcb-xfixes0-dev
+      - texinfo
+      - libvpx-dev
+      - libqt5svg5-dev
       - liba52-0.7.4-dev
       - libaa1-dev
       - libasound2-dev
       - libass-dev
       - libavahi-client-dev
       - libavc1394-dev
-      - libavcodec-dev
-      - libavformat-dev
       - libbluray-dev
       - libcaca-dev
       - libcairo2-dev
@@ -137,18 +165,15 @@ parts:
       - lua5.2
       - pkg-config
       - qtbase5-dev
-      - wayland-protocols
+      - xz-utils
       - zlib1g-dev
+      - bison
+      - flex
       - zsh
-
-  env:
-    plugin: nil
     stage-packages:
       - fonts-freefont-ttf
+      - dbus-x11
       - libaa1
-      - libavcodec57
-      - libavcodec-extra57
-      - libavutil55
       - libcaca0
       - libcairo2
       - libegl1-mesa
@@ -170,6 +195,7 @@ parts:
       - libva-drm1
       - libva-x11-1
       - libva1
+      - libvdpau1
       - libvncclient1
       - libx11-6
       - libxcb-composite0
@@ -182,8 +208,11 @@ parts:
       - libxi6
       - libxinerama1
       - libxpm4
+      - vdpau-va-driver
+      - i965-va-driver
+      - mesa-utils
+      - mesa-vdpau-drivers
       - zlib1g
-    after: [vlc] # VLC build fails if stage packages are present
 
   wrapper:
     plugin: dump

@@ -10,6 +10,10 @@ PKGS += live555
 endif
 endif
 
+ifeq ($(call need_pkg,"live555"),)
+PKGS_FOUND += live555
+endif
+
 $(TARBALLS)/$(LIVE555_FILE):
 	$(call download_pkg,$(LIVEDOTCOM_URL),live555)
 
@@ -70,6 +74,8 @@ endif
 	$(APPLY) $(SRC)/live555/no-null-reference.patch
 	# Add a pkg-config file
 	$(APPLY) $(SRC)/live555/add-pkgconfig-file.patch
+	# Expose Server:
+	$(APPLY) $(SRC)/live555/expose_server_string.patch
 
 	mv live.$(LIVE555_VERSION) $@ && touch $@
 

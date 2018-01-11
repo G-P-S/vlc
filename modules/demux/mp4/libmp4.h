@@ -99,7 +99,6 @@ typedef int64_t stime_t;
 #define ATOM_stss VLC_FOURCC( 's', 't', 's', 's' )
 #define ATOM_stsh VLC_FOURCC( 's', 't', 's', 'h' )
 #define ATOM_stdp VLC_FOURCC( 's', 't', 'd', 'p' )
-#define ATOM_padb VLC_FOURCC( 'p', 'a', 'd', 'b' )
 #define ATOM_edts VLC_FOURCC( 'e', 'd', 't', 's' )
 #define ATOM_elst VLC_FOURCC( 'e', 'l', 's', 't' )
 #define ATOM_mvex VLC_FOURCC( 'm', 'v', 'e', 'x' )
@@ -181,6 +180,13 @@ typedef int64_t stime_t;
 #define ATOM_eac3 VLC_FOURCC( 'e', 'c', '-', '3' )
 #define ATOM_dac3 VLC_FOURCC( 'd', 'a', 'c', '3' )
 #define ATOM_dec3 VLC_FOURCC( 'd', 'e', 'c', '3' )
+#define ATOM_ddts VLC_FOURCC( 'd', 'd', 't', 's' ) /* DTS formats */
+#define ATOM_dtsc VLC_FOURCC( 'd', 't', 's', 'c' )
+#define ATOM_dtsh VLC_FOURCC( 'd', 't', 's', 'h' )
+#define ATOM_dtsl VLC_FOURCC( 'd', 't', 's', 'l' )
+#define ATOM_dtse VLC_FOURCC( 'd', 't', 's', 'e' )
+#define ATOM_dtsm VLC_FOURCC( 'd', 't', 's', '-' )
+#define ATOM_dtsp VLC_FOURCC( 'd', 't', 's', '+' )
 #define ATOM_vc1  VLC_FOURCC( 'v', 'c', '-', '1' )
 #define ATOM_dvc1 VLC_FOURCC( 'd', 'v', 'c', '1' )
 #define ATOM_WMA2 VLC_FOURCC( 'W', 'M', 'A', '2' )
@@ -927,19 +933,6 @@ typedef struct MP4_Box_data_stdp_s
     uint16_t *i_priority;
 
 } MP4_Box_data_stdp_t;
-
-typedef struct MP4_Box_data_padb_s
-{
-    uint8_t  i_version;
-    uint32_t i_flags;
-
-    uint32_t i_sample_count;
-
-    unsigned char *i_reserved;   /* 1bit  */
-    unsigned char *i_pad;        /* 3bits */
-
-} MP4_Box_data_padb_t;
-
 
 typedef struct MP4_Box_data_elst_s
 {
@@ -1702,7 +1695,6 @@ typedef union MP4_Box_data_s
     MP4_Box_data_stss_t *p_stss;
     MP4_Box_data_stsh_t *p_stsh;
     MP4_Box_data_stdp_t *p_stdp;
-    MP4_Box_data_padb_t *p_padb;
     MP4_Box_data_elst_t *p_elst;
     MP4_Box_data_cprt_t *p_cprt;
 
