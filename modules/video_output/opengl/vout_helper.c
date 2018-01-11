@@ -1606,10 +1606,10 @@ static void DrawWithShaders(vout_display_opengl_t *vgl, struct prgm *prgm)
 
 #ifdef __APPLE__
     // bind FBO with shared texture
-    vgl->vt.BindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, vgl->fboId);
+    glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, vgl->fboId);
     vgl->vt.Viewport(0, 0, vgl->fmt.i_width, vgl->fmt.i_height);
     vgl->vt.DrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
-    vgl->vt.BindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
+    glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, 0);
 #else
     vgl->vt.DrawElements(GL_TRIANGLES, vgl->nb_indices, GL_UNSIGNED_SHORT, 0);
 #endif

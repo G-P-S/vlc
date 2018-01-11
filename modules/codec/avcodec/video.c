@@ -1556,64 +1556,89 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     }
 
     p_sys->profile = p_context->profile;
-    p_sys->level = p_context->level;
-
-    wait_mt(p_sys);
-
-    static const enum PixelFormat hwfmts[] =
+    p_sys->level = p_context->level; 
+    
+#if (LIBAVCODEC_VERSION_MICRO >= 100) \
+&& (LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 83, 101))
+    if (p_context->active_thread_type)
     {
-#ifdef _WIN32
-#if LIBAVUTIL_VERSION_CHECK(54, 13, 1, 24, 100)
-        AV_PIX_FMT_D3D11VA_VLD,
+        msg_Warn(p_dec, "thread type %d: disabling hardware acceleration",
+                 p_context->active_thread_type);
+        can_hwaccel = false;
+    }
 #endif
-        AV_PIX_FMT_DXVA2_VLD,
-#endif
-        AV_PIX_FMT_VAAPI_VLD,
-#if (LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(52, 4, 0))
-        AV_PIX_FMT_VDPAU,
-#endif
-        AV_PIX_FMT_NONE,
-    };
-
-    for( size_t i = 0; hwfmts[i] != AV_PIX_FMT_NONE; i++ )
+    
+    if (can_hwaccel)
     {
-        enum PixelFormat hwfmt = AV_PIX_FMT_NONE;
-        for( size_t j = 0; hwfmt == AV_PIX_FMT_NONE && pi_fmt[j] != AV_PIX_FMT_NONE; j++ )
-            if( hwfmts[i] == pi_fmt[j] )
-                hwfmt = hwfmts[i];
+        wait_mt(p_sys);
 
-        if( hwfmt == AV_PIX_FMT_NONE )
-            continue;
+        static const enum PixelFormat hwfmts[] =
+        {
+    #ifdef _WIN32
+    #if LIBAVUTIL_VERSION_CHECK(54, 13, 1, 24, 100)
+            AV_PIX_FMT_D3D11VA_VLD,
+    #endif
+            AV_PIX_FMT_DXVA2_VLD,
+    #endif
+            AV_PIX_FMT_VAAPI_VLD,
+    #if (LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(52, 4, 0))
+            AV_PIX_FMT_VDPAU,
+    #endif
+            AV_PIX_FMT_NONE,
+        };
 
-        p_dec->fmt_out.video.i_chroma = vlc_va_GetChroma(hwfmt, swfmt);
-        if (p_dec->fmt_out.video.i_chroma == 0)
-            continue; /* Unknown brand of hardware acceleration */
-        if (p_context->width == 0 || p_context->height == 0)
-        {   /* should never happen */
-            msg_Err(p_dec, "unspecified video dimensions");
-            continue;
+        for( size_t i = 0; hwfmts[i] != AV_PIX_FMT_NONE; i++ )
+        {
+            enum PixelFormat hwfmt = AV_PIX_FMT_NONE;
+            for( size_t j = 0; hwfmt == AV_PIX_FMT_NONE && pi_fmt[j] != AV_PIX_FMT_NONE; j++ )
+                if( hwfmts[i] == pi_fmt[j] )
+                    hwfmt = hwfmts[i];
+
+            if( hwfmt == AV_PIX_FMT_NONE )
+                continue;
+
+            p_dec->fmt_out.video.i_chroma = vlc_va_GetChroma(hwfmt, swfmt);
+            if (p_dec->fmt_out.video.i_chroma == 0)
+                continue; /* Unknown brand of hardware acceleration */
+            if (p_context->width == 0 || p_context->height == 0)
+            {   /* should never happen */
+                msg_Err(p_dec, "unspecified video dimensions");
+                continue;
+            }
+            if (lavc_UpdateVideoFormat(p_dec, p_context, hwfmt, swfmt))
+                continue; /* Unsupported brand of hardware acceleration */
+            post_mt(p_sys);
+
+            picture_t *test_pic = decoder_NewPicture(p_dec);
+            assert(!test_pic || test_pic->format.i_chroma == p_dec->fmt_out.video.i_chroma);
+            vlc_va_t *va = vlc_va_New(VLC_OBJECT(p_dec), p_context, hwfmt,
+                                      &p_dec->fmt_in,
+                                      test_pic ? test_pic->p_sys : NULL);
+            if (test_pic)
+                picture_Release(test_pic);
+            if (va == NULL)
+            {
+                wait_mt(p_sys);
+                continue; /* Unsupported codec profile or such */
+            }
+
+            if (va->description != NULL)
+                msg_Info(p_dec, "Using %s for hardware decoding", va->description);
+
+            msg_Info( p_dec, "######## found hw acceleration, allow rendering");
+            p_sys->p_va = va;
+            p_sys->pix_fmt = hwfmt;
+            p_context->draw_horiz_band = NULL;
+            return hwfmt;
         }
-    }
-    
-    post_mt(p_sys);
-    
-    if (hwfmt != AV_PIX_FMT_NONE)
-    {
-        msg_Info( p_dec, "######## found hw acceleration, allow rendering");
 
-        if (va->description != NULL)
-            msg_Info(p_dec, "Using %s for hardware decoding", va->description);
-        
-        p_sys->p_va = va;
-        p_sys->pix_fmt = hwfmt;
-        p_context->draw_horiz_band = NULL;
-        return hwfmt;
+        post_mt(p_sys);
     }
-    else if(strcmp(p_sys->p_codec->name, "vp8")  != 0 &&    // list allowed sotfware codecs here
-            strcmp(p_sys->p_codec->name, "vp9")  != 0 )
+
+    if(strcmp(p_sys->p_codec->name, "vp8")  != 0 &&    // list allowed sotfware codecs here
+       strcmp(p_sys->p_codec->name, "vp9")  != 0 )
     {
-        /* Fallback to default behaviour */
-        msg_Info( p_dec, "######## no acceleration and this codec is forbidden for software decoding, so disable rendering");
+        msg_Info( p_dec, "######## no hw acceleration and this codec is forbidden for software decoding, disable rendering");
         p_sys->p_va = NULL;
         p_sys->pix_fmt = AV_PIX_FMT_NONE;
         if(p_sys->hack_cb)
@@ -1630,7 +1655,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     }
     else
     {
-        msg_Info( p_dec, "######## no acceleration, but codec is allowed for software decoding");
+        msg_Info( p_dec, "######## no hw acceleration, but codec is allowed for software decoding, allow rendering");
         p_sys->pix_fmt = swfmt;
         return swfmt;
     }
