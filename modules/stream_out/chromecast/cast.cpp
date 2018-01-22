@@ -35,6 +35,7 @@
 
 #include <vlc_sout.h>
 #include <vlc_block.h>
+#include <vlc_modules.h>
 
 #include <cassert>
 
@@ -49,6 +50,8 @@ struct sout_stream_sys_t
         , b_supports_video(has_video)
         , i_port(port)
         , es_changed( true )
+        , transcode_attempt_idx( 0 )
+        , previous_state( Authenticating )
     {
         assert(p_intf != NULL);
     }
@@ -60,7 +63,8 @@ struct sout_stream_sys_t
     }
 
     bool canDecodeVideo( vlc_fourcc_t i_codec ) const;
-    bool canDecodeAudio( vlc_fourcc_t i_codec ) const;
+    bool canDecodeAudio( sout_stream_t* p_stream, vlc_fourcc_t i_codec,
+                         const audio_format_t* p_fmt ) const;
     bool startSoutChain(sout_stream_t* p_stream);
 
     sout_stream_t     *p_out;
@@ -76,6 +80,9 @@ struct sout_stream_sys_t
 
     bool                               es_changed;
     std::vector<sout_stream_id_sys_t*> streams;
+    std::vector<sout_stream_id_sys_t*> out_streams;
+    unsigned int                       transcode_attempt_idx;
+    States                             previous_state;
 
 private:
     bool UpdateOutput( sout_stream_t * );
@@ -83,8 +90,8 @@ private:
 
 #define SOUT_CFG_PREFIX "sout-chromecast-"
 
-static const vlc_fourcc_t DEFAULT_TRANSCODE_AUDIO = VLC_CODEC_MP4A;
 static const vlc_fourcc_t DEFAULT_TRANSCODE_VIDEO = VLC_CODEC_H264;
+static const unsigned int MAX_TRANSCODE_PASS = 3;
 static const char DEFAULT_MUXER[] = "avformat{mux=matroska,options={live=1}}}";
 
 
@@ -113,6 +120,37 @@ static const char *const ppsz_sout_options[] = {
 #define MIME_LONGTEXT N_("This sets the media MIME content type sent to the Chromecast.")
 #define PERF_TEXT N_( "Performance warning" )
 #define PERF_LONGTEXT N_( "Display a performance warning when transcoding" )
+#define AUDIO_PASSTHROUGH_TEXT N_( "Enable Audio passthrough" )
+#define AUDIO_PASSTHROUGH_LONGTEXT N_( "Disable if your receiver does not support Dolby®" )
+
+enum {
+    CONVERSION_QUALITY_HIGH = 0,
+    CONVERSION_QUALITY_MEDIUM = 1,
+    CONVERSION_QUALITY_LOW = 2,
+    CONVERSION_QUALITY_LOWCPU = 3,
+};
+
+#if defined (__ANDROID__) || defined (__arm__) || (defined (TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
+# define CONVERSION_QUALITY_DEFAULT CONVERSION_QUALITY_LOW
+#else
+# define CONVERSION_QUALITY_DEFAULT CONVERSION_QUALITY_MEDIUM
+#endif
+
+static const int conversion_quality_list[] = {
+    CONVERSION_QUALITY_HIGH,
+    CONVERSION_QUALITY_MEDIUM,
+    CONVERSION_QUALITY_LOW,
+    CONVERSION_QUALITY_LOWCPU,
+};
+static const char *const conversion_quality_list_text[] = {
+    N_( "High (high quality and high bandwith)" ),
+    N_( "Medium (medium quality and medium bandwidth)" ),
+    N_( "Low (low quality and low bandwith)" ),
+    N_( "Low CPU (low quality but high bandwith)" ),
+};
+
+#define CONVERSION_QUALITY_TEXT N_( "Conversion quality" )
+#define CONVERSION_QUALITY_LONGTEXT N_( "Change this option to increase conversion speed or quality." )
 
 #define IP_ADDR_TEXT N_("IP Address")
 #define IP_ADDR_LONGTEXT N_("IP Address of the Chromecast.")
@@ -130,13 +168,19 @@ vlc_module_begin ()
     set_callbacks(Open, Close)
 
     add_string(SOUT_CFG_PREFIX "ip", NULL, IP_ADDR_TEXT, IP_ADDR_LONGTEXT, false)
+        change_private()
     add_integer(SOUT_CFG_PREFIX "port", CHROMECAST_CONTROL_PORT, PORT_TEXT, PORT_LONGTEXT, false)
+        change_private()
     add_integer(SOUT_CFG_PREFIX "http-port", HTTP_PORT, HTTP_PORT_TEXT, HTTP_PORT_LONGTEXT, false)
     add_bool(SOUT_CFG_PREFIX "video", true, HAS_VIDEO_TEXT, HAS_VIDEO_LONGTEXT, false)
     add_string(SOUT_CFG_PREFIX "mux", DEFAULT_MUXER, MUX_TEXT, MUX_LONGTEXT, false)
     add_string(SOUT_CFG_PREFIX "mime", "video/x-matroska", MIME_TEXT, MIME_LONGTEXT, false)
     add_integer(SOUT_CFG_PREFIX "show-perf-warning", 1, PERF_TEXT, PERF_LONGTEXT, true )
-
+        change_private()
+    add_bool(SOUT_CFG_PREFIX "audio-passthrough", true, AUDIO_PASSTHROUGH_TEXT, AUDIO_PASSTHROUGH_LONGTEXT, false )
+    add_integer(SOUT_CFG_PREFIX "conversion-quality", CONVERSION_QUALITY_DEFAULT,
+                CONVERSION_QUALITY_TEXT, CONVERSION_QUALITY_LONGTEXT, false );
+        change_integer_list(conversion_quality_list, conversion_quality_list_text)
 
 vlc_module_end ()
 
@@ -177,48 +221,92 @@ static void Del(sout_stream_t *p_stream, sout_stream_id_sys_t *id)
 {
     sout_stream_sys_t *p_sys = p_stream->p_sys;
 
-    for (size_t i=0; i<p_sys->streams.size(); i++)
+    for (std::vector<sout_stream_id_sys_t*>::iterator it = p_sys->streams.begin();
+         it != p_sys->streams.end(); )
     {
-        if ( p_sys->streams[i] == id )
+        sout_stream_id_sys_t *p_sys_id = *it;
+        if ( p_sys_id == id )
         {
-            if ( p_sys->streams[i]->p_sub_id != NULL )
-                sout_StreamIdDel( p_sys->p_out, p_sys->streams[i]->p_sub_id );
+            if ( p_sys_id->p_sub_id != NULL )
+            {
+                sout_StreamIdDel( p_sys->p_out, p_sys_id->p_sub_id );
+                for (std::vector<sout_stream_id_sys_t*>::iterator out_it = p_sys->out_streams.begin();
+                     out_it != p_sys->out_streams.end(); )
+                {
+                    if (*out_it == id)
+                    {
+                        p_sys->out_streams.erase(out_it);
+                        p_sys->es_changed = true;
+                        break;
+                    }
+                    out_it++;
+                }
+            }
 
-            es_format_Clean( &p_sys->streams[i]->fmt );
-            free( p_sys->streams[i] );
-            p_sys->streams.erase( p_sys->streams.begin() +  i );
-            p_sys->es_changed = true;
+            es_format_Clean( &p_sys_id->fmt );
+            free( p_sys_id );
+            p_sys->streams.erase( it );
             break;
         }
+        it++;
     }
 
-    if ( p_sys->streams.empty() )
+    if ( p_sys->out_streams.empty() )
     {
         p_sys->p_intf->requestPlayerStop();
 
         sout_StreamChainDelete( p_sys->p_out, NULL );
         p_sys->p_out = NULL;
         p_sys->sout = "";
+        p_sys->transcode_attempt_idx = 0;
     }
 }
 
+/**
+ * Transcode steps:
+ * 0: Accept HEVC/VP9 & all supported audio formats
+ * 1: Transcode to h264 & accept all supported audio formats if the video codec
+ *    was HEVC/VP9
+ * 2: Transcode to H264 & MP3
+ *
+ * Additionally:
+ * - Allow (E)AC3 passthrough depending on the audio-passthrough
+ *   config value, except for the final step, where we just give up and transcode
+ *   everything.
+ * - Disallow multichannel AAC
+ *
+ * Supported formats: https://developers.google.com/cast/docs/media
+ */
 
 bool sout_stream_sys_t::canDecodeVideo( vlc_fourcc_t i_codec ) const
 {
+    if ( transcode_attempt_idx != 0 )
+        return false;
+    if ( i_codec == VLC_CODEC_HEVC || i_codec == VLC_CODEC_VP9 )
+        return transcode_attempt_idx == 0;
     return i_codec == VLC_CODEC_H264 || i_codec == VLC_CODEC_VP8;
 }
 
-bool sout_stream_sys_t::canDecodeAudio( vlc_fourcc_t i_codec ) const
+bool sout_stream_sys_t::canDecodeAudio( sout_stream_t *p_stream,
+                                        vlc_fourcc_t i_codec,
+                                        const audio_format_t* p_fmt ) const
 {
-    return i_codec == VLC_CODEC_VORBIS ||
-        i_codec == VLC_CODEC_MP4A ||
-        i_codec == VLC_FOURCC('h', 'a', 'a', 'c') ||
-        i_codec == VLC_FOURCC('l', 'a', 'a', 'c') ||
-        i_codec == VLC_FOURCC('s', 'a', 'a', 'c') ||
-        i_codec == VLC_CODEC_OPUS ||
-        i_codec == VLC_CODEC_MP3 ||
-        i_codec == VLC_CODEC_A52 ||
-        i_codec == VLC_CODEC_EAC3;
+    if ( transcode_attempt_idx == MAX_TRANSCODE_PASS - 1 )
+        return false;
+    if ( i_codec == VLC_CODEC_A52 || i_codec == VLC_CODEC_EAC3 )
+    {
+        return var_InheritBool( p_stream, SOUT_CFG_PREFIX "audio-passthrough" );
+    }
+    if ( i_codec == VLC_FOURCC('h', 'a', 'a', 'c') ||
+            i_codec == VLC_FOURCC('l', 'a', 'a', 'c') ||
+            i_codec == VLC_FOURCC('s', 'a', 'a', 'c') ||
+            i_codec == VLC_CODEC_MPGA ||
+            i_codec == VLC_CODEC_MP4A )
+    {
+        return p_fmt->i_channels <= 2;
+    }
+    return i_codec == VLC_CODEC_VORBIS || i_codec == VLC_CODEC_OPUS ||
+           i_codec == VLC_CODEC_MP3;
 }
 
 bool sout_stream_sys_t::startSoutChain( sout_stream_t *p_stream )
@@ -241,7 +329,8 @@ bool sout_stream_sys_t::startSoutChain( sout_stream_t *p_stream )
     }
 
     /* check the streams we can actually add */
-    for (std::vector<sout_stream_id_sys_t*>::iterator it = streams.begin(); it != streams.end(); )
+    for (std::vector<sout_stream_id_sys_t*>::iterator it = out_streams.begin();
+         it != out_streams.end(); )
     {
         sout_stream_id_sys_t *p_sys_id = *it;
         p_sys_id->p_sub_id = sout_StreamIdAdd( p_out, &p_sys_id->fmt );
@@ -249,13 +338,12 @@ bool sout_stream_sys_t::startSoutChain( sout_stream_t *p_stream )
         {
             msg_Err( p_stream, "can't handle %4.4s stream", (char *)&p_sys_id->fmt.i_codec );
             es_format_Clean( &p_sys_id->fmt );
-            free( p_sys_id );
-            it = streams.erase( it );
+            it = out_streams.erase( it );
         }
         else
             ++it;
     }
-    return streams.empty() == false;
+    return out_streams.empty() == false;
 }
 
 bool sout_stream_sys_t::UpdateOutput( sout_stream_t *p_stream )
@@ -269,31 +357,46 @@ bool sout_stream_sys_t::UpdateOutput( sout_stream_t *p_stream )
 
     bool canRemux = true;
     vlc_fourcc_t i_codec_video = 0, i_codec_audio = 0;
+    const es_format_t *p_original_audio = NULL;
+    const es_format_t *p_original_video = NULL;
+    out_streams.clear();
 
     for (std::vector<sout_stream_id_sys_t*>::iterator it = streams.begin(); it != streams.end(); ++it)
     {
         const es_format_t *p_es = &(*it)->fmt;
-        if (p_es->i_cat == AUDIO_ES)
+        if (p_es->i_cat == AUDIO_ES && p_original_audio == NULL)
         {
-            if (!canDecodeAudio( p_es->i_codec ))
+            if ( !canDecodeAudio( p_stream, p_es->i_codec, &p_es->audio ) )
             {
                 msg_Dbg( p_stream, "can't remux audio track %d codec %4.4s", p_es->i_id, (const char*)&p_es->i_codec );
                 canRemux = false;
             }
             else if (i_codec_audio == 0)
                 i_codec_audio = p_es->i_codec;
+            p_original_audio = p_es;
+            out_streams.push_back(*it);
         }
-        else if (b_supports_video && p_es->i_cat == VIDEO_ES)
+        else if (b_supports_video)
         {
-            if (!canDecodeVideo( p_es->i_codec ))
+            if (p_es->i_cat == VIDEO_ES && p_original_video == NULL)
             {
-                msg_Dbg( p_stream, "can't remux video track %d codec %4.4s", p_es->i_id, (const char*)&p_es->i_codec );
-                canRemux = false;
+                if (!canDecodeVideo( p_es->i_codec ))
+                {
+                    msg_Dbg( p_stream, "can't remux video track %d codec %4.4s",
+                             p_es->i_id, (const char*)&p_es->i_codec );
+                    canRemux = false;
+                }
+                else if (i_codec_video == 0)
+                    i_codec_video = p_es->i_codec;
+                p_original_video = p_es;
+                out_streams.push_back(*it);
             }
-            else if (i_codec_video == 0)
-                i_codec_video = p_es->i_codec;
+            /* TODO: else handle ttml/webvtt */
         }
     }
+
+    if (out_streams.empty())
+        return true;
 
     std::stringstream ssout;
     if ( !canRemux )
@@ -312,27 +415,96 @@ bool sout_stream_sys_t::UpdateOutput( sout_stream_t *p_stream )
             if ( res == 2 )
                 config_PutInt(p_stream, SOUT_CFG_PREFIX "show-perf-warning", 0 );
         }
+
+        static const char video_maxres_hd[] = "maxwidth=1920,maxheight=1080";
+        static const char video_maxres_720p[] = "maxwidth=1280,maxheight=720";
+        static const char video_x264_preset_veryfast[] = "veryfast";
+        static const char video_x264_preset_ultrafast[] = "ultrafast";
+
+        const int i_quality = var_InheritInteger( p_stream, SOUT_CFG_PREFIX "conversion-quality" );
+        const char *psz_video_maxres;
+        const char *psz_video_x264_preset;
+        unsigned i_video_x264_crf_hd, i_video_x264_crf_720p;
+        bool b_audio_mp3;
+
+        switch ( i_quality )
+        {
+            case CONVERSION_QUALITY_HIGH:
+                psz_video_maxres = video_maxres_hd;
+                i_video_x264_crf_hd = i_video_x264_crf_720p = 21;
+                psz_video_x264_preset = video_x264_preset_veryfast;
+                b_audio_mp3 = false;
+                break;
+            case CONVERSION_QUALITY_MEDIUM:
+                psz_video_maxres = video_maxres_hd;
+                i_video_x264_crf_hd = 23;
+                i_video_x264_crf_720p = 21;
+                psz_video_x264_preset = video_x264_preset_veryfast;
+                b_audio_mp3 = false;
+                break;
+            case CONVERSION_QUALITY_LOW:
+                psz_video_maxres = video_maxres_720p;
+                i_video_x264_crf_hd = i_video_x264_crf_720p = 23;
+                psz_video_x264_preset = video_x264_preset_veryfast;
+                b_audio_mp3 = true;
+                break;
+            default:
+            case CONVERSION_QUALITY_LOWCPU:
+                psz_video_maxres = video_maxres_720p;
+                i_video_x264_crf_hd = i_video_x264_crf_720p = 23;
+                psz_video_x264_preset = video_x264_preset_ultrafast;
+                b_audio_mp3 = true;
+                break;
+        }
+
         /* TODO: provide audio samplerate and channels */
         ssout << "transcode{";
         char s_fourcc[5];
-        if ( i_codec_audio == 0 )
+        if ( i_codec_audio == 0 && p_original_audio )
         {
-            i_codec_audio = DEFAULT_TRANSCODE_AUDIO;
+            if ( !b_audio_mp3
+              && p_original_audio->audio.i_channels > 2 && module_exists( "vorbis" ) )
+                i_codec_audio = VLC_CODEC_VORBIS;
+            else
+                i_codec_audio = VLC_CODEC_MP3;
+
             msg_Dbg( p_stream, "Converting audio to %.4s", (const char*)&i_codec_audio );
             ssout << "acodec=";
             vlc_fourcc_to_char( i_codec_audio, s_fourcc );
             s_fourcc[4] = '\0';
             ssout << s_fourcc << ',';
+            if( i_codec_audio == VLC_CODEC_VORBIS )
+                ssout << "aenc=vorbis{quality=6},";
         }
         if ( b_supports_video && i_codec_video == 0 )
         {
             i_codec_video = DEFAULT_TRANSCODE_VIDEO;
             msg_Dbg( p_stream, "Converting video to %.4s", (const char*)&i_codec_video );
-            /* TODO: provide maxwidth,maxheight */
             ssout << "vcodec=";
             vlc_fourcc_to_char( i_codec_video, s_fourcc );
             s_fourcc[4] = '\0';
-            ssout << s_fourcc;
+            ssout << s_fourcc << ',' << psz_video_maxres << ',';
+
+            const video_format_t *p_vid =
+                p_original_video ? &p_original_video->video : NULL;
+            const bool b_hdres = p_vid == NULL || p_vid->i_height == 0 || p_vid->i_height >= 800;
+            unsigned i_video_x264_crf = b_hdres ? i_video_x264_crf_hd : i_video_x264_crf_720p;
+
+            if( p_vid == NULL
+             || p_vid->i_frame_rate == 0 || p_vid->i_frame_rate_base == 0
+             || ( p_vid->i_frame_rate / p_vid->i_frame_rate_base ) > 30 )
+            {
+                /* Even force 24fps if the frame rate is unknown */
+                msg_Warn( p_stream, "lowering frame rate to 24fps" );
+                ssout << "fps=24,";
+            }
+
+            if( i_codec_video == VLC_CODEC_H264 )
+            {
+                if ( module_exists("x264") )
+                    ssout << "venc=x264{preset=" << psz_video_x264_preset
+                          << ",crf=" << i_video_x264_crf << "},";
+            }
         }
         ssout << "}:";
     }
@@ -398,6 +570,29 @@ static int Send(sout_stream_t *p_stream, sout_stream_id_sys_t *id,
     {
         block_Release( p_buffer );
         return VLC_EGENERIC;
+    }
+    States s = p_sys->p_intf->state();
+    if ( p_sys->previous_state != s )
+    {
+        if ( s == LoadFailed && p_sys->es_changed == false )
+        {
+            if ( p_sys->transcode_attempt_idx > MAX_TRANSCODE_PASS - 1 )
+            {
+                msg_Err( p_stream, "All attempts failed. Giving up." );
+                block_Release( p_buffer );
+                return VLC_EGENERIC;
+            }
+            p_sys->transcode_attempt_idx++;
+            p_sys->es_changed = true;
+            msg_Warn( p_stream, "Load failed detected. Switching to next "
+                     "configuration index: %u", p_sys->transcode_attempt_idx );
+        }
+        else if ( s == Playing || s == Paused )
+        {
+            msg_Dbg( p_stream, "Playback started: Current configuration (%u) "
+                     "accepted", p_sys->transcode_attempt_idx );
+        }
+        p_sys->previous_state = s;
     }
 
     return sout_StreamIdSend(p_sys->p_out, id, p_buffer);

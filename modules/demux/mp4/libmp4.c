@@ -1932,7 +1932,6 @@ static int MP4_ReadBox_avcC( stream_t *p_stream, MP4_Box_t *p_box )
     MP4_READBOX_EXIT( 1 );
 
 error:
-    MP4_FreeBox_avcC( p_box );
     MP4_READBOX_EXIT( 0 );
 }
 
@@ -4541,6 +4540,9 @@ static const struct
 
     { ATOM_yv12,    MP4_ReadBox_sample_vide,  0 },
     { ATOM_yuv2,    MP4_ReadBox_sample_vide,  0 },
+
+    { ATOM_strf,    MP4_ReadBox_strf,         ATOM_WVC1 }, /* MS smooth */
+    { ATOM_strf,    MP4_ReadBox_strf,         ATOM_H264 }, /* MS smooth */
 
     { ATOM_strf,    MP4_ReadBox_strf,         ATOM_WMV3 }, /* flip4mac */
     { ATOM_ASF ,    MP4_ReadBox_ASF,          ATOM_WMV3 }, /* flip4mac */
