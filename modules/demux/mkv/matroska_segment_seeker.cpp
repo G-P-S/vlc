@@ -462,19 +462,20 @@ SegmentSeeker::mkv_jump_to( matroska_segment_c& ms, fptr_t fpos )
     fptr_t i_cluster_pos = -1;
     ms.cluster = NULL;
 
+    if (!_cluster_positions.empty())
     {
         cluster_positions_t::iterator cluster_it = greatest_lower_bound(
           _cluster_positions.begin(), _cluster_positions.end(), fpos
         );
 
         ms.es.I_O().setFilePointer( *cluster_it );
-        ms.ep->reconstruct( &ms.es, ms.segment, &ms.sys.demuxer );
+        ms.ep.reconstruct( &ms.es, ms.segment, &ms.sys.demuxer );
     }
 
     while( ms.cluster == NULL || (
           ms.cluster->IsFiniteSize() && ms.cluster->GetEndPosition() < fpos ) )
     {
-        if( !( ms.cluster = static_cast<KaxCluster*>( ms.ep->Get() ) ) )
+        if( !( ms.cluster = static_cast<KaxCluster*>( ms.ep.Get() ) ) )
         {
             msg_Err( &ms.sys.demuxer, "unable to read KaxCluster during seek, giving up" );
             return;
@@ -487,16 +488,17 @@ SegmentSeeker::mkv_jump_to( matroska_segment_c& ms, fptr_t fpos )
         mark_range_as_searched( Range( i_cluster_pos, ms.es.I_O().getFilePointer() ) );
     }
 
-    ms.ep->Down();
+    ms.ep.Down();
 
     /* read until cluster/timecode to initialize cluster */
 
-    while( EbmlElement * el = ms.ep->Get() )
+    while( EbmlElement * el = ms.ep.Get() )
     {
         if( MKV_CHECKED_PTR_DECL( p_tc, KaxClusterTimecode, el ) )
         {
             p_tc->ReadData( ms.es.I_O(), SCOPE_ALL_DATA );
             ms.cluster->InitTimecode( static_cast<uint64>( *p_tc ), ms.i_timescale );
+            add_cluster(ms.cluster);
             break;
         }
     }

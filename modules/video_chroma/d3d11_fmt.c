@@ -165,10 +165,11 @@ static HKEY GetAdapterRegistry(DXGI_ADAPTER_DESC *adapterDesc)
 #undef D3D11_GetDriverVersion
 void D3D11_GetDriverVersion(vlc_object_t *obj, d3d11_device_t *d3d_dev)
 {
-    memset(&d3d_dev->WDDM, 0, sizeof(d3d_dev->WDDM));
 #if VLC_WINSTORE_APP
     return;
 #else
+    memset(&d3d_dev->WDDM, 0, sizeof(d3d_dev->WDDM));
+
     IDXGIAdapter *pAdapter = D3D11DeviceAdapter(d3d_dev->d3ddevice);
     if (!pAdapter)
         return;
@@ -276,6 +277,7 @@ HRESULT D3D11_CreateDevice(vlc_object_t *obj, d3d11_handle_t *hd3d,
             msg_Dbg(obj, "Created the D3D11 device 0x%p ctx 0x%p type %d level %x.",
                     (void *)out->d3ddevice, (void *)out->d3dcontext,
                     driverAttempts[driver], i_feature_level);
+            D3D11_GetDriverVersion( obj, out );
 #endif
             /* we can work with legacy levels but only if forced */
             if ( obj->obj.force || i_feature_level >= D3D_FEATURE_LEVEL_11_0 )
@@ -290,10 +292,7 @@ HRESULT D3D11_CreateDevice(vlc_object_t *obj, d3d11_handle_t *hd3d,
     }
 
     if (SUCCEEDED(hr))
-    {
         out->owner = true;
-        D3D11_GetDriverVersion(obj, out);
-    }
 
     return hr;
 }

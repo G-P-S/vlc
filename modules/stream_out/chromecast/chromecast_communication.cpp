@@ -49,6 +49,8 @@ ChromecastCommunication::ChromecastCommunication( vlc_object_t* p_module, const 
     if (m_creds == NULL)
         throw std::runtime_error( "Failed to create TLS client" );
 
+    /* Ignore ca checks */
+    m_creds->obj.flags |= OBJECT_FLAGS_INSECURE;
     m_tls = vlc_tls_SocketOpenTLS( m_creds, targetIP, devicePort, "tcps",
                                    NULL, NULL );
     if (m_tls == NULL)
@@ -235,21 +237,65 @@ void ChromecastCommunication::msgPlayerGetStatus( const std::string& destination
 }
 
 std::string ChromecastCommunication::GetMedia( unsigned int i_port,
-                                               const std::string& title, const std::string& artwork,
-                                               const std::string& mime )
+                                               const std::string& mime,
+                                               const vlc_meta_t *p_meta )
 {
     std::stringstream ss;
 
-    if ( title.size() )
+    bool b_music = strncmp(mime.c_str(), "audio", strlen("audio")) == 0;
+
+    const char *psz_title = NULL;
+    const char *psz_artwork = NULL;
+    const char *psz_artist = NULL;
+    const char *psz_album = NULL;
+    const char *psz_albumartist = NULL;
+    const char *psz_tracknumber = NULL;
+    const char *psz_discnumber = NULL;
+
+    if( p_meta )
     {
-        ss << "\"metadata\":{"
-           << " \"metadataType\":0"
-           << ",\"title\":\"" << title << "\"";
+        psz_title = vlc_meta_Get( p_meta, vlc_meta_Title );
+        psz_artwork = vlc_meta_Get( p_meta, vlc_meta_ArtworkURL );
 
-        if ( artwork.size() && !strncmp(artwork.c_str(), "http", 4))
-            ss << ",\"images\":[\"" << artwork << "\"]";
+        if( b_music && psz_title )
+        {
+            psz_artist = vlc_meta_Get( p_meta, vlc_meta_Artist );
+            psz_album = vlc_meta_Get( p_meta, vlc_meta_Album );
+            psz_albumartist = vlc_meta_Get( p_meta, vlc_meta_AlbumArtist );
+            psz_tracknumber = vlc_meta_Get( p_meta, vlc_meta_TrackNumber );
+            psz_discnumber = vlc_meta_Get( p_meta, vlc_meta_DiscNumber );
+        }
+        if( !psz_title )
+        {
+            psz_title = vlc_meta_Get( p_meta, vlc_meta_NowPlaying );
+            if( !psz_title )
+                psz_title = vlc_meta_Get( p_meta, vlc_meta_ESNowPlaying );
+        }
 
-        ss << "},";
+        if ( psz_title )
+        {
+            ss << "\"metadata\":{"
+               << " \"metadataType\":" << ( b_music ? "3" : "0" )
+               << ",\"title\":\"" << psz_title << "\"";
+            if( b_music )
+            {
+                if( psz_artist )
+                    ss << ",\"artist\":\"" << psz_artist << "\"";
+                if( psz_album )
+                    ss << ",\"album\":\"" << psz_album << "\"";
+                if( psz_albumartist )
+                    ss << ",\"albumArtist\":\"" << psz_albumartist << "\"";
+                if( psz_tracknumber )
+                    ss << ",\"trackNumber\":\"" << psz_tracknumber << "\"";
+                if( psz_discnumber )
+                    ss << ",\"discNumber\":\"" << psz_discnumber << "\"";
+            }
+
+            if ( psz_artwork && !strncmp( psz_artwork, "http", 4 ) )
+                ss << ",\"images\":[{\"url\":\"" << psz_artwork << "\"}]";
+
+            ss << "},";
+        }
     }
 
     std::stringstream chromecast_url;
@@ -265,12 +311,11 @@ std::string ChromecastCommunication::GetMedia( unsigned int i_port,
 }
 
 void ChromecastCommunication::msgPlayerLoad( const std::string& destinationId, unsigned int i_port,
-                                             const std::string& title, const std::string& artwork,
-                                             const std::string& mime )
+                                             const std::string& mime, const vlc_meta_t *p_meta )
 {
     std::stringstream ss;
     ss << "{\"type\":\"LOAD\","
-       <<  "\"media\":{" << GetMedia( i_port, title, artwork, mime ) << "},"
+       <<  "\"media\":{" << GetMedia( i_port, mime, p_meta ) << "},"
        <<  "\"autoplay\":\"false\","
        <<  "\"requestId\":" << m_requestId++
        << "}";
@@ -278,9 +323,9 @@ void ChromecastCommunication::msgPlayerLoad( const std::string& destinationId, u
     pushMediaPlayerMessage( destinationId, ss );
 }
 
-void ChromecastCommunication::msgPlayerPlay( const std::string& destinationId, const std::string& mediaSessionId )
+void ChromecastCommunication::msgPlayerPlay( const std::string& destinationId, int64_t mediaSessionId )
 {
-    assert(!mediaSessionId.empty());
+    assert(mediaSessionId != 0);
 
     std::stringstream ss;
     ss << "{\"type\":\"PLAY\","
@@ -291,9 +336,9 @@ void ChromecastCommunication::msgPlayerPlay( const std::string& destinationId, c
     pushMediaPlayerMessage( destinationId, ss );
 }
 
-void ChromecastCommunication::msgPlayerStop( const std::string& destinationId, const std::string& mediaSessionId )
+void ChromecastCommunication::msgPlayerStop( const std::string& destinationId, int64_t mediaSessionId )
 {
-    assert(!mediaSessionId.empty());
+    assert(mediaSessionId != 0);
 
     std::stringstream ss;
     ss << "{\"type\":\"STOP\","
@@ -304,9 +349,9 @@ void ChromecastCommunication::msgPlayerStop( const std::string& destinationId, c
     pushMediaPlayerMessage( destinationId, ss );
 }
 
-void ChromecastCommunication::msgPlayerPause( const std::string& destinationId, const std::string& mediaSessionId )
+void ChromecastCommunication::msgPlayerPause( const std::string& destinationId, int64_t mediaSessionId )
 {
-    assert(!mediaSessionId.empty());
+    assert(mediaSessionId != 0);
 
     std::stringstream ss;
     ss << "{\"type\":\"PAUSE\","
@@ -317,9 +362,9 @@ void ChromecastCommunication::msgPlayerPause( const std::string& destinationId, 
     pushMediaPlayerMessage( destinationId, ss );
 }
 
-void ChromecastCommunication::msgPlayerSetVolume( const std::string& destinationId, const std::string& mediaSessionId, float f_volume, bool b_mute )
+void ChromecastCommunication::msgPlayerSetVolume( const std::string& destinationId, int64_t mediaSessionId, float f_volume, bool b_mute )
 {
-    assert(!mediaSessionId.empty());
+    assert(mediaSessionId != 0);
 
     if ( f_volume < 0.0 || f_volume > 1.0)
         return;
@@ -334,9 +379,9 @@ void ChromecastCommunication::msgPlayerSetVolume( const std::string& destination
     pushMediaPlayerMessage( destinationId, ss );
 }
 
-void ChromecastCommunication::msgPlayerSeek( const std::string& destinationId, const std::string& mediaSessionId, const std::string& currentTime )
+void ChromecastCommunication::msgPlayerSeek( const std::string& destinationId, int64_t mediaSessionId, const std::string& currentTime )
 {
-    assert(!mediaSessionId.empty());
+    assert(mediaSessionId != 0);
 
     std::stringstream ss;
     ss << "{\"type\":\"SEEK\","

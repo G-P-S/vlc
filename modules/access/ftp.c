@@ -359,7 +359,7 @@ static void clearCmd( access_sys_t *p_sys )
     }
 }
 
-static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
+static int Login( vlc_object_t *p_access, access_sys_t *p_sys, const char *path )
 {
     int i_answer;
 
@@ -446,7 +446,7 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
 
     vlc_url_t url;
     vlc_credential credential;
-    if( vlc_UrlParseFixup( &url, ((stream_t *)p_access)->psz_url ) != 0 )
+    if( vlc_UrlParseFixup( &url, path ) != 0 )
     {
         vlc_UrlClean( &url );
         goto error;
@@ -459,19 +459,15 @@ static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
                         NULL, NULL );
     do
     {
-        if( credential.psz_username != NULL )
-        {
-            if( LoginUserPwd( p_access, p_sys, credential.psz_username,
-                              credential.psz_password, &b_logged ) != 0
-             || b_logged )
-                break;
-        }
-        else
-        {
-            /* No crendential specified: show the dialog with a "anonymous"
-             * user pre-filled */
-            credential.psz_username = "anonymous";
-        }
+        const char *psz_username = credential.psz_username;
+
+        if( psz_username == NULL ) /* use anonymous by default */
+            psz_username = "anonymous";
+
+        if( LoginUserPwd( p_access, p_sys, psz_username,
+                          credential.psz_password, &b_logged ) != 0
+         || b_logged )
+            break;
     }
     while( vlc_credential_get( &credential, p_access, "ftp-user", "ftp-pwd",
                                LOGIN_DIALOG_TITLE, LOGIN_DIALOG_TEXT,
@@ -588,9 +584,9 @@ static const char *IsASCII( const char *str )
     return str;
 }
 
-static int Connect( vlc_object_t *p_access, access_sys_t *p_sys )
+static int Connect( vlc_object_t *p_access, access_sys_t *p_sys, const char *path )
 {
-    if( Login( p_access, p_sys ) < 0 )
+    if( Login( p_access, p_sys, path ) < 0 )
         return -1;
 
     /* Extended passive mode */
@@ -616,7 +612,7 @@ static int Connect( vlc_object_t *p_access, access_sys_t *p_sys )
         msg_Info( p_access, "FTP Extended passive mode disabled" );
         clearCmd( p_sys );
 
-        if( Login( p_access, p_sys ) )
+        if( Login( p_access, p_sys, path ) )
             goto error;
     }
 
@@ -713,7 +709,7 @@ static int InOpen( vlc_object_t *p_this )
     if( parseURL( &p_sys->url, p_access->psz_url, p_sys->tlsmode ) )
         goto exit_error;
 
-    if( Connect( p_this, p_sys ) )
+    if( Connect( p_this, p_sys, p_access->psz_url ) )
         goto exit_error;
 
     do {
@@ -804,7 +800,7 @@ static int OutOpen( vlc_object_t *p_this )
         goto exit_error;
     }
 
-    if( Connect( p_this, p_sys ) )
+    if( Connect( p_this, p_sys, p_access->psz_path ) )
         goto exit_error;
 
     /* Start the 'stream' */

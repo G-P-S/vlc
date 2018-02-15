@@ -556,7 +556,7 @@ int InitVideoDec( vlc_object_t *obj )
             i_thread_count++;
 
         //FIXME: take in count the decoding time
-        i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 12 : 6 );
+        i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 10 : 6 );
     }
     i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 32 : 16 );
     msg_Dbg( p_dec, "allowing %d thread(s) for decoding", i_thread_count );
@@ -1605,6 +1605,8 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
                 msg_Err(p_dec, "unspecified video dimensions");
                 continue;
             }
+            const AVPixFmtDescriptor *dsc = av_pix_fmt_desc_get(hwfmt);
+            msg_Dbg(p_dec, "trying format %s", dsc ? dsc->name : "unknown");
             if (lavc_UpdateVideoFormat(p_dec, p_context, hwfmt, swfmt))
                 continue; /* Unsupported brand of hardware acceleration */
             post_mt(p_sys);

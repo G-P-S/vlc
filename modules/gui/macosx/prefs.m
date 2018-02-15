@@ -194,6 +194,7 @@
     [_prefsView setHasVerticalScroller: YES];
     [_prefsView setDrawsBackground: NO];
     [_prefsView setDocumentView: o_emptyView];
+    [self.window layoutIfNeeded];
     [_tree selectRowIndexes: [NSIndexSet indexSetWithIndex: 0] byExtendingSelection: NO];
 }
 
@@ -275,6 +276,28 @@
     objectValueForTableColumn:(NSTableColumn *)tableColumn byItem:(id)item
 {
     return (item == nil) ? @"" : [item name];
+}
+
+#pragma mark -
+#pragma mark split view delegate
+- (CGFloat)splitView:(NSSplitView *)splitView constrainMaxCoordinate:(CGFloat)proposedMax ofSubviewAt:(NSInteger)dividerIndex
+{
+    return 300.;
+}
+
+- (CGFloat)splitView:(NSSplitView *)splitView constrainMinCoordinate:(CGFloat)proposedMin ofSubviewAt:(NSInteger)dividerIndex
+{
+    return 100.;
+}
+
+- (BOOL)splitView:(NSSplitView *)splitView canCollapseSubview:(NSView *)subview
+{
+    return NO;
+}
+
+- (BOOL)splitView:(NSSplitView *)splitView shouldAdjustSizeOfSubview:(NSView *)subview
+{
+    return [splitView.subviews objectAtIndex:0] != subview;
 }
 
 @end

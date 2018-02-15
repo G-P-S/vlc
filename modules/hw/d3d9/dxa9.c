@@ -132,8 +132,11 @@ static void DXA9_YV12(filter_t *p_filter, picture_t *src, picture_t *dst)
             lock.Pitch,
         };
         Copy420_SP_to_P(dst, plane, pitch,
-                        src->format.i_visible_height + src->format.i_y_offset, p_copy_cache);
-        picture_SwapUV(dst);
+                        __MIN(desc.Height, src->format.i_y_offset + src->format.i_visible_height),
+                        p_copy_cache);
+
+        if (dst->format.i_chroma != VLC_CODEC_I420)
+            picture_SwapUV(dst);
     } else {
         msg_Err(p_filter, "Unsupported DXA9 conversion from 0x%08X to YV12", desc.Format);
     }
@@ -161,7 +164,9 @@ static void DXA9_NV12(filter_t *p_filter, picture_t *src, picture_t *dst)
             lock.Pitch,
             lock.Pitch,
         };
-        Copy420_SP_to_SP(dst, plane, pitch, desc.Height, p_copy_cache);
+        Copy420_SP_to_SP(dst, plane, pitch,
+                         __MIN(desc.Height, src->format.i_y_offset + src->format.i_visible_height),
+                         p_copy_cache);
     } else {
         msg_Err(p_filter, "Unsupported DXA9 conversion from 0x%08X to NV12", desc.Format);
     }
@@ -265,11 +270,7 @@ static void YV12_D3D9(filter_t *p_filter, picture_t *src, picture_t *dst)
 
     picture_Hold( src );
 
-    if (src->format.i_chroma == VLC_CODEC_I420)
-        plane_SwapUV( src->p );
     sys->filter->pf_video_filter(sys->filter, src);
-    if (src->format.i_chroma == VLC_CODEC_I420)
-        plane_SwapUV( src->p );
 
     IDirect3DSurface9_UnlockRect(sys->staging->p_sys->surface);
 
