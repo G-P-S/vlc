@@ -91,8 +91,13 @@ intf_sys_t::intf_sys_t(vlc_object_t * const p_this, int port, std::string device
  : m_module(p_this)
  , m_streaming_port(port)
  , m_mediaSessionId( 0 )
+ , m_on_seek_done( NULL )
+ , m_on_seek_done_data( NULL )
+ , m_on_paused_changed( NULL )
+ , m_on_paused_changed_data( NULL )
  , m_communication( p_this, device_addr.c_str(), device_port )
  , m_state( Authenticating )
+ , m_played_once( false )
  , m_request_stop( false )
  , m_request_load( false )
  , m_eof( false )
@@ -100,10 +105,11 @@ intf_sys_t::intf_sys_t(vlc_object_t * const p_this, int port, std::string device
  , m_meta( NULL )
  , m_ctl_thread_interrupt(p_interrupt)
  , m_httpd_host(httpd_host)
+ , m_httpd_file(NULL)
  , m_art_url(NULL)
+ , m_art_idx(0)
  , m_time_playback_started( VLC_TS_INVALID )
  , m_ts_local_start( VLC_TS_INVALID )
- , m_ts_seek( VLC_TS_INVALID )
  , m_length( VLC_TS_INVALID )
  , m_pingRetriesLeft( PING_WAIT_RETRIES )
 {
@@ -111,15 +117,12 @@ intf_sys_t::intf_sys_t(vlc_object_t * const p_this, int port, std::string device
     vlc_cond_init( &m_stateChangedCond );
     vlc_cond_init( &m_pace_cond );
 
-    const char *psz_artmime = "application/octet-stream";
-    m_httpd_file = httpd_FileNew( m_httpd_host, "/art", psz_artmime, NULL, NULL,
-                                  httpd_file_fill_cb, (httpd_file_sys_t *) this );
-
     std::stringstream ss;
     ss << "http://" << m_communication.getServerIp() << ":" << port;
     m_art_http_ip = ss.str();
 
     m_common.p_opaque = this;
+    m_common.pf_set_on_paused_changed_cb = set_on_paused_changed_cb;
     m_common.pf_get_position     = get_position;
     m_common.pf_get_time         = get_time;
     m_common.pf_set_length       = set_length;
@@ -242,19 +245,45 @@ static int httpd_file_fill_cb( httpd_file_sys_t *data, httpd_file_t *http_file,
 
 void intf_sys_t::prepareHttpArtwork()
 {
-    if( !m_httpd_file )
-        return;
-
     const char *psz_art = m_meta ? vlc_meta_Get( m_meta, vlc_meta_ArtworkURL ) : NULL;
     /* Abort if there is no art or if the art is already served */
     if( !psz_art || strncmp( psz_art, "http", 4) == 0 )
         return;
 
-    free( m_art_url );
-    m_art_url = strdup( psz_art );
+    std::stringstream ss_art_idx;
+
+    if( m_art_url && strcmp( m_art_url, psz_art ) == 0 )
+    {
+        /* Same art: use the previous cached artwork url */
+        assert( m_art_idx != 0 );
+        ss_art_idx << "/art" << (m_art_idx - 1);
+    }
+    else
+    {
+        /* New art: create a new httpd file instance with a new url. The
+         * artwork has to be different since the CC will cache the content. */
+
+        ss_art_idx << "/art" << m_art_idx;
+        m_art_idx++;
+
+        vlc_mutex_unlock( &m_lock );
+
+        if( m_httpd_file )
+            httpd_FileDelete( m_httpd_file );
+        m_httpd_file = httpd_FileNew( m_httpd_host, ss_art_idx.str().c_str(),
+                                      "application/octet-stream", NULL, NULL,
+                                      httpd_file_fill_cb, (httpd_file_sys_t *) this );
+
+        vlc_mutex_lock( &m_lock );
+        if( !m_httpd_file )
+            return;
+
+        free( m_art_url );
+        m_art_url = strdup( psz_art );
+    }
 
     std::stringstream ss;
-    ss << m_art_http_ip << "/art";
+    ss << m_art_http_ip << ss_art_idx.str();
     vlc_meta_Set( m_meta, vlc_meta_ArtworkURL, ss.str().c_str() );
 }
 
@@ -305,6 +334,7 @@ void intf_sys_t::setHasInput( const std::string mime_type )
 
     prepareHttpArtwork();
 
+    m_played_once = false;
     m_eof = false;
     m_mediaSessionId = 0;
     m_request_load = true;
@@ -370,18 +400,22 @@ void intf_sys_t::interrupt_wake_up()
     vlc_cond_signal( &m_pace_cond );
 }
 
-void intf_sys_t::pace()
+bool intf_sys_t::pace()
 {
     vlc_mutex_locker locker(&m_lock);
     if( !m_pace )
-        return;
+        return true;
 
     m_interrupted = false;
     vlc_interrupt_register( interrupt_wake_up_cb, this );
 
-    while( m_pace && !m_interrupted )
-        vlc_cond_wait( &m_pace_cond, &m_lock );
+    int ret = 0;
+    mtime_t deadline = mdate() + INT64_C(500000);
+    while( m_pace && !m_interrupted && ret == 0 )
+        ret = vlc_cond_timedwait( &m_pace_cond, &m_lock, deadline );
     vlc_interrupt_unregister();
+
+    return ret == 0;
 }
 
 /**
@@ -419,8 +453,6 @@ void intf_sys_t::queueMessage( QueueableMessages msg )
     m_msgQueue.push( msg );
     vlc_interrupt_raise( m_ctl_thread_interrupt );
 }
-
-
 
 /*****************************************************************************
  * Chromecast thread
@@ -465,23 +497,6 @@ void intf_sys_t::mainLoop()
                         }
                     }
                     break;
-                case Seek:
-                {
-                    if( !isStatePlaying() || m_mediaSessionId == 0 || m_ts_seek == VLC_TS_INVALID )
-                        break;
-                    char current_time[32];
-                    if( snprintf( current_time, sizeof(current_time), "%.3f",
-                                  double( m_ts_seek ) / 1000000.0 ) >= (int)sizeof(current_time) )
-                    {
-                        msg_Err( m_module, "snprintf() truncated string for mediaSessionId" );
-                        current_time[sizeof(current_time) - 1] = '\0';
-                    }
-                    m_ts_seek = VLC_TS_INVALID;
-                    /* send a fake time to seek to, to make sure the device flushes its buffers */
-                    m_communication.msgPlayerSeek( m_appTransportId, m_mediaSessionId, current_time );
-                    setState( Seeking );
-                    break;
-                }
             }
             m_msgQueue.pop();
         }
@@ -889,7 +904,6 @@ void intf_sys_t::requestPlayerStop()
     vlc_mutex_locker locker(&m_lock);
 
     m_request_load = false;
-    m_ts_seek = VLC_TS_INVALID;
 
     if( !isStatePlaying() )
         return;
@@ -903,13 +917,24 @@ States intf_sys_t::state() const
     return m_state;
 }
 
-void intf_sys_t::requestPlayerSeek(mtime_t pos)
+bool intf_sys_t::requestPlayerSeek(mtime_t pos)
 {
     vlc_mutex_locker locker(&m_lock);
     if( !isStatePlaying() || m_mediaSessionId == 0 )
-        return;
-    m_ts_seek = pos;
-    queueMessage( Seek );
+        return false;
+
+    char current_time[32];
+    if( snprintf( current_time, sizeof(current_time), "%.3f",
+                  double( pos ) / 1000000.0 ) >= (int)sizeof(current_time) )
+        return false;
+
+    int ret = m_communication.msgPlayerSeek( m_appTransportId, m_mediaSessionId, current_time );
+    if( ret == VLC_SUCCESS )
+    {
+        setState( Seeking );
+        return true;
+    }
+    return false;
 }
 
 void intf_sys_t::setOnSeekDoneCb(on_seek_done_itf on_seek_done, void *on_seek_done_data)
@@ -919,24 +944,25 @@ void intf_sys_t::setOnSeekDoneCb(on_seek_done_itf on_seek_done, void *on_seek_do
     m_on_seek_done_data = on_seek_done_data;
 }
 
+void intf_sys_t::setOnPausedChangedCb(on_paused_changed_itf on_paused_changed,
+                                      void *on_paused_changed_data)
+{
+    vlc_mutex_locker locker(&m_lock);
+    m_on_paused_changed = on_paused_changed;
+    m_on_paused_changed_data = on_paused_changed_data;
+}
+
 void intf_sys_t::setPauseState(bool paused)
 {
-    msg_Dbg( m_module, "%s state", paused ? "paused" : "playing" );
     vlc_mutex_locker locker( &m_lock );
+    if ( m_mediaSessionId == 0 )
+        return;
+
+    msg_Dbg( m_module, "%s state", paused ? "paused" : "playing" );
     if ( !paused )
-    {
-        if ( m_mediaSessionId != 0 )
-        {
-            m_communication.msgPlayerPlay( m_appTransportId, m_mediaSessionId );
-        }
-    }
-    else
-    {
-        if ( m_mediaSessionId != 0 && m_state != Paused )
-        {
-            m_communication.msgPlayerPause( m_appTransportId, m_mediaSessionId );
-        }
-    }
+        m_communication.msgPlayerPlay( m_appTransportId, m_mediaSessionId );
+    else if ( m_state != Paused )
+        m_communication.msgPlayerPause( m_appTransportId, m_mediaSessionId );
 }
 
 bool intf_sys_t::isFinishedPlaying()
@@ -996,9 +1022,10 @@ void intf_sys_t::setState( States state )
 #ifndef NDEBUG
         msg_Dbg( m_module, "Switching from state %s to %s", StateToStr( m_state ), StateToStr( state ) );
 #endif
-        if (state == Seeking)
+        if (m_state == Seeking)
             if (m_on_seek_done != NULL)
                 m_on_seek_done(m_on_seek_done_data);
+
         m_state = state;
 
         switch( m_state )
@@ -1006,6 +1033,15 @@ void intf_sys_t::setState( States state )
             case Connected:
             case Ready:
                 tryLoad();
+                break;
+            case Paused:
+                if (m_played_once && m_on_paused_changed != NULL)
+                    m_on_paused_changed(m_on_paused_changed_data, true);
+                break;
+            case Playing:
+                if (m_played_once && m_on_paused_changed != NULL)
+                    m_on_paused_changed(m_on_paused_changed_data, false);
+                m_played_once = true;
                 break;
             default:
                 break;
@@ -1035,16 +1071,23 @@ void intf_sys_t::set_initial_time(void *pt, mtime_t time )
     return p_this->setInitialTime( time );
 }
 
+void intf_sys_t::set_on_paused_changed_cb(void *pt,
+                                          on_paused_changed_itf itf, void *data)
+{
+    intf_sys_t *p_this = static_cast<intf_sys_t*>(pt);
+    p_this->setOnPausedChangedCb(itf, data);
+}
+
 void intf_sys_t::set_length(void *pt, mtime_t length)
 {
     intf_sys_t *p_this = static_cast<intf_sys_t*>(pt);
     p_this->m_length = length;
 }
 
-void intf_sys_t::pace(void *pt)
+bool intf_sys_t::pace(void *pt)
 {
     intf_sys_t *p_this = static_cast<intf_sys_t*>(pt);
-    p_this->pace();
+    return p_this->pace();
 }
 
 void intf_sys_t::set_pause_state(void *pt, bool paused)

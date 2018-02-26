@@ -36,6 +36,8 @@
 
 #include <new>
 
+static void on_paused_changed_cb(void *data, bool paused);
+
 struct demux_sys_t
 {
     demux_sys_t(demux_t * const demux, chromecast_common * const renderer)
@@ -119,12 +121,19 @@ struct demux_sys_t
                 }
             }
         }
+
+        p_renderer->pf_set_on_paused_changed_cb(p_renderer->p_opaque,
+                                                on_paused_changed_cb, demux);
     }
 
     ~demux_sys_t()
     {
         if( p_renderer )
+        {
             p_renderer->pf_set_meta( p_renderer->p_opaque, NULL );
+            p_renderer->pf_set_on_paused_changed_cb( p_renderer->p_opaque,
+                                                     NULL, NULL );
+        }
     }
 
     void setPauseState(bool paused)
@@ -162,7 +171,12 @@ struct demux_sys_t
         if ( !m_enabled )
             return demux_Demux( p_demux->p_next );
 
-        p_renderer->pf_pace( p_renderer->p_opaque );
+        if( !p_renderer->pf_pace( p_renderer->p_opaque ) )
+        {
+            // Still pacing, but we return now in order to let the input thread
+            // do some controls.
+            return VLC_DEMUXER_SUCCESS;
+        }
 
         if( m_startTime == VLC_TS_INVALID )
         {
@@ -287,6 +301,15 @@ protected:
     bool          m_enabled;
     mtime_t       m_startTime;
 };
+
+static void on_paused_changed_cb( void *data, bool paused )
+{
+    demux_t *p_demux = reinterpret_cast<demux_t*>(data);
+
+    input_thread_t *p_input = p_demux->p_next->p_input;
+    if( p_input )
+        input_Control( p_input, INPUT_SET_STATE, paused ? PAUSE_S : PLAYING_S );
+}
 
 static int Demux( demux_t *p_demux_filter )
 {
