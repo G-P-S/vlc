@@ -41,24 +41,33 @@ parts:
     prepare: |
       sed -i 's|0\.19\.8|0\.19\.7|'  configure.ac
     build: |
+      cd extras/tools
+      ./bootstrap
+      make -j $(getconf _NPROCESSORS_ONLN) .protoc
+      cd ../../
+      export PATH=$PWD/extras/tools/build/bin:$PATH
       cd contrib && mkdir linux && cd linux
       ../bootstrap
       make list
+      make -j $(getconf _NPROCESSORS_ONLN) .protobuf
       make -j $(getconf _NPROCESSORS_ONLN) .libplacebo
       make -j $(getconf _NPROCESSORS_ONLN) .ffmpeg
       make -j $(getconf _NPROCESSORS_ONLN) .spatialaudio
       make -j $(getconf _NPROCESSORS_ONLN) .microdns
+      make -j $(getconf _NPROCESSORS_ONLN) .libarchive
       cd ../../
       export NOCONFIGURE=1
       autoreconf -fi
       ./configure \
           --prefix=$SNAPCRAFT_PART_INSTALL/usr \
-          --disable-wayland
+          --disable-wayland \
+          --enable-merge-ffmpeg
       make -j $(getconf _NPROCESSORS_ONLN)
     install: |
       echo $(git describe HEAD) > $SNAPCRAFT_STAGE/version
       make install
       sed -i 's|Icon=vlc|Icon=/usr/share/icons/hicolor/256x256/apps/vlc\.png|' $SNAPCRAFT_PART_INSTALL/usr/share/applications/vlc.desktop
+      sed -i 's|TryExec=.*|TryExec=/snap/bin/vlc|' $SNAPCRAFT_PART_INSTALL/usr/share/applications/vlc.desktop
     build-packages:
       - git
       - g++
@@ -175,8 +184,6 @@ parts:
       - bison
       - flex
       - zsh
-      - protobuf-compiler
-      - protobuf-c-compiler
     stage-packages:
       - fonts-freefont-ttf
       - dbus-x11
@@ -223,6 +230,24 @@ parts:
       - zlib1g
       - libprojectm2v5
       - projectm-data
+      - kde-style-breeze
+      - breeze-icon-theme
+      - frameworkintegration
+      - plasma-integration
+      - phonon4qt5-backend-null
+    filesets:
+      exclusion:
+      - "-usr/lib/*/cmake/*"
+      - "-usr/include/*"
+      - "-usr/share/ECM/*"
+      - "-usr/share/doc/*"
+      - "-usr/share/man/*"
+      - "-usr/share/icons/breeze-dark*"
+      - "-usr/bin/X11"
+      - "-usr/lib/gcc/x86_64-linux-gnu/6.0.0"
+      - "-usr/lib/aspell/*"
+    prime:
+      - "$exclusion"
 
   wrapper:
     plugin: dump
