@@ -82,7 +82,7 @@ ssize_t vlc_recvmsg (int s, struct msghdr *hdr, int flags)
         return recvd;
     }
 #else
-//# warning Out-of-date Winsock header files!
+# warning Out-of-date Winsock header files!
 #endif
     return -1;
 }

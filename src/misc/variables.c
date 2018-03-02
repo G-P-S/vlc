@@ -1378,7 +1378,7 @@ void DumpVariables(vlc_object_t *obj)
     vlc_mutex_unlock(&vlc_internals(obj)->var_lock);
 }
 
-static thread_local void *twalk_ctx; 
+static thread_local void *twalk_ctx;
 
 static void TwalkGetNames(const void *data, const VISIT which, const int depth)
 {
@@ -1390,7 +1390,7 @@ static void TwalkGetNames(const void *data, const VISIT which, const int depth)
     DECL_ARRAY(char *) *names = twalk_ctx;
     char *dup = strdup(var->psz_name);
     if (dup != NULL)
-        ARRAY_APPEND((*names), dup); //vz
+        ARRAY_APPEND(*names, dup);
 }
 
 char **var_GetAllNames(vlc_object_t *obj)

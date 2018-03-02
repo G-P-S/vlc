@@ -88,7 +88,7 @@ char *vlc_getProxyUrl(const char *psz_url)
                          key, &len ) == ERROR_SUCCESS )
     {
         /* FIXME: This is lame. The string should be tokenized. */
-//#warning FIXME.
+#warning FIXME.
         char *psz_proxy = strstr( (char *)key, "http=" );
         if( psz_proxy != NULL )
         {

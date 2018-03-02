@@ -251,9 +251,7 @@ static char *config_GetAppDir (void)
     return psz_dir;
 }
 
-#ifndef COMPILE_VS2013
 #warning FIXME Use known folders on Vista and above
-#endif
 char *config_GetUserDir (vlc_userdir_t type)
 {
     switch (type)

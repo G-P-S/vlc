@@ -40,7 +40,6 @@
 /*****************************************************************************
  * Required system headers
  *****************************************************************************/
-
 #include <stdlib.h>
 #include <stdarg.h>
 
@@ -471,7 +470,7 @@ struct vlc_common_members
  * It checks if the compound type actually starts with an embedded
  * \ref vlc_object_t structure.
  */
-#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
+#if !defined(__cplusplus)
 # define VLC_OBJECT(x) \
     _Generic((x)->obj, \
         struct vlc_common_members: (vlc_object_t *)(&(x)->obj), \
@@ -684,14 +683,13 @@ static inline bool uaddll_overflow(unsigned long long a, unsigned long long b,
 #endif
 }
 
-#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
+#ifndef __cplusplus
 # define add_overflow(a,b,r) \
     _Generic(*(r), \
         unsigned: uadd_overflow(a, b, (unsigned *)(r)), \
         unsigned long: uaddl_overflow(a, b, (unsigned long *)(r)), \
         unsigned long long: uaddll_overflow(a, b, (unsigned long long *)(r)))
 #else
-/*
 static inline bool add_overflow(unsigned a, unsigned b, unsigned *res)
 {
     return uadd_overflow(a, b, res);
@@ -702,7 +700,7 @@ static inline bool add_overflow(unsigned long a, unsigned long b,
 {
     return uaddl_overflow(a, b, res);
 }
-*/
+
 static inline bool add_overflow(unsigned long long a, unsigned long long b,
                                 unsigned long long *res)
 {
@@ -746,14 +744,13 @@ static inline bool umulll_overflow(unsigned long long a, unsigned long long b,
 #endif
 }
 
-#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
+#ifndef __cplusplus
 #define mul_overflow(a,b,r) \
     _Generic(*(r), \
         unsigned: umul_overflow(a, b, (unsigned *)(r)), \
         unsigned long: umull_overflow(a, b, (unsigned long *)(r)), \
         unsigned long long: umulll_overflow(a, b, (unsigned long long *)(r)))
 #else
-/*
 static inline bool mul_overflow(unsigned a, unsigned b, unsigned *res)
 {
     return umul_overflow(a, b, res);
@@ -764,7 +761,7 @@ static inline bool mul_overflow(unsigned long a, unsigned long b,
 {
     return umull_overflow(a, b, res);
 }
-*/
+
 static inline bool mul_overflow(unsigned long long a, unsigned long long b,
                                 unsigned long long *res)
 {
@@ -957,7 +954,7 @@ VLC_API bool vlc_ureduce( unsigned *, unsigned *, uint64_t, uint64_t, uint64_t )
 VLC_USED VLC_MALLOC
 static inline void *vlc_alloc(size_t count, size_t size)
 {
-    return mul_overflow((unsigned long long)count, (unsigned long long)size, (unsigned long long *)&size) ? NULL : malloc(size);
+    return mul_overflow(count, size, &size) ? NULL : malloc(size);
 }
 
 /*****************************************************************************

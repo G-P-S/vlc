@@ -157,11 +157,7 @@ picture_pool_t *picture_pool_New(unsigned count, picture_t *const *tab)
 picture_pool_t *picture_pool_NewFromFormat(const video_format_t *fmt,
                                            unsigned count)
 {
-    //vz picture_t *picture[count ? count : 1];
-	picture_t**  picture = NULL;
-	const char size = count ? count : 1;
-	picture = malloc(sizeof( picture_t*) *size);
-
+    picture_t *picture[count ? count : 1];
     unsigned i;
 
     for (i = 0; i < count; i++) {
@@ -173,25 +169,19 @@ picture_pool_t *picture_pool_NewFromFormat(const video_format_t *fmt,
     picture_pool_t *pool = picture_pool_New(count, picture);
     if (!pool)
         goto error;
-	if (picture)free( picture);
+
     return pool;
 
 error:
     while (i > 0)
         picture_Release(picture[--i]);
-
-	if (picture)free( picture);
     return NULL;
 }
 
 picture_pool_t *picture_pool_Reserve(picture_pool_t *master, unsigned count)
 {
-    //vz picture_t *picture[count ? count : 1];
-	picture_t**  picture = NULL;
-	const char size = count ? count : 1;
-	picture =malloc(sizeof( picture_t*)*size);
-	
-	unsigned i;
+    picture_t *picture[count ? count : 1];
+    unsigned i;
 
     for (i = 0; i < count; i++) {
         picture[i] = picture_pool_Get(master);
@@ -202,15 +192,13 @@ picture_pool_t *picture_pool_Reserve(picture_pool_t *master, unsigned count)
     picture_pool_t *pool = picture_pool_New(count, picture);
     if (!pool)
         goto error;
-	if (picture) free( picture);
+
     return pool;
 
 error:
     while (i > 0)
         picture_Release(picture[--i]);
-
-	if (picture) free( picture);
-     return NULL;
+    return NULL;
 }
 
 /** Find next (bit) set */

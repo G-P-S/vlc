@@ -356,7 +356,7 @@ static ssize_t config_ListModules (const char *cap, char ***restrict values,
                                    char ***restrict texts)
 {
     module_t **list;
-    ssize_t n = vlc_module_list_cap (&list, cap);
+    ssize_t n = module_list_cap (&list, cap);
     if (unlikely(n < 0))
     {
         *values = *texts = NULL;

@@ -117,9 +117,6 @@ static void Altivec_test (void)
 #endif
 #endif
 
-#ifdef COMPILE_VS2013
-#define cpuid(In) __cpuid(CPUInfo,In) //vz
-#endif
 /**
  * Determines the CPU capabilities and stores them in cpu_flags.
  * The result can be retrieved with vlc_CPU().
@@ -128,13 +125,10 @@ void vlc_CPU_init (void)
 {
     uint32_t i_capabilities = 0;
 
-	int CPUInfo[4] = {-1,-1,-1,-1}; //vz
 #if defined( __i386__ ) || defined( __x86_64__ )
      unsigned int i_eax, i_ebx, i_ecx, i_edx;
-
      bool b_amd;
 
-#ifndef COMPILE_VS2013
     /* Needed for x86 CPU capabilities detection */
 # if defined (__i386__) && defined (__PIC__)
 #  define cpuid(reg) \
@@ -146,7 +140,7 @@ void vlc_CPU_init (void)
                    : "cc");
 # else
 #  define cpuid(reg) \
-     asm  volatile ("cpuid\n\t" \
+     asm volatile ("cpuid\n\t" \
                    : "=a" (i_eax), "=b" (i_ebx), "=c" (i_ecx), "=d" (i_edx) \
                    : "a" (reg) \
                    : "cc");
@@ -175,13 +169,9 @@ void vlc_CPU_init (void)
     if( i_eax == i_ebx )
         goto out;
 # endif
-# endif
 
     /* the CPU supports the CPUID instruction - get its level */
-	cpuid( 0x00000000 );
-#ifdef COMPILE_VS2013
-	i_eax = CPUInfo[0], i_ebx = CPUInfo[1], i_ecx = CPUInfo[2], i_edx == CPUInfo[3]; //vz
-#endif
+    cpuid( 0x00000000 );
 
 # if defined (__i386__) && !defined (__i586__) \
   && !defined (__i686__) && !defined (__pentium4__) \
@@ -196,17 +186,14 @@ void vlc_CPU_init (void)
 
     /* test for the MMX flag */
     cpuid( 0x00000001 );
-#ifdef COMPILE_VS2013
-	i_eax = CPUInfo[0], i_ebx = CPUInfo[1], i_ecx = CPUInfo[2], i_edx == CPUInfo[3]; //vz
-#else
 # if !defined (__MMX__)
     if( ! (i_edx & 0x00800000) )
         goto out;
-# endif	
+# endif
     i_capabilities |= VLC_CPU_MMX;
-# endif	
-	if( i_edx & 0x02000000 )
-       i_capabilities |= VLC_CPU_MMXEXT;
+
+    if( i_edx & 0x02000000 )
+        i_capabilities |= VLC_CPU_MMXEXT;
 # if defined (CAN_COMPILE_SSE) && !defined (__SSE__)
     if (( i_edx & 0x02000000 ) && vlc_CPU_check ("SSE", SSE_test))
 # endif
@@ -227,25 +214,20 @@ void vlc_CPU_init (void)
 
     /* test for additional capabilities */
     cpuid( 0x80000000 );
-#ifdef COMPILE_VS2013
-	i_eax = CPUInfo[0], i_ebx = CPUInfo[1], i_ecx = CPUInfo[2], i_edx == CPUInfo[3]; //vz
-#endif
+
     if( i_eax < 0x80000001 )
         goto out;
 
     /* list these additional capabilities */
     cpuid( 0x80000001 );
-#ifdef COMPILE_VS2013
-	i_eax = CPUInfo[0], i_ebx = CPUInfo[1], i_ecx = CPUInfo[2], i_edx == CPUInfo[3]; //vz
-#endif
+
 # if defined (CAN_COMPILE_3DNOW) && !defined (__3dNOW__)
     if ((i_edx & 0x80000000) && vlc_CPU_check ("3D Now!", ThreeD_Now_test))
 # endif
-		i_capabilities |= VLC_CPU_3dNOW;
+        i_capabilities |= VLC_CPU_3dNOW;
 
     if( b_amd && ( i_edx & 0x00400000 ) )
         i_capabilities |= VLC_CPU_MMXEXT;
-
 out:
 
 #elif defined( __powerpc__ ) || defined( __ppc__ ) || defined( __powerpc64__ ) \

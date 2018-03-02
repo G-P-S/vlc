@@ -730,7 +730,7 @@ module_t **module_list_get (size_t *n)
  * @return the number of matching found, or -1 on error (*list is then NULL).
  * @note *list must be freed with module_list_free().
  */
-ssize_t vlc_module_list_cap (module_t ***restrict list, const char *name)
+ssize_t module_list_cap (module_t ***restrict list, const char *name)
 {
     const vlc_modcap_t **cp = tfind(&name, &modules.caps_tree, vlc_modcap_cmp);
     if (cp == NULL)

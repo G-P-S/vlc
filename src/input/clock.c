@@ -535,11 +535,8 @@ void input_clock_GetSystemOrigin( input_clock_t *cl, mtime_t *pi_system, mtime_t
 
     vlc_mutex_unlock( &cl->lock );
 }
-#ifndef COMPILE_VS2013
-#warning  "input_clock_SetJitter needs more work"
-#else
-#pragma message (  "input_clock_SetJitter needs more work")
-#endif
+
+#warning "input_clock_SetJitter needs more work"
 void input_clock_SetJitter( input_clock_t *cl,
                             mtime_t i_pts_delay, int i_cr_average )
 {

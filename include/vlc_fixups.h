@@ -109,11 +109,7 @@ typedef struct
 
 #if !defined (HAVE_DIRFD) || \
     !defined (HAVE_FDOPENDIR)
-#ifndef COMPILE_VS2013
 # include <dirent.h>
-#else
-# include <windirent.h>
-#endif
 #endif
 
 #ifdef __cplusplus
@@ -254,12 +250,6 @@ struct tm *localtime_r (const time_t *, struct tm *);
 time_t timegm(struct tm *);
 #endif
 
-#ifdef _WIN32
-#if _MSC_VER>=1900	// 1900=Visual2015
-#define HAVE_TIMESPEC_GET
-#endif
-#endif
-
 #ifndef HAVE_TIMESPEC_GET
 #define TIME_UTC 1
 struct timespec;
@@ -386,11 +376,6 @@ const char *inet_ntop(int, const void *, char *, socklen_t);
 #if defined(__native_client__) && !defined( HAVE_NETINET_TCP_H )
 #  define TCP_NODELAY 1
 #endif
-#ifdef COMPILE_VS2013
-#ifndef HAVE_STRUCT_POLLFD  //vz
-#define HAVE_STRUCT_POLLFD 
-#endif 
-#endif 
 
 #ifndef HAVE_STRUCT_POLLFD
 enum
@@ -431,12 +416,6 @@ struct if_nameindex
 # endif
 # define if_nameindex()         (errno = ENOBUFS, NULL)
 # define if_freenameindex(list) (void)0
-#endif
-
-#ifdef _WIN32
-#if _MSC_VER>=1900	// 1900=Visual2015
-#define HAVE_STRUCT_TIMESPEC
-#endif
 #endif
 
 #ifndef HAVE_STRUCT_TIMESPEC
@@ -515,11 +494,6 @@ double erand48 (unsigned short subi[3]);
 long jrand48 (unsigned short subi[3]);
 long nrand48 (unsigned short subi[3]);
 #endif
-
-//vz
-# define SHUT_RD    0
-# define SHUT_WR    1
-# define SHUT_RDWR  2
 
 #ifdef __OS2__
 # undef HAVE_FORK   /* Implementation of fork() is imperfect on OS/2 */

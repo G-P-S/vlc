@@ -39,9 +39,7 @@
 
 static inline void vout_SendEventClose(vout_thread_t *vout)
 {
-#ifndef COMPILE_VS2013
-	#warning FIXME: implement video close event
-#endif
+#warning FIXME: implement video close event
     /* FIXME: this code is disabled as it breaks the non-playlist cases */
     //playlist_Stop(pl_Get(vout));
     (void) vout;

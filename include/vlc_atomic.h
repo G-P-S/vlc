@@ -1,7 +1,7 @@
 /*****************************************************************************
  * vlc_atomic.h:
  *****************************************************************************
- * Copyright (C) 2010 Rémi Denis-Courmont
+ * Copyright (C) 2010 RÃ©mi Denis-Courmont
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -20,6 +20,7 @@
 
 #ifndef VLC_ATOMIC_H
 # define VLC_ATOMIC_H
+
 /**
  * \file
  * Atomic operations do not require locking, but they are not very powerful.
@@ -32,28 +33,13 @@
 # endif
 #endif
 
- 
 # ifndef __cplusplus
-
-#  if !defined (__STDC_NO_ATOMICS__) && !defined(COMPILE_VS2013)
+#  if !defined (__STDC_NO_ATOMICS__)
 /*** Native C11 atomics ***/
 #   include <stdatomic.h>
 
 #  else
-
-#ifdef COMPILE_VS2013
-#define WIN32_LEAN_AND_MEAN
-#include <stddef.h>
-#include <stdint.h>
-#include <windows.h>
-#endif
-
-
-
-#ifdef COMPILE_VS2013
-#define __sync_synchronize _mm_sfence  //vz!!!
-#endif
-
+/*** Intel/GCC atomics ***/
 
 #  define ATOMIC_FLAG_INIT false
 
@@ -68,51 +54,12 @@
 #  define atomic_thread_fence(order) \
     __sync_synchronize()
 
-
 #  define atomic_signal_fence(order) \
     ((void)0)
 
 #  define atomic_is_lock_free(obj) \
     false
 
-#ifdef COMPILE_VS2013
-typedef intptr_t atomic_flag;
-typedef intptr_t atomic_bool;
-typedef intptr_t atomic_char;
-typedef intptr_t atomic_schar;
-typedef intptr_t atomic_uchar;
-typedef intptr_t atomic_short;
-typedef intptr_t atomic_ushort;
-typedef intptr_t atomic_int;
-typedef intptr_t atomic_uint;
-typedef intptr_t atomic_long;
-typedef intptr_t atomic_ulong;
-typedef intptr_t atomic_llong;
-typedef intptr_t atomic_ullong;
-typedef intptr_t atomic_wchar_t;
-typedef intptr_t atomic_int_least8_t;
-typedef intptr_t atomic_uint_least8_t;
-typedef intptr_t atomic_int_least16_t;
-typedef intptr_t atomic_uint_least16_t;
-typedef intptr_t atomic_int_least32_t;
-typedef intptr_t atomic_uint_least32_t;
-typedef intptr_t atomic_int_least64_t;
-typedef intptr_t atomic_uint_least64_t;
-typedef intptr_t atomic_int_fast8_t;
-typedef intptr_t atomic_uint_fast8_t;
-typedef intptr_t atomic_int_fast16_t;
-typedef intptr_t atomic_uint_fast16_t;
-typedef intptr_t atomic_int_fast32_t;
-typedef intptr_t atomic_uint_fast32_t;
-typedef intptr_t atomic_int_fast64_t;
-typedef intptr_t atomic_uint_fast64_t;
-typedef intptr_t atomic_intptr_t;
-typedef uintptr_t atomic_uintptr_t;
-typedef intptr_t atomic_size_t;
-typedef intptr_t atomic_ptrdiff_t;
-typedef intptr_t atomic_intmax_t;
-typedef intptr_t atomic_uintmax_t;
-#else
 typedef          bool      atomic_flag;
 typedef          bool      atomic_bool;
 typedef          char      atomic_char;
@@ -151,7 +98,7 @@ typedef            size_t atomic_size_t;
 typedef         ptrdiff_t atomic_ptrdiff_t;
 typedef          intmax_t atomic_intmax_t;
 typedef         uintmax_t atomic_uintmax_t;
-#endif
+
 #  define atomic_store(object,desired) \
     do { \
         *(object) = (desired); \
@@ -167,15 +114,6 @@ typedef         uintmax_t atomic_uintmax_t;
 #  define atomic_load_explicit(object,order) \
     atomic_load(object)
 
-#ifdef COMPILE_VS2013
-static inline int atomic_exchange(intptr_t *object, intptr_t desired)
-{
-	intptr_t old = (intptr_t)InterlockedExchangePointer(
-		(PVOID *)object, (PVOID)desired);
-	return old;
-}
-#else
-
 #  define atomic_exchange(object,desired) \
 ({  \
     typeof (object) _obj = (object); \
@@ -185,21 +123,10 @@ static inline int atomic_exchange(intptr_t *object, intptr_t desired)
     while (!__sync_bool_compare_and_swap(_obj, _old, (desired))); \
     _old; \
 })
-#endif
 
 #  define atomic_exchange_explicit(object,desired,order) \
     atomic_exchange(object,desired)
 
-#ifdef COMPILE_VS2013
-static inline int atomic_compare_exchange(intptr_t *object, intptr_t *expected,
-                                                 intptr_t desired)
-{
-    intptr_t old = *expected;
-    *expected = (intptr_t)InterlockedCompareExchangePointer(
-        (PVOID *)object, (PVOID)desired, (PVOID)old);
-    return *expected == old;
-}
-#else
 #  define atomic_compare_exchange(object,expected,desired) \
 ({  \
     typeof (object) _exp = (expected); \
@@ -207,11 +134,10 @@ static inline int atomic_compare_exchange(intptr_t *object, intptr_t *expected,
     *_exp = __sync_val_compare_and_swap((object), _old, (desired)); \
     *_exp == _old; \
 })
-#endif
 
 #  define atomic_compare_exchange_strong(object,expected,desired) \
     atomic_compare_exchange(object, expected, desired)
-	
+
 #  define atomic_compare_exchange_strong_explicit(object,expected,desired,order,order_different) \
     atomic_compare_exchange_strong(object, expected, desired)
 
@@ -221,22 +147,6 @@ static inline int atomic_compare_exchange(intptr_t *object, intptr_t *expected,
 #  define atomic_compare_exchange_weak_explicit(object,expected,desired,order_equal,order_different) \
     atomic_compare_exchange_weak(object, expected, desired)
 
-#ifdef COMPILE_VS2013
-#ifdef _WIN64
-#define  __sync_fetch_and_add(object, operand) InterlockedExchangeAdd64(object, operand)
-#define __sync_fetch_and_sub(object, operand) InterlockedExchangeAdd64(object, -(operand))
-#define __sync_fetch_and_or(object, operand) InterlockedOr64(object, operand)
-#define __sync_fetch_and_xor(object, operand) InterlockedOr64(object, operand)
-#define __sync_fetch_and_and(object, operand) InterlockedOr64(object, operand)
-#else
-#define  __sync_fetch_and_add(object, operand) InterlockedExchangeAdd(object, operand)
-#define __sync_fetch_and_sub(object, operand) InterlockedExchangeAdd(object, -(operand))
-#define __sync_fetch_and_or(object, operand) InterlockedOr(object, operand)
-#define __sync_fetch_and_xor(object, operand) InterlockedOr(object, operand)
-#define __sync_fetch_and_and(object, operand) InterlockedOr(object, operand)
-#endif /* _WIN64 */
-#endif /* COMPILE_VS2013 */
-
 #  define atomic_fetch_add(object,operand) \
     __sync_fetch_and_add(object, operand)
 
@@ -245,18 +155,22 @@ static inline int atomic_compare_exchange(intptr_t *object, intptr_t *expected,
 
 #  define atomic_fetch_sub(object,operand) \
     __sync_fetch_and_sub(object, operand)
+
 #  define atomic_fetch_sub_explicit(object,operand,order) \
     atomic_fetch_sub(object,operand)
 
 #  define atomic_fetch_or(object,operand) \
     __sync_fetch_and_or(object, operand)
+
 #  define atomic_fetch_or_explicit(object,operand,order) \
     atomic_fetch_or(object,operand)
 
 #  define atomic_fetch_xor(object,operand) \
-    __sync_fetch_and_xor(object, operand)
-# define atomic_fetch_xor_explicit(object, operand, order) \
-    atomic_fetch_xor(object, operand)
+    __sync_fetch_and_sub(object, operand)
+
+#  define atomic_fetch_xor_explicit(object,operand,order) \
+    atomic_fetch_sub(object,operand)
+
 #  define atomic_fetch_and(object,operand) \
     __sync_fetch_and_and(object, operand)
 
@@ -281,25 +195,25 @@ typedef atomic_uint_least32_t vlc_atomic_float;
 
 static inline void vlc_atomic_init_float(vlc_atomic_float *var, float f)
 {
-	union { float f; uint32_t i; } u;
-	u.f = f;
-	atomic_init(var, u.i);
+    union { float f; uint32_t i; } u;
+    u.f = f;
+    atomic_init(var, u.i);
 }
 
 /** Helper to retrieve a single precision from an atom. */
 static inline float vlc_atomic_load_float(vlc_atomic_float *atom)
 {
-	union { float f; uint32_t i; } u;
-	u.i = atomic_load(atom);
-	return u.f;
+    union { float f; uint32_t i; } u;
+    u.i = atomic_load(atom);
+    return u.f;
 }
 
 /** Helper to store a single precision into an atom. */
 static inline void vlc_atomic_store_float(vlc_atomic_float *atom, float f)
 {
-	union { float f; uint32_t i; } u;
-	u.f = f;
-	atomic_store(atom, u.i);
+    union { float f; uint32_t i; } u;
+    u.f = f;
+    atomic_store(atom, u.i);
 }
 
 # else /* C++ */
