@@ -1642,7 +1642,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
     {
         msg_Info( p_dec, "######## no hw acceleration and this codec is forbidden for software decoding, disable rendering");
         p_sys->p_va = NULL;
-        p_sys->pix_fmt = AV_PIX_FMT_NONE;
+        p_sys->pix_fmt = 0;
         if(p_sys->hack_cb)
         {
             unsigned codeError = 1;
@@ -1652,7 +1652,7 @@ static enum PixelFormat ffmpeg_GetFormat( AVCodecContext *p_context,
         {
             msg_Info( p_dec, "######## Error callback is null" );
         }
-        return AV_PIX_FMT_NONE; // return null PixelFormat
+        return 0; // return null PixelFormat
         
     }
     else
