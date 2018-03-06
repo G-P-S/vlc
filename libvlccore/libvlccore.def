@@ -444,6 +444,7 @@ vlc_Log
 vlc_LogSet
 vlc_UrlClean
 vlc_UrlParse
+vlc_UrlParseFixup
 vlc_accept
 vlc_accept_i11e
 vlc_access_NewMRL

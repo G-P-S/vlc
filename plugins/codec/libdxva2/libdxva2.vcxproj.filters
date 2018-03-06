@@ -36,5 +36,8 @@
     <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\modules\video_chroma\dxgi_fmt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

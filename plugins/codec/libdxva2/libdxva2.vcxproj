@@ -349,6 +349,7 @@
     <ClCompile Include="..\..\..\modules\packetizer\h264_nal.c" />
     <ClCompile Include="..\..\..\modules\packetizer\hevc_nal.c" />
     <ClCompile Include="..\..\..\modules\video_chroma\d3d9_fmt.c" />
+    <ClCompile Include="..\..\..\modules\video_chroma\dxgi_fmt.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\libcompat\libcompat.vcxproj">
