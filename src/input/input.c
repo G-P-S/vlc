@@ -1145,7 +1145,7 @@ static void LoadSlaves( input_thread_t *p_input )
                SlaveCompare );
 
     /* add all detected slaves */
-    bool p_forced[2] = {0,0}; //vz
+    bool p_forced[2] = { false, false };
     static_assert( SLAVE_TYPE_AUDIO <= 1 && SLAVE_TYPE_SPU <= 1,
                    "slave type size mismatch");
     for( int i = 0; i < i_slaves && pp_slaves[i] != NULL; i++ )
@@ -1813,7 +1813,7 @@ static void ControlNav( input_thread_t *p_input, int i_type )
         return; /* The demux handled the navigation control */
 
     /* Handle Up/Down/Left/Right if the demux can't navigate */
-	vlc_viewpoint_t vp; //vz  = {};
+    vlc_viewpoint_t vp = {};
     int vol_direction = 0;
     int seek_direction = 0;
     switch( i_type )

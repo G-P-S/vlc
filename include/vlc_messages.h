@@ -29,10 +29,6 @@
 
 #include <stdarg.h>
 
-#ifndef __func__
-#define __func__ __FUNCTION__
-#endif
-
 /**
  * \defgroup messages Logging
  * \brief Message logs

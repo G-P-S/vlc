@@ -100,11 +100,7 @@ void vlc_vaLog (vlc_object_t *obj, int type, const char *module,
     p = strchr(module, '.');
 
     size_t modlen = (p != NULL) ? (p - module) : 0;
-    //vz char modulebuf[modlen + 1];
-	char*  modulebuf = NULL;
-	size_t size = modlen + 1;
-	modulebuf = malloc(sizeof(char)*size);
-
+    char modulebuf[modlen + 1];
     if (p != NULL)
     {
         memcpy(modulebuf, module, modlen);
@@ -142,9 +138,6 @@ void vlc_vaLog (vlc_object_t *obj, int type, const char *module,
     /* Pass message to the callback */
     if (obj != NULL)
         vlc_vaLogCallback(obj->obj.libvlc, type, &msg, format, args);
-
-
-	if (modulebuf) free( modulebuf);
 }
 
 /**

@@ -22,11 +22,7 @@
 #define VLC_FS_H 1
 
 #include <sys/types.h>
-#ifndef COMPILE_VS2013
 #include <dirent.h>
-#else
-#include <windirent.h> //vz
-#endif
 
 struct stat;
 struct iovec;
@@ -268,7 +264,6 @@ typedef struct vlc_DIR
         bool insert_dot_dot;
     } u;
 } vlc_DIR;
-
 
 static inline int vlc_closedir( DIR *dir )
 {

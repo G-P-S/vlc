@@ -28,9 +28,7 @@
 # include "config.h"
 #endif
 
-#ifndef COMPILE_VS2013
- #include <stdalign.h>
-#endif
+#include <stdalign.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,11 +50,7 @@
 
 #include "modules/modules.h"
 
-#ifdef COMPILE_VS2013
-#ifndef alignof
-#define alignof __alignof
-#endif
-#endif
+
 /*****************************************************************************
  * Local prototypes
  *****************************************************************************/
@@ -181,11 +175,9 @@ static int vlc_cache_load_align(size_t align, block_t *file)
 #define LOAD_STRING(a) \
     if (vlc_cache_load_string(&(a), file)) \
         goto error
-
 #define LOAD_ALIGNOF(t) \
     if (vlc_cache_load_align(alignof(t), file)) \
-goto error
-
+        goto error
 
 static int vlc_cache_load_config(module_config_t *cfg, block_t *file)
 {
@@ -230,9 +222,7 @@ static int vlc_cache_load_config(module_config_t *cfg, block_t *file)
 
         if (cfg->list_count)
         {
-			//vz
-			int cli = *cfg->list.i;
-            LOAD_ALIGNOF(cli);
+            LOAD_ALIGNOF(*cfg->list.i);
         }
         else
             LOAD_STRING(cfg->list_cb_name);
@@ -554,9 +544,7 @@ static int CacheSaveConfig (FILE *file, const module_config_t *cfg)
 
         if (cfg->list_count > 0)
         {
-			//vz
-			int cli = *cfg->list.i;
-            SAVE_ALIGNOF(cli);
+            SAVE_ALIGNOF(*cfg->list.i);
         }
         else
             SAVE_STRING(cfg->list_cb_name);

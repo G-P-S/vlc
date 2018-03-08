@@ -415,6 +415,7 @@ typedef void (*libvlc_video_gpu_newframe_cb)(void *opaque,
  */
 typedef void (*libvlc_video_avcodec_hack_cb)(void *opaque, unsigned *code);
 
+
 /**
  * Set callbacks and private data to render decoded video to a custom area
  * in memory.

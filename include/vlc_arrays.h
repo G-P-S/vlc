@@ -30,14 +30,6 @@
  * This file defines functions, structures and macros for handling arrays in vlc
  */
 
-#include <sys/types.h>  /* for ssize_t */
-#ifdef _WINDOWS
-#include <BaseTsd.h>
-#ifndef COMPILE_VS2013
- typedef SSIZE_T ssize_t;
-#endif
-#endif
-
 /* realloc() that never fails *if* downsizing */
 static inline void *realloc_down( void *ptr, size_t size )
 {
@@ -120,8 +112,6 @@ static inline void *realloc_down( void *ptr, size_t size )
 
 #define TAB_INSERT( count, tab, p, index )      \
     TAB_INSERT_CAST( , count, tab, p, index )
-
-
 
 /**
  * Binary search in a sorted array. The key must be comparable by < and >
@@ -271,13 +261,19 @@ static inline size_t vlc_array_count( vlc_array_t * p_array )
     return p_array->i_count;
 }
 
-#if !defined(__cplusplus) && !defined(COMPILE_VS2013)
+#ifndef __cplusplus
 # define vlc_array_item_at_index(ar, idx) \
     _Generic((ar), \
         const vlc_array_t *: ((ar)->pp_elems[idx]), \
         vlc_array_t *: ((ar)->pp_elems[idx]))
 #else
 static inline void *vlc_array_item_at_index( vlc_array_t *ar, size_t idx )
+{
+    return ar->pp_elems[idx];
+}
+
+static inline const void *vlc_array_item_at_index( const vlc_array_t *ar,
+                                                   size_t idx )
 {
     return ar->pp_elems[idx];
 }

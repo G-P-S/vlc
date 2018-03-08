@@ -60,9 +60,6 @@ static void Usage (vlc_object_t *, const char *);
 static void Version (void);
 static void ListModules (vlc_object_t *, bool);
 
-#ifdef COMPILE_VS2013
-extern const char psz_vlc_changeset[]; //vz
-#endif
 /**
  * Returns the console width or a best guess.
  */

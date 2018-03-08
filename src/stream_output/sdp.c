@@ -154,11 +154,8 @@ int vlc_sdp_Start(struct vlc_memstream *restrict stream,
     size_t cfglen = strlen(cfgpref);
     if (cfglen >= 128)
         return -1;
-	//vz	char varname[cfglen + sizeof("description")];
-	char* varname = NULL;
-	const int size = cfglen + sizeof("description");
-	varname = (char*)malloc(sizeof(char)*size);
 
+    char varname[cfglen + sizeof ("description")];
     char *subvar = varname + cfglen;
 
     strcpy(varname, cfgpref);
@@ -174,7 +171,8 @@ int vlc_sdp_Start(struct vlc_memstream *restrict stream,
 
         gethostname(hostname, sizeof (hostname));
 
-//        vlc_memstream_printf(stream, "o=- %"PRIu64" %"PRIu64" IN IP%c %s\r\n", now, now, connection[5], hostname);
+        vlc_memstream_printf(stream, "o=- %"PRIu64" %"PRIu64" IN IP%c %s\r\n",
+                             now, now, connection[5], hostname);
     }
 
     strcpy(subvar, "name");
@@ -251,7 +249,6 @@ int vlc_sdp_Start(struct vlc_memstream *restrict stream,
 
     strcpy(subvar, "cat");
     str = var_GetNonEmptyString(obj, varname);
-	if (varname) free( varname); //vz
     if (str != NULL)
     {
         if (IsSDPString(str))

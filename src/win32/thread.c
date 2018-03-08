@@ -174,22 +174,14 @@ void vlc_mutex_unlock (vlc_mutex_t *p_mutex)
 
 /*** Semaphore ***/
 #if (_WIN32_WINNT < _WIN32_WINNT_WIN8)
-
-#ifdef COMPILE_VS2013
-#ifndef alignof
-#define alignof __alignof
-#endif
-#else
 # include <stdalign.h>
-#endif
+
 static inline HANDLE *vlc_sem_handle_p(vlc_sem_t *sem)
 {
     /* NOTE: vlc_sem_t layout cannot easily depend on Windows version */
-	static_assert (sizeof(HANDLE) <= sizeof(vlc_sem_t), "Size mismatch!");
-
-
-	static_assert ((alignof (HANDLE) % alignof (vlc_sem_t)) == 0,
-		"Alignment mismatch"); 
+    static_assert (sizeof (HANDLE) <= sizeof (vlc_sem_t), "Size mismatch!");
+    static_assert ((alignof (HANDLE) % alignof (vlc_sem_t)) == 0,
+                   "Alignment mismatch");
     return (HANDLE *)sem;
 }
 #define vlc_sem_handle(sem) (*vlc_sem_handle_p(sem))
