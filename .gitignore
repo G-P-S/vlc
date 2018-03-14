@@ -58,4 +58,6 @@ build*
 contrib-*
 install-*
 x64/*
-win32/lib/*
+win32/*
+contrib/win32/*
+contrib/i686-w64-mingw32
