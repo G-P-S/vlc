@@ -314,7 +314,7 @@ SegmentSeeker::get_seekpoints( matroska_segment_c& ms, mtime_t target_pts,
         if ( start.fpos == std::numeric_limits<fptr_t>::max() )
             return tracks_seekpoint_t();
 
-        if ( end.fpos != std::numeric_limits<fptr_t>::max() )
+        if ( end.fpos != std::numeric_limits<fptr_t>::max() || !ms.b_cues )
             // do not read the whole (infinite?) file to get seek indexes
             index_range( ms, Range( start.fpos, end.fpos ), needle_pts );
 
@@ -500,6 +500,10 @@ SegmentSeeker::mkv_jump_to( matroska_segment_c& ms, fptr_t fpos )
             ms.cluster->InitTimecode( static_cast<uint64>( *p_tc ), ms.i_timescale );
             add_cluster(ms.cluster);
             break;
+        }
+        else if( MKV_CHECKED_PTR_DECL( p_tc, EbmlCrc32, el ) )
+        {
+            p_tc->ReadData( ms.es.I_O(), SCOPE_ALL_DATA ); /* avoid a skip that may fail */
         }
     }
 

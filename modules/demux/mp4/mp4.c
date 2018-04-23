@@ -2860,7 +2860,9 @@ static int TrackCreateES( demux_t *p_demux, mp4_track_t *p_track,
         break;
 
     case SPU_ES:
-        if ( p_sample->i_handler != ATOM_text ||
+        if ( ( p_sample->i_handler != ATOM_text &&
+               p_sample->i_handler != ATOM_subt &&
+               p_sample->i_handler != ATOM_sbtl ) ||
              !SetupSpuES( p_demux, p_track, p_sample ) )
            return VLC_EGENERIC;
         break;
@@ -4564,6 +4566,7 @@ static int FragCreateTrunIndex( demux_t *p_demux, MP4_Box_t *p_moof,
         {
             i_traf_base_data_offset = BOXDATA(p_tfhd)->i_base_data_offset;
         }
+        /* ignored if MP4_TFHD_BASE_DATA_OFFSET */
         else if ( BOXDATA(p_tfhd)->i_flags & MP4_TFHD_DEFAULT_BASE_IS_MOOF )
         {
             i_traf_base_data_offset = p_moof->i_pos /* + 8*/;
@@ -4601,6 +4604,11 @@ static int FragCreateTrunIndex( demux_t *p_demux, MP4_Box_t *p_moof,
                 else if( (BOXDATA(p_tfhd)->i_flags & MP4_TFHD_BASE_DATA_OFFSET) )
                 {
                     i_trun_data_offset = BOXDATA(p_tfhd)->i_base_data_offset + p_trundata->i_data_offset;
+                }
+                /* ignored if MP4_TFHD_BASE_DATA_OFFSET */
+                else if ( BOXDATA(p_tfhd)->i_flags & MP4_TFHD_DEFAULT_BASE_IS_MOOF )
+                {
+                    i_trun_data_offset = p_moof->i_pos + p_trundata->i_data_offset;
                 }
                 else
                 {

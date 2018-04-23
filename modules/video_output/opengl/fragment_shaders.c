@@ -33,6 +33,7 @@
 #include <vlc_common.h>
 #include <vlc_memstream.h>
 #include "internal.h"
+#include "vout_helper.h"
 
 #ifndef GL_RED
 # define GL_RED 0x1903
@@ -126,9 +127,7 @@ tc_yuv_base_init(opengl_tex_converter_t *tc, GLenum tex_target,
             return VLC_EGENERIC;
 
         /* Do a bit shift if samples are stored on LSB */
-        /* This is a hackish way to detect endianness. FIXME: Add bit order
-         * in vlc_chroma_description_t */
-        if ((chroma >> 24) == 'L')
+        if (chroma != VLC_CODEC_P010)
             yuv_range_correction = (float)((1 << 16) - 1)
                                  / ((1 << desc->pixel_bits) - 1);
     }
@@ -177,7 +176,7 @@ tc_yuv_base_init(opengl_tex_converter_t *tc, GLenum tex_target,
                 GL_UNSIGNED_BYTE
             };
             tc->texs[1] = (struct opengl_tex_cfg) {
-                { 1, 2 }, { 1, 4 }, twoplanes_texfmt, twoplanes_texfmt,
+                { 1, 2 }, { 1, 2 }, twoplanes_texfmt, twoplanes_texfmt,
                 GL_UNSIGNED_BYTE
             };
         }
@@ -192,7 +191,7 @@ tc_yuv_base_init(opengl_tex_converter_t *tc, GLenum tex_target,
                 GL_UNSIGNED_SHORT
             };
             tc->texs[1] = (struct opengl_tex_cfg) {
-                { 1, 2 }, { 1, 4 }, twoplanes16_texfmt, twoplanes_texfmt,
+                { 1, 2 }, { 1, 2 }, twoplanes16_texfmt, twoplanes_texfmt,
                 GL_UNSIGNED_SHORT
             };
         }
@@ -399,11 +398,18 @@ tc_base_prepare_shader(const opengl_tex_converter_t *tc,
             continue;
 
         struct pl_shader_var sv = res->variables[i];
+#if PL_API_VER >= 4
+        struct pl_var var = sv.var;
+        // libplacebo doesn't need anything else anyway
+        if (var.type != PL_VAR_FLOAT)
+            continue;
+#else
         struct ra_var var = sv.var;
-
         // libplacebo doesn't need anything else anyway
         if (var.type != RA_VAR_FLOAT)
             continue;
+#endif
+
         if (var.dim_m > 1 && var.dim_m != var.dim_v)
             continue;
 
@@ -657,7 +663,12 @@ opengl_fragment_shader_init_impl(opengl_tex_converter_t *tc, GLenum tex_target,
         tc->uloc.pl_vars = calloc(res->num_variables, sizeof(GLint));
         for (int i = 0; i < res->num_variables; i++) {
             struct pl_shader_var sv = res->variables[i];
-            ADDF("uniform %s %s;\n", ra_var_glsl_type_name(sv.var), sv.var.name);
+#if PL_API_VER >= 4
+            const char *glsl_type_name = pl_var_glsl_type_name(sv.var);
+#else
+            const char *glsl_type_name = ra_var_glsl_type_name(sv.var);
+#endif
+            ADDF("uniform %s %s;\n", glsl_type_name, sv.var.name);
         }
 
         // We can't handle these yet, but nothing we use requires them, either

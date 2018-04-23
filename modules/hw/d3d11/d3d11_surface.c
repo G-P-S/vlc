@@ -262,8 +262,14 @@ ok:
 
 static void D3D11_YUY2(filter_t *p_filter, picture_t *src, picture_t *dst)
 {
+    if (src->context == NULL)
+    {
+        /* the previous stages creating a D3D11 picture should always fill the context */
+        msg_Err(p_filter, "missing source context");
+        return;
+    }
+
     filter_sys_t *sys = (filter_sys_t*) p_filter->p_sys;
-    assert(src->context != NULL);
     picture_sys_t *p_sys = &((struct va_pic_context*)src->context)->picsys;
 
     D3D11_TEXTURE2D_DESC desc;
@@ -373,7 +379,8 @@ static void D3D11_YUY2(filter_t *p_filter, picture_t *src, picture_t *dst)
         Copy420_P_to_P(dst, plane, pitch,
                        src->format.i_visible_height + src->format.i_y_offset,
                        &sys->cache);
-    } else if (desc.Format == DXGI_FORMAT_NV12) {
+    } else if (desc.Format == DXGI_FORMAT_NV12 ||
+               desc.Format == DXGI_FORMAT_P010) {
         const uint8_t *plane[2] = {
             lock.pData,
             (uint8_t*)lock.pData + lock.RowPitch * desc.Height
@@ -382,15 +389,20 @@ static void D3D11_YUY2(filter_t *p_filter, picture_t *src, picture_t *dst)
             lock.RowPitch,
             lock.RowPitch,
         };
-        Copy420_SP_to_P(dst, plane, pitch,
-                        __MIN(desc.Height, src->format.i_y_offset + src->format.i_visible_height),
-                        &sys->cache);
+        if (desc.Format == DXGI_FORMAT_NV12)
+            Copy420_SP_to_P(dst, plane, pitch,
+                            __MIN(desc.Height, src->format.i_y_offset + src->format.i_visible_height),
+                            &sys->cache);
+        else
+            Copy420_16_SP_to_P(dst, plane, pitch,
+                               __MIN(desc.Height, src->format.i_y_offset + src->format.i_visible_height),
+                               6, &sys->cache);
         picture_SwapUV(dst);
     } else {
         msg_Err(p_filter, "Unsupported D3D11VA conversion from 0x%08X to YV12", desc.Format);
     }
 
-    if (dst->format.i_chroma == VLC_CODEC_I420) {
+    if (dst->format.i_chroma == VLC_CODEC_I420 || dst->format.i_chroma == VLC_CODEC_I420_10L) {
         uint8_t *tmp = dst->p[1].p_pixels;
         dst->p[1].p_pixels = dst->p[2].p_pixels;
         dst->p[2].p_pixels = tmp;
@@ -403,8 +415,14 @@ static void D3D11_YUY2(filter_t *p_filter, picture_t *src, picture_t *dst)
 
 static void D3D11_NV12(filter_t *p_filter, picture_t *src, picture_t *dst)
 {
+    if (src->context == NULL)
+    {
+        /* the previous stages creating a D3D11 picture should always fill the context */
+        msg_Err(p_filter, "missing source context");
+        return;
+    }
+
     filter_sys_t *sys = (filter_sys_t*) p_filter->p_sys;
-    assert(src->context != NULL);
     picture_sys_t *p_sys = &((struct va_pic_context*)src->context)->picsys;
 
     D3D11_TEXTURE2D_DESC desc;
@@ -484,7 +502,7 @@ static void D3D11_NV12(filter_t *p_filter, picture_t *src, picture_t *dst)
 
     ID3D11Texture2D_GetDesc(sys->staging, &desc);
 
-    if (desc.Format == DXGI_FORMAT_NV12) {
+    if (desc.Format == DXGI_FORMAT_NV12 || desc.Format == DXGI_FORMAT_P010) {
         const uint8_t *plane[2] = {
             lock.pData,
             (uint8_t*)lock.pData + lock.RowPitch * desc.Height
@@ -637,48 +655,61 @@ VIDEO_FILTER_WRAPPER (NV12_D3D11)
 int D3D11OpenConverter( vlc_object_t *obj )
 {
     filter_t *p_filter = (filter_t *)obj;
-    int err = VLC_EGENERIC;
 
-    if ( p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE )
+    if ( p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE &&
+         p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE_10B )
         return VLC_EGENERIC;
 
     if ( p_filter->fmt_in.video.i_height != p_filter->fmt_out.video.i_height
          || p_filter->fmt_in.video.i_width != p_filter->fmt_out.video.i_width )
         return VLC_EGENERIC;
 
+    uint8_t pixel_bytes = 1;
     switch( p_filter->fmt_out.video.i_chroma ) {
     case VLC_CODEC_I420:
     case VLC_CODEC_YV12:
+        if( p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE )
+            return VLC_EGENERIC;
         p_filter->pf_video_filter = D3D11_YUY2_Filter;
         break;
+    case VLC_CODEC_I420_10L:
+        if( p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE_10B )
+            return VLC_EGENERIC;
+        p_filter->pf_video_filter = D3D11_YUY2_Filter;
+        pixel_bytes = 2;
+        break;
     case VLC_CODEC_NV12:
+        if( p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE )
+            return VLC_EGENERIC;
         p_filter->pf_video_filter = D3D11_NV12_Filter;
+        break;
+    case VLC_CODEC_P010:
+        if( p_filter->fmt_in.video.i_chroma != VLC_CODEC_D3D11_OPAQUE_10B )
+            return VLC_EGENERIC;
+        p_filter->pf_video_filter = D3D11_NV12_Filter;
+        pixel_bytes = 2;
         break;
     default:
         return VLC_EGENERIC;
     }
 
-    filter_sys_t *p_sys = calloc(1, sizeof(filter_sys_t));
+    filter_sys_t *p_sys = vlc_obj_calloc(obj, 1, sizeof(filter_sys_t));
     if (!p_sys)
-         goto done;
+        return VLC_ENOMEM;
+
+    if (CopyInitCache(&p_sys->cache, p_filter->fmt_in.video.i_width * pixel_bytes))
+        return VLC_ENOMEM;
 
     if (D3D11_Create(p_filter, &p_sys->hd3d) != VLC_SUCCESS)
     {
         msg_Warn(p_filter, "cannot load d3d11.dll, aborting");
-        goto done;
+        CopyCleanCache(&p_sys->cache);
+        return VLC_EGENERIC;
     }
 
-    CopyInitCache(&p_sys->cache, p_filter->fmt_in.video.i_width );
     vlc_mutex_init(&p_sys->staging_lock);
     p_filter->p_sys = p_sys;
-    err = VLC_SUCCESS;
-
-done:
-    if (err != VLC_SUCCESS)
-    {
-        free(p_sys);
-    }
-    return err;
+    return VLC_SUCCESS;
 }
 
 int D3D11OpenCPUConverter( vlc_object_t *obj )
@@ -689,7 +720,8 @@ int D3D11OpenCPUConverter( vlc_object_t *obj )
     filter_t *p_cpu_filter = NULL;
     video_format_t fmt_staging;
 
-    if ( p_filter->fmt_out.video.i_chroma != VLC_CODEC_D3D11_OPAQUE )
+    if ( p_filter->fmt_out.video.i_chroma != VLC_CODEC_D3D11_OPAQUE
+     &&  p_filter->fmt_out.video.i_chroma != VLC_CODEC_D3D11_OPAQUE_10B )
         return VLC_EGENERIC;
 
     if ( p_filter->fmt_in.video.i_height != p_filter->fmt_out.video.i_height
@@ -698,6 +730,7 @@ int D3D11OpenCPUConverter( vlc_object_t *obj )
 
     switch( p_filter->fmt_in.video.i_chroma ) {
     case VLC_CODEC_I420:
+    case VLC_CODEC_I420_10L:
     case VLC_CODEC_YV12:
     case VLC_CODEC_NV12:
     case VLC_CODEC_P010:
@@ -769,7 +802,7 @@ int D3D11OpenCPUConverter( vlc_object_t *obj )
             goto done;
     }
 
-    filter_sys_t *p_sys = calloc(1, sizeof(filter_sys_t));
+    filter_sys_t *p_sys = vlc_obj_calloc(obj, 1, sizeof(filter_sys_t));
     if (!p_sys) {
          err = VLC_ENOMEM;
          goto done;
@@ -795,7 +828,6 @@ done:
         if (texture)
             ID3D11Texture2D_Release(texture);
         D3D11_FilterReleaseInstance(&d3d_dev);
-        free(p_sys);
     }
     else
     {
@@ -824,8 +856,6 @@ void D3D11CloseConverter( vlc_object_t *obj )
         ID3D11Texture2D_Release(p_sys->staging);
     D3D11_FilterReleaseInstance(&p_sys->d3d_dev);
     D3D11_Destroy(&p_sys->hd3d);
-    free( p_sys );
-    p_filter->p_sys = NULL;
 }
 
 void D3D11CloseCPUConverter( vlc_object_t *obj )
@@ -835,6 +865,4 @@ void D3D11CloseCPUConverter( vlc_object_t *obj )
     DeleteFilter(p_sys->filter);
     picture_Release(p_sys->staging_pic);
     D3D11_Destroy(&p_sys->hd3d);
-    free( p_sys );
-    p_filter->p_sys = NULL;
 }

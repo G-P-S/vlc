@@ -41,6 +41,7 @@
 #include <vlc_vout.h>
 #include <vlc_viewpoint.h>
 
+#include "vout_helper.h"
 #include "internal.h"
 
 #ifndef GL_CLAMP_TO_EDGE
@@ -652,7 +653,10 @@ opengl_init_program(vout_display_opengl_t *vgl, struct prgm *prgm,
             vlc_fourcc_GetChromaDescription(fmt->i_chroma);
 
         if (desc == NULL)
+        {
+            vlc_object_release(tc);
             return VLC_EGENERIC;
+        }
         if (desc->plane_count == 0)
         {
             /* Opaque chroma: load a module to handle it */

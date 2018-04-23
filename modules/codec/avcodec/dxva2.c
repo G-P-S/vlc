@@ -320,7 +320,7 @@ static int Open(vlc_va_t *va, AVCodecContext *ctx, enum PixelFormat pix_fmt,
     if (err!=VLC_SUCCESS)
         goto error;
 
-    err = directx_va_Setup(va, &sys->dx_sys, ctx, fmt);
+    err = directx_va_Setup(va, &sys->dx_sys, ctx, fmt, 0);
     if (err != VLC_SUCCESS)
         goto error;
 
@@ -500,29 +500,29 @@ static int DxGetInputList(vlc_va_t *va, input_list_t *p_list)
     return VLC_SUCCESS;
 }
 
+extern const GUID DXVA_ModeHEVC_VLD_Main;
 extern const GUID DXVA_ModeHEVC_VLD_Main10;
 static bool CanUseIntelHEVC(vlc_va_t *va)
 {
     vlc_va_sys_t *sys = va->sys;
-    /* it should be OK starting after driver 20.19.15.4835 */
-    struct wddm_version WDMM = {
-        .wddm         = 20,
-        .d3d_features = 19,
-        .revision     = 15,
-        .build        = 4836,
-    };
-    if (D3D9CheckDriverVersion(&sys->hd3d, &sys->d3d_dev, GPU_MANUFACTURER_INTEL, &WDMM) == VLC_SUCCESS)
+
+    D3DADAPTER_IDENTIFIER9 identifier;
+    HRESULT hr = IDirect3D9_GetAdapterIdentifier(sys->hd3d.obj, sys->d3d_dev.adapterId, 0, &identifier);
+    if (FAILED(hr))
+        return false;
+
+    if (identifier.VendorId != GPU_MANUFACTURER_INTEL)
         return true;
 
-    msg_Dbg(va, "HEVC not supported with these drivers");
-    return false;
+    return directx_va_canUseHevc( va, identifier.DeviceId );
 }
 
 static int DxSetupOutput(vlc_va_t *va, const GUID *input, const video_format_t *fmt)
 {
     VLC_UNUSED(fmt);
 
-    if (IsEqualGUID(input,&DXVA_ModeHEVC_VLD_Main10) && !CanUseIntelHEVC(va))
+    if ((IsEqualGUID(input,&DXVA_ModeHEVC_VLD_Main) ||
+         IsEqualGUID(input,&DXVA_ModeHEVC_VLD_Main10)) && !CanUseIntelHEVC(va))
         return VLC_EGENERIC;
 
     int err = VLC_EGENERIC;
@@ -647,13 +647,14 @@ static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id,
     /* List all configurations available for the decoder */
     UINT                      cfg_count = 0;
     DXVA2_ConfigPictureDecode *cfg_list = NULL;
-    if (FAILED(IDirectXVideoDecoderService_GetDecoderConfigurations(sys->d3ddec,
-                                                                    &sys->input,
-                                                                    &dsc,
-                                                                    NULL,
-                                                                    &cfg_count,
-                                                                    &cfg_list))) {
-        msg_Err(va, "IDirectXVideoDecoderService_GetDecoderConfigurations failed");
+    hr = IDirectXVideoDecoderService_GetDecoderConfigurations(sys->d3ddec,
+                                                              &sys->input,
+                                                              &dsc,
+                                                              NULL,
+                                                              &cfg_count,
+                                                              &cfg_list);
+    if (FAILED(hr)) {
+        msg_Err(va, "IDirectXVideoDecoderService_GetDecoderConfigurations failed. (hr=0x%0lx)", hr);
         goto error;
     }
     msg_Dbg(va, "we got %d decoder configurations", cfg_count);
@@ -686,7 +687,7 @@ static int DxCreateVideoDecoder(vlc_va_t *va, int codec_id,
     CoTaskMemFree(cfg_list);
     if (cfg_score <= 0) {
         msg_Err(va, "Failed to find a supported decoder configuration");
-        return VLC_EGENERIC;
+        goto error;
     }
 
     /* Create the decoder */

@@ -33,30 +33,60 @@ apps:
       - mpris
 
 parts:
+  desktop-qt5-vlc:
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-commit: 3a6209d90bcec218618348f7f41c873bdacc723f
+    source-subdir: qt/
+    plugin: make
+    make-parameters: ["FLAVOR=qt5"]
+    build-packages:
+      - qtbase5-dev
+      - dpkg-dev
+    stage-packages:
+      - libxkbcommon0
+      - ttf-ubuntu-font-family
+      - dmz-cursor-theme
+      - light-themes
+      - shared-mime-info
+      - libqt5gui5
+      - libgdk-pixbuf2.0-0
+      - libqt5svg5
+      - locales-all
   vlc:
-    after: [desktop-qt5]
+    after: [desktop-qt5-vlc]
     source: ../../../
     source-type: git
     plugin: autotools
     prepare: |
       sed -i 's|0\.19\.8|0\.19\.7|'  configure.ac
     build: |
+      cd extras/tools
+      ./bootstrap
+      make -j $(getconf _NPROCESSORS_ONLN) .protoc
+      cd ../../
+      export PATH=$PWD/extras/tools/build/bin:$PATH
       cd contrib && mkdir linux && cd linux
       ../bootstrap
+      make list
+      make -j $(getconf _NPROCESSORS_ONLN) .protobuf
       make -j $(getconf _NPROCESSORS_ONLN) .libplacebo
       make -j $(getconf _NPROCESSORS_ONLN) .ffmpeg
+      make -j $(getconf _NPROCESSORS_ONLN) .spatialaudio
+      make -j $(getconf _NPROCESSORS_ONLN) .microdns
+      make -j $(getconf _NPROCESSORS_ONLN) .libarchive
       cd ../../
       export NOCONFIGURE=1
       autoreconf -fi
       ./configure \
           --prefix=$SNAPCRAFT_PART_INSTALL/usr \
-          --disable-chromecast \
-          --disable-wayland
+          --disable-wayland \
+          --enable-merge-ffmpeg
       make -j $(getconf _NPROCESSORS_ONLN)
     install: |
       echo $(git describe HEAD) > $SNAPCRAFT_STAGE/version
       make install
       sed -i 's|Icon=vlc|Icon=/usr/share/icons/hicolor/256x256/apps/vlc\.png|' $SNAPCRAFT_PART_INSTALL/usr/share/applications/vlc.desktop
+      sed -i 's|TryExec=.*|TryExec=/snap/bin/vlc|' $SNAPCRAFT_PART_INSTALL/usr/share/applications/vlc.desktop
     build-packages:
       - git
       - g++
@@ -115,12 +145,12 @@ parts:
       - libmpeg2-4-dev
       - libmtp-dev
       - libncursesw5-dev
-      - libnotify-dev
       - libogg-dev
       - libomxil-bellagio-dev
       - libopus-dev
       - libpng-dev
       - libpostproc-dev
+      - libprojectm-dev
       - libpulse-dev
       - libqt5x11extras5-dev
       - qtbase5-private-dev
@@ -130,6 +160,7 @@ parts:
       - libsamplerate0-dev
       - libsdl-image1.2-dev
       - libsdl1.2-dev
+      - libsecret-1-dev
       - libshine-dev
       - libshout3-dev
       - libsidplay2-dev
@@ -194,6 +225,7 @@ parts:
       - librsvg2-2
       - libsdl-image1.2
       - libsdl1.2debian
+      - libsecret-1-0
       - libva-drm1
       - libva-x11-1
       - libva1
@@ -215,6 +247,26 @@ parts:
       - mesa-utils
       - mesa-vdpau-drivers
       - zlib1g
+      - libprojectm2v5
+      - projectm-data
+      - kde-style-breeze
+      - breeze-icon-theme
+      - frameworkintegration
+      - plasma-integration
+      - phonon4qt5-backend-null
+    filesets:
+      exclusion:
+      - "-usr/lib/*/cmake/*"
+      - "-usr/include/*"
+      - "-usr/share/ECM/*"
+      - "-usr/share/doc/*"
+      - "-usr/share/man/*"
+      - "-usr/share/icons/breeze-dark*"
+      - "-usr/bin/X11"
+      - "-usr/lib/gcc/x86_64-linux-gnu/6.0.0"
+      - "-usr/lib/aspell/*"
+    prime:
+      - "$exclusion"
 
   wrapper:
     plugin: dump

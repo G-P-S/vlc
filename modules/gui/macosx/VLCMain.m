@@ -321,11 +321,13 @@ static VLCMain *sharedInstance = nil;
 
 - (void)applicationWillTerminate:(NSNotification *)notification
 {
+    msg_Dbg(getIntf(), "applicationWillTerminate called");
     if (b_intf_terminating)
         return;
     b_intf_terminating = true;
 
     [_input_manager onPlaybackHasEnded:nil];
+    [_input_manager deinit];
 
     if (notification == nil)
         [[NSNotificationCenter defaultCenter] postNotificationName: NSApplicationWillTerminateNotification object: nil];
@@ -340,8 +342,6 @@ static VLCMain *sharedInstance = nil;
     config_PutInt(p_intf, "random", var_GetBool(p_playlist, "random"));
     config_PutInt(p_intf, "loop", var_GetBool(p_playlist, "loop"));
     config_PutInt(p_intf, "repeat", var_GetBool(p_playlist, "repeat"));
-
-    msg_Dbg(p_intf, "Terminating");
 
     var_DelCallback(p_intf->obj.libvlc, "intf-toggle-fscontrol", ShowController, (__bridge void *)self);
     var_DelCallback(p_intf->obj.libvlc, "intf-show", ShowController, (__bridge void *)self);

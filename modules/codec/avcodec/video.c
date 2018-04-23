@@ -361,8 +361,8 @@ static int lavc_CopyPicture(decoder_t *dec, picture_t *pic, AVFrame *frame)
                 sys->p_context->pix_fmt, (name != NULL) ? name : "unknown");
         return VLC_EGENERIC;
     } else if (fourcc != pic->format.i_chroma
-     || frame->width != (int) pic->format.i_visible_width
-     || frame->height != (int) pic->format.i_visible_height)
+     || frame->width > (int) pic->format.i_width
+     || frame->height > (int) pic->format.i_height)
     {
         msg_Warn(dec, "dropping frame because the vout changed");
         return VLC_EGENERIC;
@@ -556,7 +556,11 @@ int InitVideoDec( vlc_object_t *obj )
             i_thread_count++;
 
         //FIXME: take in count the decoding time
+#if VLC_WINSTORE_APP
+        i_thread_count = __MIN( i_thread_count, 6 );
+#else
         i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 10 : 6 );
+#endif
     }
     i_thread_count = __MIN( i_thread_count, p_codec->id == AV_CODEC_ID_HEVC ? 32 : 16 );
     msg_Dbg( p_dec, "allowing %d thread(s) for decoding", i_thread_count );

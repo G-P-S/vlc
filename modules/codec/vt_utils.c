@@ -149,7 +149,8 @@ cvpxpic_create_mapped(const video_format_t *fmt, CVPixelBufferRef cvpx,
     {
         case VLC_CODEC_BGRA:
         case VLC_CODEC_UYVY: planes_count = 0; break;
-        case VLC_CODEC_NV12: planes_count = 2; break;
+        case VLC_CODEC_NV12:
+        case VLC_CODEC_P010: planes_count = 2; break;
         case VLC_CODEC_I420: planes_count = 3; break;
         default: return NULL;
     }
@@ -199,6 +200,7 @@ cvpxpic_unmap(picture_t *mapped_pic)
     {
         case VLC_CODEC_UYVY: fmt.i_chroma = VLC_CODEC_CVPX_UYVY; break;
         case VLC_CODEC_NV12: fmt.i_chroma = VLC_CODEC_CVPX_NV12; break;
+        case VLC_CODEC_P010: fmt.i_chroma = VLC_CODEC_CVPX_P010; break;
         case VLC_CODEC_I420: fmt.i_chroma = VLC_CODEC_CVPX_I420; break;
         case VLC_CODEC_BGRA: fmt.i_chroma = VLC_CODEC_CVPX_BGRA; break;
         default:
@@ -239,6 +241,9 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
         case VLC_CODEC_CVPX_BGRA:
             cvpx_format = kCVPixelFormatType_32BGRA;
             break;
+        case VLC_CODEC_CVPX_P010:
+            cvpx_format = 'x420'; /* kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange */
+            break;
         default:
             return NULL;
     }
@@ -265,12 +270,10 @@ cvpxpool_create(const video_format_t *fmt, unsigned count)
                          kCVPixelBufferIOSurfacePropertiesKey, io_dict);
     CFRelease(io_dict);
 
-    cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferBytesPerRowAlignmentKey,
-                     fmt->i_width);
     cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferPixelFormatTypeKey,
                      cvpx_format);
-    cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferWidthKey, fmt->i_width);
-    cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferHeightKey, fmt->i_height);
+    cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferWidthKey, fmt->i_visible_width);
+    cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferHeightKey, fmt->i_visible_height);
     /* Required by CIFilter to render IOSurface */
     cfdict_set_int32(cvpx_attrs_dict, kCVPixelBufferBytesPerRowAlignmentKey, 16);
 

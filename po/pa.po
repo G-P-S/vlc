@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vlc 3.0.0-rc3\n"
 "Report-Msgid-Bugs-To: vlc-devel@videolan.org\n"
-"POT-Creation-Date: 2018-02-06 22:47+0100\n"
+"POT-Creation-Date: 2018-04-19 08:59+0200\n"
 "PO-Revision-Date: 2017-02-06 13:43+0000\n"
 "Last-Translator: A S Alam <alam.yellow@gmail.com>, 2017\n"
 "Language-Team: Panjabi (Punjabi) (https://www.transifex.com/yaron/"
@@ -21,7 +21,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: include/vlc_common.h:1040
+#: include/vlc_common.h:1044
 msgid ""
 "This program comes with NO WARRANTY, to the extent permitted by law.\n"
 "You may redistribute it under the terms of the GNU General Public License;\n"
@@ -43,7 +43,7 @@ msgstr "ਸਭ ਚੋਣਾਂ ਵੇਖਣ ਲਈ \"ਤਕਨੀਕੀ ਚੋ�
 
 #: include/vlc_config_cat.h:38
 #: modules/gui/macosx/VLCSimplePrefsController.m:227
-#: modules/gui/qt/components/simple_preferences.cpp:223
+#: modules/gui/qt/components/simple_preferences.cpp:231
 #: modules/gui/qt/menus.cpp:1093
 msgid "Interface"
 msgstr "ਇੰਟਰਫੇਸ"
@@ -77,14 +77,14 @@ msgstr "VLC ਦੇ ਕੰਟਰੋਲ ਇੰਟਰਫੇਸ ਲਈ ਸੈਟਿ�
 msgid "Hotkeys settings"
 msgstr "ਹਾਟ-ਕੀ ਸੈਟਿੰਗ"
 
-#: include/vlc_config_cat.h:53 src/input/es_out.c:3095 src/libvlc-module.c:1492
+#: include/vlc_config_cat.h:53 src/input/es_out.c:3115 src/libvlc-module.c:1492
 #: modules/access/imem.c:64
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:171
-#: modules/gui/macosx/VLCMainMenu.m:415 modules/gui/macosx/VLCOutput.m:92
-#: modules/gui/macosx/VLCPlaylistInfo.m:96
+#: modules/gui/macosx/VLCMainMenu.m:414 modules/gui/macosx/VLCOutput.m:92
+#: modules/gui/macosx/VLCPlaylistInfo.m:95
 #: modules/gui/macosx/VLCSimplePrefsController.m:229
 #: modules/gui/qt/components/info_panels.cpp:572
-#: modules/gui/qt/components/simple_preferences.cpp:225
+#: modules/gui/qt/components/simple_preferences.cpp:233
 #: modules/gui/qt/qt.cpp:213 modules/services_discovery/mediadirs.c:77
 #: modules/stream_out/es.c:94 modules/stream_out/transcode/transcode.c:182
 #: share/lua/http/dialogs/create_stream.html:150
@@ -114,7 +114,7 @@ msgid "Audio resampler"
 msgstr ""
 
 #: include/vlc_config_cat.h:63 src/audio_output/output.c:260
-#: modules/gui/macosx/VLCMainMenu.m:425 modules/gui/macosx/VLCMainMenu.m:426
+#: modules/gui/macosx/VLCMainMenu.m:424 modules/gui/macosx/VLCMainMenu.m:425
 msgid "Visualizations"
 msgstr "ਵਿਜੁਲਾਈਜੇਸ਼ਨ"
 
@@ -141,18 +141,17 @@ msgstr "ਫੁਟਕਲ"
 msgid "Miscellaneous audio settings and modules."
 msgstr "ਫੁਟਕਲ ਆਡੀਓ ਸੈਟਿੰਗ ਅਤੇ ਮੋਡੀਊਲ।"
 
-#: include/vlc_config_cat.h:73 src/input/es_out.c:3139 src/libvlc-module.c:142
+#: include/vlc_config_cat.h:73 src/input/es_out.c:3159 src/libvlc-module.c:142
 #: src/libvlc-module.c:1551 modules/access/imem.c:64
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:160
-#: modules/gui/macosx/VLCMainMenu.m:428 modules/gui/macosx/VLCOutput.m:82
-#: modules/gui/macosx/VLCPlaylistInfo.m:91
+#: modules/gui/macosx/VLCMainMenu.m:427 modules/gui/macosx/VLCOutput.m:82
+#: modules/gui/macosx/VLCPlaylistInfo.m:90
 #: modules/gui/macosx/VLCSimplePrefsController.m:231
 #: modules/gui/macosx/VLCSimplePrefsController.m:374
 #: modules/gui/qt/components/info_panels.cpp:573
-#: modules/gui/qt/components/simple_preferences.cpp:227
+#: modules/gui/qt/components/simple_preferences.cpp:235
 #: modules/gui/qt/qt.cpp:213 modules/services_discovery/mediadirs.c:70
-#: modules/stream_out/chromecast/cast.cpp:165 modules/stream_out/es.c:102
-#: modules/stream_out/transcode/transcode.c:153
+#: modules/stream_out/es.c:102 modules/stream_out/transcode/transcode.c:153
 #: share/lua/http/dialogs/create_stream.html:147
 #: modules/gui/qt/ui/profiles.h:722 modules/gui/qt/ui/profiles.h:726
 #: modules/gui/qt/ui/sprefs_video.h:326
@@ -336,8 +335,8 @@ msgstr "VLC ਦਾ ਵਿਡੀਓ ਆਨ ਡਿਮਾਂਡ ਸਥਾਪਨ"
 #: include/vlc_config_cat.h:173 src/libvlc-module.c:2070
 #: src/playlist/engine.c:233 modules/demux/playlist/playlist.c:64
 #: modules/demux/playlist/playlist.c:65 modules/demux/playlist/wpl.c:99
-#: modules/gui/macosx/VLCMainWindow.m:296
-#: modules/gui/macosx/VLCMainWindow.m:859
+#: modules/gui/macosx/VLCMainWindow.m:294
+#: modules/gui/macosx/VLCMainWindow.m:856
 #: modules/gui/qt/components/controller.hpp:109
 #: modules/gui/qt/components/playlist/playlist.cpp:165
 #: modules/gui/qt/components/playlist/selector.cpp:227
@@ -438,11 +437,11 @@ msgstr "ਇਸ ਬਾਰੇ(&A)"
 
 #: include/vlc_intf_strings.h:65 modules/control/oldrc.c:71
 #: modules/gui/macosx/VLCControlsBarCommon.m:64
-#: modules/gui/macosx/VLCControlsBarCommon.m:394
-#: modules/gui/macosx/VLCMainMenu.m:386 modules/gui/macosx/VLCMainMenu.m:498
-#: modules/gui/macosx/VLCMainMenu.m:505 modules/gui/macosx/VLCMainMenu.m:1340
-#: modules/gui/macosx/VLCMainMenu.m:1341 modules/gui/macosx/VLCMainMenu.m:1342
-#: modules/gui/macosx/VLCPlaylist.m:230
+#: modules/gui/macosx/VLCControlsBarCommon.m:397
+#: modules/gui/macosx/VLCMainMenu.m:385 modules/gui/macosx/VLCMainMenu.m:497
+#: modules/gui/macosx/VLCMainMenu.m:504 modules/gui/macosx/VLCMainMenu.m:1339
+#: modules/gui/macosx/VLCMainMenu.m:1340 modules/gui/macosx/VLCMainMenu.m:1341
+#: modules/gui/macosx/VLCPlaylist.m:228
 #: modules/gui/qt/components/controller.hpp:107
 #: modules/gui/qt/dialogs/vlm.cpp:539 modules/gui/qt/ui/open.h:261
 msgid "Play"
@@ -489,17 +488,17 @@ msgid "Save..."
 msgstr "ਸੰਭਾਲੋ..."
 
 #: include/vlc_intf_strings.h:79 modules/gui/macosx/VLCCoreInteraction.m:447
-#: modules/gui/macosx/VLCMainMenu.m:400
+#: modules/gui/macosx/VLCMainMenu.m:399
 msgid "Repeat All"
 msgstr "ਸਭ ਰਪੀਟ"
 
 #: include/vlc_intf_strings.h:80 modules/gui/macosx/VLCCoreInteraction.m:467
-#: modules/gui/macosx/VLCMainMenu.m:399
+#: modules/gui/macosx/VLCMainMenu.m:398
 msgid "Repeat One"
 msgstr "ਇੱਕ ਰਪੀਟ"
 
 #: include/vlc_intf_strings.h:81 src/libvlc-module.c:1429
-#: modules/gui/macosx/VLCMainMenu.m:398
+#: modules/gui/macosx/VLCMainMenu.m:397
 #: modules/gui/qt/components/controller.hpp:111
 #: modules/gui/qt/components/controller.hpp:124
 msgid "Random"
@@ -513,7 +512,7 @@ msgstr "ਰਲਵਾਂ ਬੰਦ"
 msgid "Add to Playlist"
 msgstr "ਪਲੇਅ-ਲਿਸਟ 'ਚ ਸ਼ਾਮਲ"
 
-#: include/vlc_intf_strings.h:85 modules/gui/macosx/VLCPlaylist.m:237
+#: include/vlc_intf_strings.h:85 modules/gui/macosx/VLCPlaylist.m:235
 msgid "Add File..."
 msgstr "ਫਾਇਲ ਸ਼ਾਮਲ..."
 
@@ -535,7 +534,7 @@ msgid "Search"
 msgstr "ਖੋਜ"
 
 #: include/vlc_intf_strings.h:99
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:281
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:282
 #: modules/gui/qt/ui/video_effects.h:1292
 msgid "Waves"
 msgstr "ਵੇਵ"
@@ -578,9 +577,9 @@ msgstr "ਆਡੀਓ ਫਿਲਟਰ ਕਰਨਾ ਫੇਲ੍ਹ ਹੈ"
 msgid "The maximum number of filters (%u) was reached."
 msgstr "ਫਿਲਟਰਾਂ ਦੀ ਵੱਧੋ-ਵੱਧ ਗਿਣਤੀ (%u) ਅੱਪੜ ਗਈ ਹੈ।"
 
-#: src/audio_output/output.c:263 src/config/core.c:380 src/input/es_out.c:947
+#: src/audio_output/output.c:263 src/config/core.c:380 src/input/es_out.c:943
 #: src/libvlc-module.c:540 modules/gui/macosx/VLCMainMenu.m:243
-#: modules/gui/macosx/VLCMainWindow.m:1002 modules/video_filter/postproc.c:235
+#: modules/gui/macosx/VLCMainWindow.m:999 modules/video_filter/postproc.c:235
 msgid "Disable"
 msgstr "ਆਯੋਗ"
 
@@ -608,40 +607,40 @@ msgstr "ਆਡੀਓ ਫਿਲਟਰ"
 msgid "Replay gain"
 msgstr "ਰੀਪਲੇਅ ਗੇਨ"
 
-#: src/audio_output/output.c:345 modules/gui/macosx/VLCMainMenu.m:421
-#: modules/gui/macosx/VLCMainMenu.m:422
+#: src/audio_output/output.c:345 modules/gui/macosx/VLCMainMenu.m:420
+#: modules/gui/macosx/VLCMainMenu.m:421
 msgid "Stereo audio mode"
 msgstr "ਸਟੀਰਿਓ ਆਡੀਓ ਮੋਡ"
 
-#: src/audio_output/output.c:421 modules/access/v4l2/v4l2.c:267
+#: src/audio_output/output.c:419 modules/access/v4l2/v4l2.c:267
 #: modules/audio_output/alsa.c:76
 msgid "Mono"
 msgstr "ਮੋਨੋ"
 
-#: src/audio_output/output.c:428
+#: src/audio_output/output.c:425
 msgid "Original"
 msgstr ""
 
-#: src/audio_output/output.c:434 src/libvlc-module.c:197
+#: src/audio_output/output.c:431 src/libvlc-module.c:197
 msgid "Dolby Surround"
 msgstr "ਡੋਲਬੀ ਸਰਾਊਂਡਿੰਗ"
 
-#: src/audio_output/output.c:439 src/libvlc-module.c:196
+#: src/audio_output/output.c:436 src/libvlc-module.c:196
 #: modules/access/alsa.c:38 modules/access/oss.c:64
 #: modules/access/v4l2/v4l2.c:268 modules/audio_output/alsa.c:76
 #: modules/codec/twolame.c:70
 msgid "Stereo"
 msgstr "ਸਟੀਰਿਓ"
 
-#: src/audio_output/output.c:448 src/input/es_out.c:3236
+#: src/audio_output/output.c:445 src/input/es_out.c:3256
 #: src/libvlc-module.c:197 src/libvlc-module.c:295 src/libvlc-module.c:368
 #: src/misc/actions.c:81 modules/audio_filter/channel_mixer/mono.c:89
 #: modules/audio_filter/channel_mixer/remap.c:61 modules/codec/dvbsub.c:102
 #: modules/codec/subsdec.c:167 modules/codec/zvbi.c:83
 #: modules/control/gestures.c:85
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:217
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:290
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:312
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:218
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:291
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:313
 #: modules/spu/audiobargraph_v.c:65 modules/spu/logo.c:80
 #: modules/spu/marq.c:129 modules/spu/mosaic.c:170 modules/spu/rss.c:171
 #: modules/gui/qt/ui/video_effects.h:1231
@@ -650,26 +649,26 @@ msgstr "ਸਟੀਰਿਓ"
 msgid "Left"
 msgstr "ਖੱਬੇ"
 
-#: src/audio_output/output.c:451 src/libvlc-module.c:197
+#: src/audio_output/output.c:448 src/libvlc-module.c:197
 #: src/libvlc-module.c:295 src/libvlc-module.c:368 src/misc/actions.c:109
 #: modules/audio_filter/channel_mixer/mono.c:89
 #: modules/audio_filter/channel_mixer/remap.c:61 modules/codec/dvbsub.c:102
 #: modules/codec/subsdec.c:167 modules/codec/zvbi.c:83
 #: modules/control/gestures.c:85
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:218
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:292
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:314
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:219
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:293
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:315
 #: modules/spu/audiobargraph_v.c:65 modules/spu/logo.c:80
 #: modules/spu/marq.c:129 modules/spu/mosaic.c:170 modules/spu/rss.c:171
 #: modules/gui/qt/ui/video_effects.h:1232
 msgid "Right"
 msgstr "ਸੱਜੇ"
 
-#: src/audio_output/output.c:455 src/libvlc-module.c:196
+#: src/audio_output/output.c:452 src/libvlc-module.c:196
 msgid "Reverse stereo"
 msgstr "ਰੀਵਰਸ ਸਟੀਰਿਓ"
 
-#: src/audio_output/output.c:463 src/libvlc-module.c:198
+#: src/audio_output/output.c:460 src/libvlc-module.c:198
 #: modules/audio_filter/equalizer_presets.h:55
 msgid "Headphones"
 msgstr "ਹੈੱਡਫੋਨ"
@@ -678,8 +677,8 @@ msgstr "ਹੈੱਡਫੋਨ"
 #: modules/access/dtv/access.c:106 modules/access/dtv/access.c:115
 #: modules/access/dtv/access.c:123 modules/access/dtv/access.c:132
 #: modules/access/dtv/access.c:140 modules/access/dtv/access.c:162
-#: modules/access/v4l2/v4l2.c:137 modules/gui/qt/components/open_panels.cpp:974
-#: modules/gui/qt/components/simple_preferences.cpp:370
+#: modules/access/v4l2/v4l2.c:137 modules/gui/qt/components/open_panels.cpp:976
+#: modules/gui/qt/components/simple_preferences.cpp:378
 msgid "Automatic"
 msgstr "ਆਟੋਮੈਟਿਕ"
 
@@ -841,7 +840,7 @@ msgid "decoder"
 msgstr "ਡੀਕੋਡਰ"
 
 #: src/input/decoder.c:1909 src/input/decoder.c:2191
-#: modules/codec/avcodec/encoder.c:365 modules/codec/avcodec/encoder.c:879
+#: modules/codec/avcodec/encoder.c:368 modules/codec/avcodec/encoder.c:896
 #: modules/stream_out/es.c:349 modules/stream_out/es.c:362
 msgid "Streaming / Transcoding failed"
 msgstr "ਸਟਰੀਮਿੰਗ / ਟਰਾਂਸਕੋਡਿੰਗ ਫੇਲ੍ਹ ਹੋਈ"
@@ -855,51 +854,51 @@ msgstr "VLC %s ਮੋਡੀਊਲ ਖੋਲ੍ਹ ਨਹੀਂ ਸਕਿਆ"
 msgid "VLC could not open the decoder module."
 msgstr "VLC ਡੀਕੋਡਰ ਮੋਡੀਊਲ ਖੋਲ੍ਹ ਨਹੀਂ ਸਕਿਆ"
 
-#: src/input/es_out.c:967 src/input/es_out.c:972 src/libvlc-module.c:239
+#: src/input/es_out.c:963 src/input/es_out.c:968 src/libvlc-module.c:239
 #: modules/gui/qt/components/open_panels.cpp:547
 msgid "Track"
 msgstr "ਟਰੈਕ"
 
-#: src/input/es_out.c:1189
+#: src/input/es_out.c:1185
 #, c-format
 msgid "%s [%s %d]"
 msgstr "%s [%s %d]"
 
-#: src/input/es_out.c:1190 src/input/es_out.c:1195 src/input/es_out.c:1210
+#: src/input/es_out.c:1186 src/input/es_out.c:1191 src/input/es_out.c:1206
 #: src/input/var.c:160 src/libvlc-module.c:564
-#: modules/gui/macosx/VLCMainMenu.m:408 modules/gui/macosx/VLCMainMenu.m:409
+#: modules/gui/macosx/VLCMainMenu.m:407 modules/gui/macosx/VLCMainMenu.m:408
 msgid "Program"
 msgstr "ਪਰੋਗਰਾਮ"
 
-#: src/input/es_out.c:1220
+#: src/input/es_out.c:1216
 #, c-format
 msgid "Stream %d"
 msgstr "ਸਟਰੀਮ %d"
 
-#: src/input/es_out.c:1472 src/input/es_out.c:1474
+#: src/input/es_out.c:1469 src/input/es_out.c:1471
 msgid "Scrambled"
 msgstr "ਅਵਿਵਸਥਿਤ"
 
-#: src/input/es_out.c:1472 modules/keystore/keychain.m:40
-#: modules/lua/extension.c:1191
+#: src/input/es_out.c:1469 modules/keystore/keychain.m:41
+#: modules/lua/extension.c:1193
 msgid "Yes"
 msgstr "ਹਾਂ"
 
-#: src/input/es_out.c:2139
+#: src/input/es_out.c:2136
 #, c-format
 msgid "DTVCC Closed captions %u"
 msgstr ""
 
-#: src/input/es_out.c:2141
+#: src/input/es_out.c:2138
 #, c-format
 msgid "Closed captions %u"
 msgstr "%u ਸੁਰਖੀਆਂ ਬੰਦ ਕੀਤੀਆਂ"
 
-#: src/input/es_out.c:3071
+#: src/input/es_out.c:3091
 msgid "Original ID"
 msgstr "ਅਸਲੀ ID"
 
-#: src/input/es_out.c:3079 src/input/es_out.c:3082 modules/access/imem.c:67
+#: src/input/es_out.c:3099 src/input/es_out.c:3102 modules/access/imem.c:67
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:162
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:173
 #: modules/gui/qt/ui/profiles.h:728 modules/gui/qt/ui/profiles.h:754
@@ -907,48 +906,48 @@ msgstr "ਅਸਲੀ ID"
 msgid "Codec"
 msgstr "Codec"
 
-#: src/input/es_out.c:3086 src/input/meta.c:66 modules/access/imem.c:71
+#: src/input/es_out.c:3106 src/input/meta.c:66 modules/access/imem.c:71
 #: modules/gui/macosx/VLCPlaylist.m:114
 #: modules/gui/macosx/VLCSimplePrefsController.m:311
 #: modules/stream_out/setid.c:49 modules/gui/qt/ui/sprefs_interface.h:530
 msgid "Language"
 msgstr "ਭਾਸ਼ਾ"
 
-#: src/input/es_out.c:3089 src/input/meta.c:61
+#: src/input/es_out.c:3109 src/input/meta.c:61
 #: modules/gui/macosx/VLCBookmarksWindowController.m:83
 #: modules/gui/macosx/VLCPlaylist.m:112 modules/gui/qt/dialogs/bookmarks.cpp:75
 #: modules/gui/qt/dialogs/epg.cpp:55
 msgid "Description"
 msgstr "ਵੇਰਵਾ"
 
-#: src/input/es_out.c:3095 src/input/es_out.c:3139 src/input/es_out.c:3329
+#: src/input/es_out.c:3115 src/input/es_out.c:3159 src/input/es_out.c:3349
 #: modules/gui/macosx/VLCAddonsWindowController.m:132
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:185
 #: modules/gui/macosx/VLCOutput.m:75 modules/gui/qt/dialogs/plugins.cpp:1487
 msgid "Type"
 msgstr "ਟਾਈਪ"
 
-#: src/input/es_out.c:3098
+#: src/input/es_out.c:3118
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:175
 #: modules/gui/macosx/VLCOutput.m:98 modules/gui/qt/ui/profiles.h:756
 msgid "Channels"
 msgstr "ਚੈਨਲ"
 
-#: src/input/es_out.c:3103 modules/access/alsa.c:39 modules/access/imem.c:75
+#: src/input/es_out.c:3123 modules/access/alsa.c:39 modules/access/imem.c:75
 #: modules/audio_output/amem.c:45 modules/codec/fluidsynth.c:64
 msgid "Sample rate"
 msgstr "ਸੈਂਪਲ ਰੇਟ"
 
-#: src/input/es_out.c:3103
+#: src/input/es_out.c:3123
 #, c-format
 msgid "%u Hz"
 msgstr "%u Hz"
 
-#: src/input/es_out.c:3113
+#: src/input/es_out.c:3133
 msgid "Bits per sample"
 msgstr "ਪ੍ਰਤੀ ਸੈਂਪਲ ਬਿੱਟ"
 
-#: src/input/es_out.c:3118 modules/access_output/shout.c:92
+#: src/input/es_out.c:3138 modules/access_output/shout.c:92
 #: modules/demux/playlist/shoutcast.c:327
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:163
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:174
@@ -956,33 +955,33 @@ msgstr "ਪ੍ਰਤੀ ਸੈਂਪਲ ਬਿੱਟ"
 msgid "Bitrate"
 msgstr "ਬਿੱਟਰੇਟ"
 
-#: src/input/es_out.c:3118
+#: src/input/es_out.c:3138
 #, c-format
 msgid "%u kb/s"
 msgstr "%u kb/s"
 
-#: src/input/es_out.c:3130
+#: src/input/es_out.c:3150
 msgid "Track replay gain"
 msgstr "ਟਰੈਕ ਰੀਪਲੇਅ ਗੇਨ"
 
-#: src/input/es_out.c:3132
+#: src/input/es_out.c:3152
 msgid "Album replay gain"
 msgstr "ਐਲਬਮ ਰੀਪਲੇਅ ਗੇਨ"
 
-#: src/input/es_out.c:3133
+#: src/input/es_out.c:3153
 #, c-format
 msgid "%.2f dB"
 msgstr "%.2f dB"
 
-#: src/input/es_out.c:3143
+#: src/input/es_out.c:3163
 msgid "Video resolution"
 msgstr ""
 
-#: src/input/es_out.c:3148
+#: src/input/es_out.c:3168
 msgid "Buffer dimensions"
 msgstr ""
 
-#: src/input/es_out.c:3158 src/input/es_out.c:3161 modules/access/imem.c:93
+#: src/input/es_out.c:3178 src/input/es_out.c:3181 modules/access/imem.c:93
 #: modules/access/rdp.c:73 modules/access/screen/screen.c:43
 #: modules/access/screen/xcb.c:39 modules/access/shm.c:42
 #: modules/access/timecode.c:34 modules/access/v4l2/v4l2.c:70
@@ -992,199 +991,204 @@ msgstr ""
 msgid "Frame rate"
 msgstr "ਫਰੇਮ ਰੇਟ"
 
-#: src/input/es_out.c:3169
+#: src/input/es_out.c:3189
 msgid "Decoded format"
 msgstr "ਡੀਕੋਡ ਕੀਤਾ ਫਾਰਮੈਟ"
 
-#: src/input/es_out.c:3174
+#: src/input/es_out.c:3194
 msgid "Top left"
 msgstr ""
 
-#: src/input/es_out.c:3174
+#: src/input/es_out.c:3194
 msgid "Left top"
 msgstr ""
 
-#: src/input/es_out.c:3175
+#: src/input/es_out.c:3195
 msgid "Right bottom"
 msgstr ""
 
-#: src/input/es_out.c:3175
+#: src/input/es_out.c:3195
 msgid "Top right"
 msgstr ""
 
-#: src/input/es_out.c:3176
+#: src/input/es_out.c:3196
 msgid "Bottom left"
 msgstr ""
 
-#: src/input/es_out.c:3176
+#: src/input/es_out.c:3196
 msgid "Bottom right"
 msgstr ""
 
-#: src/input/es_out.c:3177
+#: src/input/es_out.c:3197
 msgid "Left bottom"
 msgstr ""
 
-#: src/input/es_out.c:3177
+#: src/input/es_out.c:3197
 msgid "Right top"
 msgstr ""
 
-#: src/input/es_out.c:3179
+#: src/input/es_out.c:3199
 msgid "Orientation"
 msgstr "ਸਥਿਤੀ"
 
-#: src/input/es_out.c:3185 src/input/es_out.c:3203 src/input/es_out.c:3221
-#: src/input/es_out.c:3235 src/playlist/tree.c:67
+#: src/input/es_out.c:3205 src/input/es_out.c:3223 src/input/es_out.c:3241
+#: src/input/es_out.c:3255 src/playlist/tree.c:67
 #: modules/access/dtv/access.c:75 modules/access/v4l2/v4l2.c:242
 msgid "Undefined"
 msgstr "ਅਣ-ਪਰਭਾਸ਼ਿਤ"
 
-#: src/input/es_out.c:3187
+#: src/input/es_out.c:3207
 msgid "ITU-R BT.601 (525 lines, 60 Hz)"
 msgstr "ITU-R BT.601 (525 ਲਾਈਨਾਂ, 60 Hz)"
 
-#: src/input/es_out.c:3189
+#: src/input/es_out.c:3209
 msgid "ITU-R BT.601 (625 lines, 50 Hz)"
 msgstr "ITU-R BT.601 (625 ਲਾਈਨਾਂ, 50 Hz)"
 
-#: src/input/es_out.c:3197
+#: src/input/es_out.c:3217
 msgid "Color primaries"
 msgstr ""
 
-#: src/input/es_out.c:3204 src/libvlc-module.c:362
+#: src/input/es_out.c:3224 src/libvlc-module.c:362
 #: modules/video_filter/deinterlace/deinterlace.h:58
 msgid "Linear"
 msgstr "ਲੀਨੀਅਰ"
 
-#: src/input/es_out.c:3211
+#: src/input/es_out.c:3231
 msgid "Hybrid Log-Gamma"
 msgstr "ਹਾਈਬਰਡ ਲਾਗ-ਗਾਮਾ"
 
-#: src/input/es_out.c:3215
+#: src/input/es_out.c:3235
 msgid "Color transfer function"
 msgstr "ਰੰਗ ਟਰਾਂਸਫਰ ਫੰਕਸ਼ਨ"
 
-#: src/input/es_out.c:3228
+#: src/input/es_out.c:3248
 msgid "Color space"
 msgstr "ਰੰਗ ਥਾਂ"
 
-#: src/input/es_out.c:3228
+#: src/input/es_out.c:3248
 #, c-format
 msgid "%s Range"
 msgstr "%s ਰੇਜ਼"
 
-#: src/input/es_out.c:3230
+#: src/input/es_out.c:3250
 msgid "Full"
 msgstr "ਪੂਰਾ"
 
-#: src/input/es_out.c:3237 src/libvlc-module.c:295 src/libvlc-module.c:368
+#: src/input/es_out.c:3257 src/libvlc-module.c:295 src/libvlc-module.c:368
 #: modules/audio_filter/channel_mixer/mono.c:91
 #: modules/audio_filter/channel_mixer/remap.c:61 modules/codec/dvbsub.c:102
 #: modules/codec/subsdec.c:167 modules/codec/zvbi.c:83
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:288
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:310
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:289
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:311
 #: modules/spu/audiobargraph_v.c:65 modules/spu/logo.c:80
 #: modules/spu/marq.c:129 modules/spu/mosaic.c:170 modules/spu/rss.c:171
 msgid "Center"
 msgstr "ਸੈਂਟਰ"
 
-#: src/input/es_out.c:3238
+#: src/input/es_out.c:3258
 msgid "Top Left"
 msgstr "ਉੱਤੇ ਖੱਬੇ"
 
-#: src/input/es_out.c:3239
+#: src/input/es_out.c:3259
 msgid "Top Center"
 msgstr "ਉੱਤੇ ਕੇਂਦਰ"
 
-#: src/input/es_out.c:3240
+#: src/input/es_out.c:3260
 msgid "Bottom Left"
 msgstr "ਹੇਠਾਂ ਖੱਬਾ"
 
-#: src/input/es_out.c:3241
+#: src/input/es_out.c:3261
 msgid "Bottom Center"
 msgstr "ਹੇਠਾਂ ਕੇਂਦਰ"
 
-#: src/input/es_out.c:3245
+#: src/input/es_out.c:3265
 msgid "Chroma location"
 msgstr "ਕਰੋਮਾ ਟਿਕਾਣਾ"
 
-#: src/input/es_out.c:3254
+#: src/input/es_out.c:3274
 msgid "Rectangular"
 msgstr "ਚਤੁਰਭੁਜ"
 
-#: src/input/es_out.c:3257
+#: src/input/es_out.c:3277
 msgid "Equirectangular"
 msgstr ""
 
-#: src/input/es_out.c:3260
+#: src/input/es_out.c:3280
 msgid "Cubemap"
 msgstr ""
 
-#: src/input/es_out.c:3266
+#: src/input/es_out.c:3286
 msgid "Projection"
 msgstr "ਪਰੋਜੈਕਸ਼ਨ"
 
-#: src/input/es_out.c:3268
+#: src/input/es_out.c:3288
 msgctxt "ViewPoint"
 msgid "Yaw"
 msgstr ""
 
-#: src/input/es_out.c:3270
+#: src/input/es_out.c:3290
 #, fuzzy
 msgctxt "ViewPoint"
 msgid "Pitch"
 msgstr "ਪਿੱਚ"
 
-#: src/input/es_out.c:3272
+#: src/input/es_out.c:3292
 #, fuzzy
 msgctxt "ViewPoint"
 msgid "Roll"
 msgstr "ਰੋਲ"
 
-#: src/input/es_out.c:3275
+#: src/input/es_out.c:3295
 #, fuzzy
 msgctxt "ViewPoint"
 msgid "Field of view"
 msgstr "ਵੇਖਣ ਦਾ ਖੇਤਰ"
 
-#: src/input/es_out.c:3280
+#: src/input/es_out.c:3300
 msgid "Max. luminance"
 msgstr ""
 
-#: src/input/es_out.c:3285
+#: src/input/es_out.c:3305
 msgid "Min. luminance"
 msgstr ""
 
-#: src/input/es_out.c:3293
+#: src/input/es_out.c:3313
 msgid "Primary R"
 msgstr "ਮੁੱਢਲਾ ਲਾਲ"
 
-#: src/input/es_out.c:3300
+#: src/input/es_out.c:3320
 msgid "Primary G"
 msgstr "ਮੁੱਢਲਾ ਹਰਾ"
 
-#: src/input/es_out.c:3307
+#: src/input/es_out.c:3327
 msgid "Primary B"
 msgstr "ਮੁੱਢਲਾ ਨੀਲਾ"
 
-#: src/input/es_out.c:3314
+#: src/input/es_out.c:3334
 msgid "White point"
 msgstr "ਚਿੱਟਾ ਬਿੰਦੂ"
 
-#: src/input/es_out.c:3329 modules/access/imem.c:64
+#: src/input/es_out.c:3349 modules/access/imem.c:64
 msgid "Subtitle"
 msgstr "ਸਬ-ਟਾਈਟਲ"
 
-#: src/input/input.c:2662
+#: src/input/input.c:1813 modules/control/hotkeys.c:1511
+#, c-format
+msgid "Volume %ld%%"
+msgstr "ਵਾਲੀਅਮ %ld%%"
+
+#: src/input/input.c:2711
 msgid "Your input can't be opened"
 msgstr "ਤੁਹਾਡੀ ਇੰਪੁੱਟ ਖੋਲ੍ਹੀ ਨਹੀਂ ਜਾ ਸਕਦੀ ਹੈ"
 
-#: src/input/input.c:2663
+#: src/input/input.c:2712
 #, c-format
 msgid "VLC is unable to open the MRL '%s'. Check the log for details."
 msgstr "VLC MRL '%s' ਨੂੰ ਖੋਲ੍ਹਣ ਲਈ ਅਸਮਰੱਥ ਹੈ। ਵਧੇਰੇ ਜਾਣਕਾਰੀ ਵਾਸਤਾ ਲਾਗ ਵੇਖੋ।"
 
-#: src/input/meta.c:55 src/input/var.c:170 modules/gui/macosx/VLCMainMenu.m:410
-#: modules/gui/macosx/VLCMainMenu.m:411
+#: src/input/meta.c:55 src/input/var.c:170 modules/gui/macosx/VLCMainMenu.m:409
+#: modules/gui/macosx/VLCMainMenu.m:410
 #: modules/gui/macosx/VLCOpenWindowController.m:178
 #: modules/gui/macosx/VLCOpenWindowController.m:180
 #: modules/gui/macosx/VLCPlaylist.m:107 modules/gui/macosx/VLCPlaylistInfo.m:63
@@ -1296,21 +1300,21 @@ msgstr "ਬੁੱਕਮਾਰਕ"
 msgid "Programs"
 msgstr "ਪਰੋਗਰਾਮ"
 
-#: src/input/var.c:175 modules/gui/macosx/VLCMainMenu.m:412
-#: modules/gui/macosx/VLCMainMenu.m:413
+#: src/input/var.c:175 modules/gui/macosx/VLCMainMenu.m:411
+#: modules/gui/macosx/VLCMainMenu.m:412
 #: modules/gui/macosx/VLCOpenWindowController.m:179
 #: modules/gui/macosx/VLCOpenWindowController.m:181
 #: modules/gui/qt/ui/open_disk.h:310
 msgid "Chapter"
 msgstr "ਚੈਪਟਰ"
 
-#: src/input/var.c:188 modules/gui/macosx/VLCMainMenu.m:436
-#: modules/gui/macosx/VLCMainMenu.m:437
+#: src/input/var.c:188 modules/gui/macosx/VLCMainMenu.m:435
+#: modules/gui/macosx/VLCMainMenu.m:436
 msgid "Video Track"
 msgstr "ਵਿਡੀਓ ਟਰੈਕ"
 
-#: src/input/var.c:194 modules/gui/macosx/VLCMainMenu.m:419
-#: modules/gui/macosx/VLCMainMenu.m:420
+#: src/input/var.c:194 modules/gui/macosx/VLCMainMenu.m:418
+#: modules/gui/macosx/VLCMainMenu.m:419
 msgid "Audio Track"
 msgstr "ਆਡੀਓ ਟਰੈਕ"
 
@@ -1344,11 +1348,11 @@ msgstr "ਟਾਈਟਲ %i%s"
 msgid "Chapter %i"
 msgstr "ਚੈਪਟਰ %i"
 
-#: src/input/var.c:380 modules/gui/qt/dialogs/toolbar.cpp:505
+#: src/input/var.c:380 modules/gui/qt/dialogs/toolbar.cpp:514
 msgid "Next chapter"
 msgstr "ਅੱਗੇ ਚੈਪਟਰ"
 
-#: src/input/var.c:385 modules/gui/qt/dialogs/toolbar.cpp:495
+#: src/input/var.c:385 modules/gui/qt/dialogs/toolbar.cpp:504
 msgid "Previous chapter"
 msgstr "ਪਿੱਛੇ ਚੈਪਟਰ"
 
@@ -1375,14 +1379,10 @@ msgid "Web"
 msgstr "ਵੈੱਬ"
 
 #: src/interface/interface.c:99
-msgid "Debug logging"
-msgstr "ਡੀਬੱਗ ਲਾਗ"
-
-#: src/interface/interface.c:102
 msgid "Mouse Gestures"
 msgstr "ਮਾਊਸ ਜੈਸਚਰ"
 
-#: src/interface/interface.c:225
+#: src/interface/interface.c:222
 msgid ""
 "Running vlc with the default interface. Use 'cvlc' to use vlc without "
 "interface."
@@ -1396,8 +1396,7 @@ msgid "C"
 msgstr "pa"
 
 #: src/libvlc.h:164 src/libvlc-module.c:1432 src/libvlc-module.c:1433
-#: src/libvlc-module.c:2659 src/video_output/vout_intf.c:176
-#: modules/gui/macosx/VLCMainMenu.m:476
+#: src/video_output/vout_intf.c:176 modules/gui/macosx/VLCMainMenu.m:475
 msgid "Zoom"
 msgstr "ਜ਼ੂਮ"
 
@@ -1849,9 +1848,9 @@ msgstr ""
 
 #: src/libvlc-module.c:295 src/libvlc-module.c:368 modules/codec/dvbsub.c:102
 #: modules/codec/zvbi.c:83
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:216
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:294
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:316
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:217
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:295
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:317
 #: modules/spu/audiobargraph_v.c:65 modules/spu/logo.c:80
 #: modules/spu/marq.c:129 modules/spu/mosaic.c:170 modules/spu/rss.c:171
 #: modules/gui/qt/ui/video_effects.h:1229
@@ -1862,9 +1861,9 @@ msgstr "ਉੱਤੇ"
 
 #: src/libvlc-module.c:295 src/libvlc-module.c:368 modules/codec/dvbsub.c:102
 #: modules/codec/zvbi.c:83
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:219
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:296
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:318
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:220
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:297
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:319
 #: modules/spu/audiobargraph_v.c:65 modules/spu/logo.c:80
 #: modules/spu/marq.c:129 modules/spu/mosaic.c:170 modules/spu/rss.c:171
 #: modules/gui/qt/ui/video_effects.h:1233
@@ -1873,8 +1872,8 @@ msgstr "ਥੱਲੇ"
 
 #: src/libvlc-module.c:296 src/libvlc-module.c:369 modules/codec/dvbsub.c:103
 #: modules/codec/zvbi.c:84
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:298
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:320
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:299
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:321
 #: modules/spu/audiobargraph_v.c:66 modules/spu/logo.c:81
 #: modules/spu/marq.c:130 modules/spu/mosaic.c:171 modules/spu/rss.c:172
 msgid "Top-Left"
@@ -1882,8 +1881,8 @@ msgstr "ਉੱਤੇ-ਖੱਬੇ"
 
 #: src/libvlc-module.c:296 src/libvlc-module.c:369 modules/codec/dvbsub.c:103
 #: modules/codec/zvbi.c:84
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:300
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:322
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:301
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:323
 #: modules/spu/audiobargraph_v.c:66 modules/spu/logo.c:81
 #: modules/spu/marq.c:130 modules/spu/mosaic.c:171 modules/spu/rss.c:172
 msgid "Top-Right"
@@ -1891,8 +1890,8 @@ msgstr "ਉੱਤੇ-ਸੱਜੇ"
 
 #: src/libvlc-module.c:296 src/libvlc-module.c:369 modules/codec/dvbsub.c:103
 #: modules/codec/zvbi.c:84
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:302
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:324
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:303
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:325
 #: modules/spu/audiobargraph_v.c:66 modules/spu/logo.c:81
 #: modules/spu/marq.c:130 modules/spu/mosaic.c:171 modules/spu/rss.c:172
 msgid "Bottom-Left"
@@ -1900,8 +1899,8 @@ msgstr "ਥੱਲੇ-ਖੱਬੇ"
 
 #: src/libvlc-module.c:296 src/libvlc-module.c:369 modules/codec/dvbsub.c:103
 #: modules/codec/zvbi.c:84
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:304
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:326
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:305
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:327
 #: modules/spu/audiobargraph_v.c:66 modules/spu/logo.c:81
 #: modules/spu/marq.c:130 modules/spu/mosaic.c:171 modules/spu/rss.c:172
 msgid "Bottom-Right"
@@ -1991,8 +1990,8 @@ msgid "Hide mouse cursor and fullscreen controller after n milliseconds."
 msgstr ""
 
 #: src/libvlc-module.c:342 src/libvlc-module.c:344
-#: src/video_output/interlacing.c:112 modules/gui/macosx/VLCMainMenu.m:444
-#: modules/gui/macosx/VLCMainMenu.m:445
+#: src/video_output/interlacing.c:112 modules/gui/macosx/VLCMainMenu.m:443
+#: modules/gui/macosx/VLCMainMenu.m:444
 #: modules/gui/macosx/VLCSimplePrefsController.m:372
 #: modules/gui/qt/dialogs/convert.cpp:123 modules/hw/vdpau/chroma.c:896
 #: modules/video_filter/deinterlace/deinterlace.c:300
@@ -2001,7 +2000,7 @@ msgid "Deinterlace"
 msgstr "ਡਿ-ਇੰਟਰਲੇਸ"
 
 #: src/libvlc-module.c:352 src/video_output/interlacing.c:128
-#: modules/gui/macosx/VLCMainMenu.m:446 modules/gui/macosx/VLCMainMenu.m:447
+#: modules/gui/macosx/VLCMainMenu.m:445 modules/gui/macosx/VLCMainMenu.m:446
 #: modules/gui/macosx/VLCSimplePrefsController.m:373
 #: modules/video_filter/deinterlace/deinterlace.c:256
 msgid "Deinterlace mode"
@@ -2347,26 +2346,27 @@ msgstr ""
 #: src/video_output/vout_intf.c:116 modules/access/dshow/dshow.cpp:92
 #: modules/access/dshow/dshow.cpp:99 modules/access/dshow/dshow.cpp:119
 #: modules/access/dshow/dshow.cpp:2081 modules/audio_output/alsa.c:767
-#: modules/audio_output/directsound.c:1031 modules/codec/avcodec/avcodec.c:50
+#: modules/audio_output/directsound.c:1031 modules/audio_output/mmdevice.c:1285
+#: modules/audio_output/mmdevice.c:1424 modules/codec/avcodec/avcodec.c:50
 #: modules/demux/adaptive/adaptive.cpp:97
 #: modules/gui/macosx/VLCAudioEffectsWindowController.m:79
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:320
-#: modules/gui/macosx/VLCMainMenu.m:603
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:322
+#: modules/gui/macosx/VLCMainMenu.m:602
 #: modules/gui/macosx/VLCSimplePrefsController.m:656
 #: modules/gui/macosx/VLCVideoEffectsWindowController.m:54
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:389
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:388
 #: modules/gui/macosx/prefs_widgets.m:1217
 #: modules/gui/macosx/prefs_widgets.m:1274
 #: modules/gui/qt/components/preferences_widgets.cpp:546
 #: modules/logger/file.c:203 modules/spu/marq.c:61 modules/spu/rss.c:69
-#: modules/spu/rss.c:182 modules/video_output/win32/directdraw.c:1495
+#: modules/spu/rss.c:182 modules/video_output/win32/directdraw.c:1492
 msgid "Default"
 msgstr "ਡਿਫਾਲਟ"
 
 #: src/libvlc-module.c:540
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:214
-#: modules/gui/macosx/VLCMainWindow.m:1000
-#: modules/gui/qt/components/extended_panels.cpp:928
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:215
+#: modules/gui/macosx/VLCMainWindow.m:997
+#: modules/gui/qt/components/extended_panels.cpp:949
 #: modules/gui/qt/ui/equalizer.h:133 modules/gui/qt/ui/vlm.h:289
 msgid "Enable"
 msgstr "ਯੋਗ"
@@ -3583,7 +3583,7 @@ msgstr ""
 
 #: src/libvlc-module.c:1226 src/video_output/vout_intf.c:268
 #: modules/gui/macosx/VLCControlsBarCommon.m:81
-#: modules/gui/macosx/VLCMainMenu.m:433 modules/gui/macosx/VLCMainMenu.m:512
+#: modules/gui/macosx/VLCMainMenu.m:432 modules/gui/macosx/VLCMainMenu.m:511
 #: modules/gui/qt/components/controller.hpp:108
 #: modules/gui/qt/ui/sprefs_video.h:318
 msgid "Fullscreen"
@@ -3625,7 +3625,7 @@ msgstr "ਕੇਵਲ ਚਲਾਓ"
 msgid "Select the hotkey to use to play."
 msgstr "ਚਲਾਉਣ ਲਈ ਵਰਤਣ ਵਾਸਤੇ ਹਾਟ-ਕੀ ਚੁਣੋ।"
 
-#: src/libvlc-module.c:1236 modules/gui/macosx/VLCMainMenu.m:394
+#: src/libvlc-module.c:1236 modules/gui/macosx/VLCMainMenu.m:393
 #: modules/gui/qt/components/controller.hpp:108
 #: modules/gui/qt/components/controller.hpp:118
 msgid "Faster"
@@ -3635,7 +3635,7 @@ msgstr "ਤੇਜ਼"
 msgid "Select the hotkey to use for fast forward playback."
 msgstr "ਪਲੇਅਬੈਕ ਤੇਜ਼ ਅੱਗੇ ਕਰਨ ਲਈ ਵਰਤਣ ਵਾਸਤੇ ਹਾਟ-ਕੀ ਚੁਣੋ।"
 
-#: src/libvlc-module.c:1238 modules/gui/macosx/VLCMainMenu.m:392
+#: src/libvlc-module.c:1238 modules/gui/macosx/VLCMainMenu.m:391
 #: modules/gui/qt/components/controller.hpp:108
 #: modules/gui/qt/components/controller.hpp:118
 msgid "Slower"
@@ -3664,8 +3664,8 @@ msgstr "ਹੌਲੀ (ਵਧੀਆ)"
 #: src/libvlc-module.c:1246 modules/control/hotkeys.c:410
 #: modules/gui/macosx/VLCControlsBarCommon.m:163
 #: modules/gui/macosx/VLCFSPanelController.m:112
-#: modules/gui/macosx/VLCMainMenu.m:397 modules/gui/macosx/VLCMainMenu.m:500
-#: modules/gui/macosx/VLCMainMenu.m:508
+#: modules/gui/macosx/VLCMainMenu.m:396 modules/gui/macosx/VLCMainMenu.m:499
+#: modules/gui/macosx/VLCMainMenu.m:507
 #: modules/gui/qt/components/controller.hpp:112
 #: modules/gui/qt/dialogs/sout.cpp:93 modules/notify/notify.c:335
 #: modules/gui/qt/ui/streampanel.h:181
@@ -3679,8 +3679,8 @@ msgstr "ਪਲੇਅਲਿਸਟ ਵਿੱਚ ਅਗਲੀ ਆਈਟਮ ਲਈ �
 #: src/libvlc-module.c:1248 modules/control/hotkeys.c:414
 #: modules/gui/macosx/VLCControlsBarCommon.m:160
 #: modules/gui/macosx/VLCFSPanelController.m:115
-#: modules/gui/macosx/VLCMainMenu.m:396 modules/gui/macosx/VLCMainMenu.m:501
-#: modules/gui/macosx/VLCMainMenu.m:507
+#: modules/gui/macosx/VLCMainMenu.m:395 modules/gui/macosx/VLCMainMenu.m:500
+#: modules/gui/macosx/VLCMainMenu.m:506
 #: modules/gui/qt/components/controller.hpp:112 modules/notify/notify.c:333
 msgid "Previous"
 msgstr "ਪਿੱਛੇ"
@@ -3689,8 +3689,8 @@ msgstr "ਪਿੱਛੇ"
 msgid "Select the hotkey to use to skip to the previous item in the playlist."
 msgstr "ਪਲੇਅਲਿਸਟ ਵਿੱਚ ਪਿਛਲੀ ਆਈਟਮ ਉੱਤੇ ਜਾਣ ਲਈ ਵਰਤਣ ਵਾਸਤੇ ਹਾਟ-ਕੀ ਚੁਣੋ।"
 
-#: src/libvlc-module.c:1250 modules/gui/macosx/VLCMainMenu.m:387
-#: modules/gui/macosx/VLCMainMenu.m:499 modules/gui/macosx/VLCMainMenu.m:506
+#: src/libvlc-module.c:1250 modules/gui/macosx/VLCMainMenu.m:386
+#: modules/gui/macosx/VLCMainMenu.m:498 modules/gui/macosx/VLCMainMenu.m:505
 #: modules/gui/macosx/VLCMainWindowControlsBar.m:61
 #: modules/gui/qt/components/controller.hpp:107
 #: modules/gui/qt/dialogs/vlm.cpp:545 modules/gui/qt/ui/streampanel.h:180
@@ -3703,8 +3703,8 @@ msgstr "ਪਲੇਅਬੈਕ ਰੋਕਣ ਲਈ ਵਰਤਣ ਵਾਸਤੇ �
 
 #: src/libvlc-module.c:1252 modules/gui/macosx/VLCControlsBarCommon.m:75
 #: modules/gui/macosx/VLCFSPanelController.m:130
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:286
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:308
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:287
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:309
 #: modules/spu/marq.c:151 modules/spu/rss.c:198
 #: modules/gui/qt/ui/sprefs_subtitles.h:293
 #: modules/gui/qt/ui/video_effects.h:1279
@@ -3879,7 +3879,7 @@ msgstr "ਐਕਟੀਵੇਟ"
 msgid "Select the key to activate selected item in DVD menus."
 msgstr ""
 
-#: src/libvlc-module.c:1305 modules/gui/qt/dialogs/toolbar.cpp:500
+#: src/libvlc-module.c:1305 modules/gui/qt/dialogs/toolbar.cpp:509
 msgid "Go to the DVD menu"
 msgstr "DVD ਮੇਨੂ ਉੱਤੇ ਜਾਓ"
 
@@ -3936,8 +3936,8 @@ msgid "Select the key to decrease audio volume."
 msgstr "ਆਡੀਓ ਵਾਲੀਅਮ ਘਟਾਉਣ ਲਈ ਸਵਿੱਚ ਚੁਣੋ।"
 
 #: src/libvlc-module.c:1319 modules/access/v4l2/v4l2.c:181
-#: modules/gui/macosx/VLCMainMenu.m:418 modules/gui/macosx/VLCMainMenu.m:502
-#: modules/gui/macosx/VLCMainMenu.m:511
+#: modules/gui/macosx/VLCMainMenu.m:417 modules/gui/macosx/VLCMainMenu.m:501
+#: modules/gui/macosx/VLCMainMenu.m:510
 #: modules/gui/macosx/VLCMainWindowControlsBar.m:78
 msgid "Mute"
 msgstr "ਚੁੱਪ"
@@ -4307,7 +4307,7 @@ msgstr "ਵਿਡੀਓ ਸਨੈਪਸ਼ਾਟ ਲਵੋ"
 msgid "Takes a video snapshot and writes it to disk."
 msgstr "ਇੱਕ ਵਿਡੀਓ ਸਨੈਪਸ਼ਾਟ ਲਵੋ ਅਤੇ ਡਿਸਕ ਉੱਤੇ ਲਿਖੋ।"
 
-#: src/libvlc-module.c:1423 modules/gui/macosx/VLCMainMenu.m:388
+#: src/libvlc-module.c:1423 modules/gui/macosx/VLCMainMenu.m:387
 #: modules/gui/qt/components/controller.hpp:110
 #: modules/gui/qt/components/controller.hpp:121 modules/gui/qt/menus.cpp:857
 #: modules/stream_out/record.c:60
@@ -4399,7 +4399,7 @@ msgid "Cycle through available audio devices"
 msgstr "ਉਪਲੱਬਧ ਆਡੀਓ ਜੰਤਰ ਰਾਹੀਂ ਚੱਕਰ"
 
 #: src/libvlc-module.c:1598 src/video_output/vout_intf.c:274
-#: modules/gui/macosx/VLCMainMenu.m:435 modules/gui/macosx/VLCMainMenu.m:513
+#: modules/gui/macosx/VLCMainMenu.m:434 modules/gui/macosx/VLCMainMenu.m:512
 #: modules/gui/qt/components/controller.hpp:109
 msgid "Snapshot"
 msgstr "ਸਨੈਪਸ਼ਾਟ"
@@ -4417,7 +4417,7 @@ msgstr "ਸਬ-ਤਸਵੀਰਾਂ"
 #: modules/demux/xiph_metadata.h:62
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:158
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:178
-#: modules/gui/macosx/VLCMainMenu.m:451
+#: modules/gui/macosx/VLCMainMenu.m:450
 #: share/lua/http/dialogs/create_stream.html:153
 #: modules/gui/qt/ui/profiles.h:718 modules/gui/qt/ui/profiles.h:762
 #: modules/gui/qt/ui/profiles.h:765
@@ -4457,7 +4457,7 @@ msgid "Decoders"
 msgstr "ਡੀਕੋਡਰ"
 
 #: src/libvlc-module.c:1944 modules/access/avio.h:40
-#: modules/access/v4l2/v4l2.c:59 modules/gui/macosx/VLCPlaylistInfo.m:85
+#: modules/access/v4l2/v4l2.c:59 modules/gui/macosx/VLCPlaylistInfo.m:84
 msgid "Input"
 msgstr "ਇੰਪੁੱਟ"
 
@@ -4485,63 +4485,63 @@ msgstr "ਘੜੀ ਸਰੋਤ"
 msgid "Hot keys"
 msgstr "ਹਾਟ ਕੀ"
 
-#: src/libvlc-module.c:2669
+#: src/libvlc-module.c:2668
 msgid "Jump sizes"
 msgstr "ਜੰਪ ਸਾਈਜ਼"
 
-#: src/libvlc-module.c:2754
+#: src/libvlc-module.c:2753
 msgid "print help for VLC (can be combined with --advanced and --help-verbose)"
 msgstr ""
 
-#: src/libvlc-module.c:2757
+#: src/libvlc-module.c:2756
 msgid "Exhaustive help for VLC and its modules"
 msgstr ""
 
-#: src/libvlc-module.c:2759
+#: src/libvlc-module.c:2758
 msgid ""
 "print help for VLC and all its modules (can be combined with --advanced and "
 "--help-verbose)"
 msgstr ""
 
-#: src/libvlc-module.c:2762
+#: src/libvlc-module.c:2761
 msgid "ask for extra verbosity when displaying help"
 msgstr ""
 
-#: src/libvlc-module.c:2764
+#: src/libvlc-module.c:2763
 msgid "print a list of available modules"
 msgstr "ਉਪਲੱਬਧ ਮੋਡੀਊਲ ਦੀ ਲਿਸਟ ਦਿਓ"
 
-#: src/libvlc-module.c:2766
+#: src/libvlc-module.c:2765
 msgid "print a list of available modules with extra detail"
 msgstr "ਉਪਲੱਬਧ ਮੋਡੀਊਲ ਦੀ ਲਿਸਟ ਵੱਧ ਵੇਰਵੇ ਨਾਲ ਦਿਓ"
 
-#: src/libvlc-module.c:2768
+#: src/libvlc-module.c:2767
 msgid ""
 "print help on a specific module (can be combined with --advanced and --help-"
 "verbose). Prefix the module name with = for strict matches."
 msgstr ""
 
-#: src/libvlc-module.c:2772
+#: src/libvlc-module.c:2771
 msgid "no configuration option will be loaded nor saved to config file"
 msgstr ""
 
-#: src/libvlc-module.c:2774
+#: src/libvlc-module.c:2773
 msgid "reset the current config to the default values"
 msgstr "ਡਿਫਾਲਟ ਮੁੱਲ ਲਈ ਮੌਜੂਦਾ ਸੰਰਚਨਾ ਮੁੜ-ਸੈੱਟ"
 
-#: src/libvlc-module.c:2776
+#: src/libvlc-module.c:2775
 msgid "use alternate config file"
 msgstr "ਬਦਲਵੀ ਸੰਰਚਨਾ ਫਾਇਲ ਵਰਤੋਂ"
 
-#: src/libvlc-module.c:2778
+#: src/libvlc-module.c:2777
 msgid "resets the current plugins cache"
 msgstr "ਮੌਜੂਦਾ ਪਲੱਗਇਨ ਕੈਸ਼ ਮੁੜ-ਸੈੱਟ"
 
-#: src/libvlc-module.c:2780
+#: src/libvlc-module.c:2779
 msgid "print version information"
 msgstr "ਵਰਜਨ ਜਾਣਕਾਰੀ ਪਰਿੰਟ ਕਰੋ"
 
-#: src/libvlc-module.c:2820
+#: src/libvlc-module.c:2819
 msgid "core program"
 msgstr "ਮੂਲ ਪਰੋਗਰਾਮ"
 
@@ -4586,7 +4586,7 @@ msgid "Browser Stop"
 msgstr "ਬਰਾਊਜ਼ਰ ਰੋਕੋ"
 
 #: src/misc/actions.c:62 modules/gui/macosx/VLCMainMenu.m:370
-#: modules/gui/macosx/VLCPlaylist.m:231 modules/gui/qt/dialogs/bookmarks.cpp:50
+#: modules/gui/macosx/VLCPlaylist.m:229 modules/gui/qt/dialogs/bookmarks.cpp:50
 #: modules/gui/qt/ui/podcast_configuration.h:104
 #: modules/gui/qt/ui/streampanel.h:172
 msgid "Delete"
@@ -4765,9 +4765,9 @@ msgid "Page Up"
 msgstr "Page Up"
 
 #: src/misc/actions.c:107 modules/control/oldrc.c:72
-#: modules/gui/macosx/VLCControlsBarCommon.m:386
-#: modules/gui/macosx/VLCMainMenu.m:1347 modules/gui/macosx/VLCMainMenu.m:1348
-#: modules/gui/macosx/VLCMainMenu.m:1349
+#: modules/gui/macosx/VLCControlsBarCommon.m:389
+#: modules/gui/macosx/VLCMainMenu.m:1346 modules/gui/macosx/VLCMainMenu.m:1347
+#: modules/gui/macosx/VLCMainMenu.m:1348
 #: modules/gui/qt/components/playlist/standardpanel.cpp:196
 #: modules/gui/qt/menus.cpp:831
 msgid "Pause"
@@ -4789,7 +4789,7 @@ msgstr "ਟੈਬ"
 msgid "Up"
 msgstr "ਉੱਤੇ"
 
-#: src/misc/actions.c:114 modules/gui/macosx/VLCMainMenu.m:510
+#: src/misc/actions.c:114 modules/gui/macosx/VLCMainMenu.m:509
 msgid "Volume Down"
 msgstr "ਵਾਲੀਅਮ ਘਟਾਓ"
 
@@ -4797,7 +4797,7 @@ msgstr "ਵਾਲੀਅਮ ਘਟਾਓ"
 msgid "Volume Mute"
 msgstr "ਵਾਲੀਅਮ ਮੌਨ"
 
-#: src/misc/actions.c:116 modules/gui/macosx/VLCMainMenu.m:509
+#: src/misc/actions.c:116 modules/gui/macosx/VLCMainMenu.m:508
 msgid "Volume Up"
 msgstr "ਵਾਲੀਅਮ ਵਧਾਓ"
 
@@ -4839,8 +4839,8 @@ msgstr "%.1f GiB"
 msgid "%.1f MiB"
 msgstr "%.1f MiB"
 
-#: src/misc/update.c:486 modules/gui/macosx/VLCPlaylistInfo.m:143
-#: modules/gui/macosx/VLCPlaylistInfo.m:145
+#: src/misc/update.c:486 modules/gui/macosx/VLCPlaylistInfo.m:142
+#: modules/gui/macosx/VLCPlaylistInfo.m:144
 #, c-format
 msgid "%.1f KiB"
 msgstr "%.1f KiB"
@@ -4860,11 +4860,11 @@ msgid "Failed to open \"%s\" for writing"
 msgstr "\"%s\" ਨੂੰ ਲਿਖਣ ਲਈ ਖੋਲ੍ਹਣ ਲਈ ਫੇਲ੍ਹ"
 
 #: src/misc/update.c:596 src/misc/update.c:726 modules/access/dvb/scan.c:826
-#: modules/demux/avi/avi.c:2713
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:511
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:569
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:823
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:869
+#: modules/demux/avi/avi.c:2718
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:513
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:571
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:825
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:871
 #: modules/gui/macosx/VLCBookmarksWindowController.m:89
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:153
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:182
@@ -4882,14 +4882,14 @@ msgstr "\"%s\" ਨੂੰ ਲਿਖਣ ਲਈ ਖੋਲ੍ਹਣ ਲਈ ਫੇਲ
 #: modules/gui/macosx/VLCSimplePrefsController.m:378
 #: modules/gui/macosx/VLCSimplePrefsController.m:820
 #: modules/gui/macosx/VLCTimeSelectionPanelController.m:50
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:792
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:861
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:791
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:860
 #: modules/gui/macosx/prefs.m:189
-#: modules/gui/qt/components/open_panels.cpp:1364
+#: modules/gui/qt/components/open_panels.cpp:1366
 #: modules/gui/qt/components/preferences_widgets.cpp:1428
 #: modules/gui/qt/components/sout/profile_selector.cpp:446
 #: modules/gui/qt/dialogs/sout.cpp:92
-#: modules/stream_out/chromecast/cast.cpp:854
+#: modules/stream_out/chromecast/cast.cpp:1201
 msgid "Cancel"
 msgstr "ਰੱਦ ਕਰੋ"
 
@@ -4959,8 +4959,8 @@ msgid "Update VLC media player"
 msgstr "VLC ਮੀਡਿਆ ਪਲੇਅਰ ਅੱਪਡੇਟ ਕਰੋ"
 
 #: src/playlist/engine.c:237 src/playlist/loadsave.c:159 lib/media_list.c:237
-#: modules/gui/macosx/VLCMainWindow.m:298
-#: modules/gui/macosx/VLCMainWindow.m:861
+#: modules/gui/macosx/VLCMainWindow.m:296
+#: modules/gui/macosx/VLCMainWindow.m:858
 #: modules/gui/qt/components/playlist/selector.cpp:236
 msgid "Media Library"
 msgstr "ਮੀਡਿਆ ਲਾਇਬਰੇਰੀ"
@@ -5629,8 +5629,8 @@ msgstr "ਜ਼ੂਮ"
 msgid "Autoscale video"
 msgstr "ਵਿਡੀਓ ਆਟੋ-ਸਕੇਲ"
 
-#: src/video_output/vout_intf.c:203 modules/gui/macosx/VLCMainMenu.m:440
-#: modules/gui/macosx/VLCMainMenu.m:441
+#: src/video_output/vout_intf.c:203 modules/gui/macosx/VLCMainMenu.m:439
+#: modules/gui/macosx/VLCMainMenu.m:440
 #: modules/gui/macosx/VLCVideoEffectsWindowController.m:193
 #: modules/video_filter/croppadd.c:87 modules/gui/qt/ui/video_effects.h:1239
 msgid "Crop"
@@ -5639,8 +5639,8 @@ msgstr "ਕਰੋਪ"
 #: src/video_output/vout_intf.c:230 modules/access/decklink.cpp:92
 #: modules/access/linsys/linsys_hdsdi.c:78
 #: modules/access/linsys/linsys_sdi.c:74 modules/demux/rawvid.c:58
-#: modules/gui/macosx/VLCMainMenu.m:438 modules/gui/macosx/VLCMainMenu.m:439
-#: modules/gui/macosx/VLCMainMenu.m:1459
+#: modules/gui/macosx/VLCMainMenu.m:437 modules/gui/macosx/VLCMainMenu.m:438
+#: modules/gui/macosx/VLCMainMenu.m:1458
 msgid "Aspect ratio"
 msgstr "ਅਕਾਰ ਅਨੁਪਾਤ"
 
@@ -5844,8 +5844,8 @@ msgstr "ਤੁਹਾਡੇ ਸਿਸਟਮ 'ਤੇ ਜਾਵਾ ਨਹੀਂ ਲ
 msgid "Failed to start bluray playback. Please try without menu support."
 msgstr ""
 
-#: modules/access/bluray.c:852 modules/access/bluray.c:2289
-#: modules/access/bluray.c:2294
+#: modules/access/bluray.c:852 modules/access/bluray.c:2287
+#: modules/access/bluray.c:2292
 msgid "Blu-ray error"
 msgstr "ਬਲਿਉ-ਰੇ ਗਲਤੀ"
 
@@ -6073,7 +6073,7 @@ msgid "DSS"
 msgstr "DSS"
 
 #: modules/access/dshow/dshow.cpp:130
-#: modules/gui/qt/components/open_panels.cpp:821
+#: modules/gui/qt/components/open_panels.cpp:823
 msgid "Video device name"
 msgstr "ਵਿਡੀਓ ਜੰਤਰ ਨਾਂ"
 
@@ -6084,8 +6084,8 @@ msgid ""
 msgstr ""
 
 #: modules/access/dshow/dshow.cpp:135
-#: modules/gui/qt/components/open_panels.cpp:829
-#: modules/gui/qt/components/open_panels.cpp:1050
+#: modules/gui/qt/components/open_panels.cpp:831
+#: modules/gui/qt/components/open_panels.cpp:1052
 msgid "Audio device name"
 msgstr "ਆਡੀਓ ਜੰਤਰ ਨਾਂ"
 
@@ -6096,7 +6096,7 @@ msgid ""
 msgstr ""
 
 #: modules/access/dshow/dshow.cpp:140
-#: modules/gui/qt/components/open_panels.cpp:796
+#: modules/gui/qt/components/open_panels.cpp:798
 msgid "Video size"
 msgstr "ਵਿਡੀਓ ਸਾਈਜ਼"
 
@@ -6169,8 +6169,8 @@ msgid "This overrides the channel. Measured in Hz."
 msgstr ""
 
 #: modules/access/dshow/dshow.cpp:168
-#: modules/gui/qt/components/open_panels.cpp:849
-#: modules/gui/qt/components/open_panels.cpp:1070
+#: modules/gui/qt/components/open_panels.cpp:851
+#: modules/gui/qt/components/open_panels.cpp:1072
 msgid "Video standard"
 msgstr "ਵਿਡੀਓ ਸਟੈਂਡਰਡ"
 
@@ -6364,7 +6364,7 @@ msgid ""
 "frequency. This is required to tune the receiver."
 msgstr ""
 
-#: modules/access/dtv/access.c:61 modules/gui/qt/components/open_panels.cpp:970
+#: modules/access/dtv/access.c:61 modules/gui/qt/components/open_panels.cpp:972
 msgid "Modulation / Constellation"
 msgstr ""
 
@@ -6824,13 +6824,13 @@ msgstr "DVDnav ਇੰਪੁੱਟ"
 msgid "DVDnav demuxer"
 msgstr ""
 
-#: modules/access/dvdnav.c:296 modules/access/dvdread.c:201
+#: modules/access/dvdnav.c:298 modules/access/dvdread.c:201
 #: modules/access/dvdread.c:216 modules/access/dvdread.c:471
 #: modules/access/dvdread.c:539
 msgid "Playback failure"
 msgstr "ਪਲੇਅਬੈਕ ਫੇਲ੍ਹ"
 
-#: modules/access/dvdnav.c:297
+#: modules/access/dvdnav.c:299
 msgid ""
 "VLC cannot set the DVD's title. It possibly cannot decrypt the entire disc."
 msgstr ""
@@ -6870,7 +6870,7 @@ msgstr "ਫਾਇਲ ਇੰਪੁੱਟ"
 #: modules/audio_output/file.c:113
 #: modules/gui/macosx/VLCOpenWindowController.m:140
 #: modules/gui/macosx/VLCOutput.m:64 modules/gui/macosx/VLCOutput.m:175
-#: modules/gui/macosx/VLCOutput.m:298 modules/gui/qt/dialogs/plugins.cpp:1421
+#: modules/gui/macosx/VLCOutput.m:301 modules/gui/qt/dialogs/plugins.cpp:1421
 #: modules/gui/qt/dialogs/sout.cpp:69 modules/gui/qt/dialogs/sout.cpp:121
 #: share/lua/http/dialogs/create_stream.html:204
 #: share/lua/http/dialogs/stream_config_window.html:36
@@ -6897,7 +6897,7 @@ msgstr ""
 #: modules/access_output/http.c:52
 #: modules/gui/macosx/VLCCoreDialogProvider.m:191
 #: modules/gui/macosx/VLCSimplePrefsController.m:273
-#: modules/gui/qt/dialogs/external.cpp:206 modules/misc/audioscrobbler.c:114
+#: modules/gui/qt/dialogs/external.cpp:203 modules/misc/audioscrobbler.c:114
 #: modules/stream_out/rtp.c:173
 msgid "Username"
 msgstr "ਯੂਜ਼ਰ ਨਾਂ"
@@ -6916,7 +6916,7 @@ msgstr ""
 #: modules/gui/macosx/VLCCoreDialogProvider.m:192
 #: modules/gui/macosx/VLCSimplePrefsController.m:272
 #: modules/gui/macosx/VLCSimplePrefsController.m:334
-#: modules/gui/qt/dialogs/external.cpp:211 modules/lua/vlc.c:54
+#: modules/gui/qt/dialogs/external.cpp:208 modules/lua/vlc.c:54
 #: modules/lua/vlc.c:70 modules/misc/audioscrobbler.c:116
 #: modules/stream_out/rtp.c:176
 msgid "Password"
@@ -7041,7 +7041,7 @@ msgstr ""
 
 #: modules/access/idummy.c:41 modules/access_output/dummy.c:44
 #: modules/audio_output/adummy.c:36 modules/codec/ddummy.c:46
-#: modules/codec/edummy.c:39 modules/control/dummy.c:52
+#: modules/codec/edummy.c:39 modules/control/dummy.c:49
 #: modules/text_renderer/tdummy.c:35 modules/video_output/vdummy.c:47
 msgid "Dummy"
 msgstr "ਫ਼ਰਜ਼ੀ"
@@ -7106,9 +7106,9 @@ msgstr "ਆਡੀਓ ਐਲੀਮੈਂਟਰ ਸਟਰੀਮ ਦੀ ਚੈਨ�
 
 #: modules/access/imem.c:83 modules/access/v4l2/v4l2.c:65
 #: modules/demux/rawvid.c:47
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:238
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:239
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:167
-#: modules/gui/qt/components/extended_panels.cpp:1297 modules/spu/mosaic.c:94
+#: modules/gui/qt/components/extended_panels.cpp:1318 modules/spu/mosaic.c:94
 #: modules/video_output/vmem.c:42 share/lua/http/dialogs/mosaic_window.html:108
 #: modules/gui/qt/ui/profiles.h:743
 msgid "Width"
@@ -7176,8 +7176,8 @@ msgid "Address of the release callback function"
 msgstr "ਰੀਲਿਜ਼ ਕਾਲਬੈਕ ਫੰਕਸ਼ਨ ਦਾ ਐਡਰੈੱਸ"
 
 #: modules/access/imem.c:113
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:235
-#: modules/gui/qt/components/extended_panels.cpp:1296
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:236
+#: modules/gui/qt/components/extended_panels.cpp:1317
 msgid "Size"
 msgstr "ਸਾਈਜ਼"
 
@@ -7205,7 +7205,7 @@ msgstr "ਪੇਸ"
 msgid "Read the audio stream at VLC pace rather than Jack pace."
 msgstr ""
 
-#: modules/access/jack.c:62 modules/gui/qt/components/open_panels.cpp:901
+#: modules/access/jack.c:62 modules/gui/qt/components/open_panels.cpp:903
 msgid "Auto connection"
 msgstr "ਆਟੋ ਕੁਨੈਕਸ਼ਨ"
 
@@ -7675,7 +7675,7 @@ msgid "SAT>IP Receiver Plugin"
 msgstr ""
 
 #: modules/access/screen/screen.c:45
-#: modules/gui/qt/components/open_panels.cpp:1107
+#: modules/gui/qt/components/open_panels.cpp:1109
 msgid "Desired frame rate for the capture."
 msgstr "ਕੈਪਚਰ ਲਈ ਲੋੜੀਦੀ ਫਰੇਮ ਰੇਟ ਹੈ।"
 
@@ -7752,7 +7752,7 @@ msgid "Screen Input"
 msgstr "ਸਕਰੀਨ ਇੰਪੁੱਟ"
 
 #: modules/access/screen/screen.c:99 modules/access/screen/xcb.c:70
-#: modules/gui/macosx/VLCMainMenu.m:611
+#: modules/gui/macosx/VLCMainMenu.m:610
 #: modules/gui/macosx/VLCOpenWindowController.m:207
 #: modules/gui/macosx/VLCOpenWindowController.m:209
 #: modules/gui/macosx/VLCOpenWindowController.m:480
@@ -7909,7 +7909,7 @@ msgid ""
 "username) and a password."
 msgstr ""
 
-#: modules/access/srt.c:288 modules/access_output/srt.c:311
+#: modules/access/srt.c:288 modules/access_output/srt.c:436
 msgid "SRT"
 msgstr "SRT"
 
@@ -7917,15 +7917,15 @@ msgstr "SRT"
 msgid "SRT input"
 msgstr "SRT ਇਨਪੁਟ"
 
-#: modules/access/srt.c:294 modules/access_output/srt.c:317
+#: modules/access/srt.c:294 modules/access_output/srt.c:442
 msgid "SRT chunk size (bytes)"
 msgstr ""
 
-#: modules/access/srt.c:296 modules/access_output/srt.c:319
+#: modules/access/srt.c:296 modules/access_output/srt.c:444
 msgid "Return poll wait after timeout milliseconds (-1 = infinite)"
 msgstr ""
 
-#: modules/access/srt.c:297 modules/access_output/srt.c:320
+#: modules/access/srt.c:297 modules/access_output/srt.c:445
 msgid "SRT latency (ms)"
 msgstr ""
 
@@ -8023,7 +8023,7 @@ msgstr "ਰੇਡੀਓ ਜੰਤਰ"
 msgid "Radio tuner device node."
 msgstr ""
 
-#: modules/access/v4l2/v4l2.c:75 modules/gui/qt/components/open_panels.cpp:1077
+#: modules/access/v4l2/v4l2.c:75 modules/gui/qt/components/open_panels.cpp:1079
 msgid "Frequency"
 msgstr "ਫਰੀਕਿਊਂਸੀ"
 
@@ -8048,7 +8048,7 @@ msgid "Reset controls to defaults."
 msgstr "ਕੰਟਰੋਲ ਡਿਫਾਲਟ ਲਈ ਰੀ-ਸੈੱਟ ਕਰੋ"
 
 #: modules/access/v4l2/v4l2.c:84
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:205
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:206
 #: modules/gui/qt/ui/video_effects.h:1217
 msgid "Brightness"
 msgstr "ਚਮਕ"
@@ -8066,7 +8066,7 @@ msgid "Automatically adjust the picture brightness."
 msgstr ""
 
 #: modules/access/v4l2/v4l2.c:89
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:204
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:205
 #: modules/gui/qt/ui/video_effects.h:1219
 msgid "Contrast"
 msgstr "ਕਨਟਰਾਸਟ"
@@ -8076,8 +8076,8 @@ msgid "Picture contrast or luma gain."
 msgstr ""
 
 #: modules/access/v4l2/v4l2.c:91
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:207
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:253
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:208
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:254
 #: modules/gui/qt/ui/video_effects.h:1220
 #: modules/gui/qt/ui/video_effects.h:1252
 msgid "Saturation"
@@ -8088,7 +8088,7 @@ msgid "Picture saturation or chroma gain."
 msgstr ""
 
 #: modules/access/v4l2/v4l2.c:93
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:203
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:204
 #: modules/gui/qt/ui/video_effects.h:1216
 msgid "Hue"
 msgstr "ਆਭਾ"
@@ -8140,7 +8140,7 @@ msgid "Blue chroma balance."
 msgstr ""
 
 #: modules/access/v4l2/v4l2.c:111
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:208
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:209
 #: modules/gui/qt/ui/video_effects.h:1221
 msgid "Gamma"
 msgstr "ਗਾਮਾ"
@@ -8202,7 +8202,7 @@ msgid "50 Hz"
 msgstr "50 Hz"
 
 #: modules/access/v4l2/v4l2.c:137
-#: modules/gui/qt/components/extended_panels.cpp:1086
+#: modules/gui/qt/components/extended_panels.cpp:1107
 msgid "60 Hz"
 msgstr "60 Hz"
 
@@ -8265,7 +8265,7 @@ msgid "Black & white"
 msgstr "ਕਾਲਾ ਤੇ ਚਿੱਟਾ"
 
 #: modules/access/v4l2/v4l2.c:164
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:255
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:256
 #: modules/video_filter/sepia.c:66 modules/gui/qt/ui/video_effects.h:1254
 msgid "Sepia"
 msgstr "ਭੂਰਾ ਰੰਗ"
@@ -8299,7 +8299,8 @@ msgid "Vivid"
 msgstr "ਵਿਵਿਦ"
 
 #: modules/access/v4l2/v4l2.c:169 modules/audio_output/auhal.c:42
-#: modules/audio_output/directsound.c:69 modules/audio_output/waveout.c:145
+#: modules/audio_output/directsound.c:69 modules/audio_output/mmdevice.c:1468
+#: modules/audio_output/waveout.c:145
 msgid "Audio volume"
 msgstr "ਆਡੀਓ ਵਾਲੀਅਮ"
 
@@ -8758,7 +8759,7 @@ msgid "LiveHTTP"
 msgstr "LiveHTTP"
 
 #: modules/access_output/shout.c:64
-#: modules/gui/qt/components/sout/sout_widgets.cpp:383
+#: modules/gui/qt/components/sout/sout_widgets.cpp:385
 #: share/lua/http/dialogs/create_stream.html:139
 msgid "Stream name"
 msgstr "ਸਟਰੀਮ ਨਾਂ"
@@ -8841,9 +8842,33 @@ msgstr ""
 msgid "IceCAST output"
 msgstr "IceCAST ਆਉਟਪੁੱਟ"
 
-#: modules/access_output/srt.c:312
+#: modules/access_output/srt.c:50
+msgid "Crypto key length in bytes"
+msgstr ""
+
+#: modules/access_output/srt.c:57
+#, fuzzy
+msgid "16 bytes"
+msgstr "16 ਬਿੱਟ"
+
+#: modules/access_output/srt.c:57
+#, fuzzy
+msgid "24 bytes"
+msgstr "24 ਬਿੱਟ"
+
+#: modules/access_output/srt.c:57
+#, fuzzy
+msgid "32 bytes"
+msgstr "32 ਬਿੱਟ"
+
+#: modules/access_output/srt.c:437
 msgid "SRT stream output"
 msgstr ""
+
+#: modules/access_output/srt.c:446
+#, fuzzy
+msgid "Password for stream encryption"
+msgstr "ਟਾਰਗੇਟ ਜੰਤਰ ਲਈ ਪਾਸਵਰਡ।"
 
 #: modules/access_output/udp.c:62 modules/stream_out/rtp.c:135
 msgid "Caching value (ms)"
@@ -8960,7 +8985,7 @@ msgid "Dolby Surround decoder"
 msgstr "ਡੋਲਬੀ ਸਰਾਊਂਡ ਡੀਕੋਡਰ"
 
 #: modules/audio_filter/channel_mixer/headphone.c:53
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:246
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:247
 msgid ""
 "This effect gives you the feeling that you are standing in a room with a "
 "complete 7.1 speaker set when using only a headphone, providing a more "
@@ -9083,11 +9108,11 @@ msgstr ""
 msgid "If the output is stereo, render ambisonics with the binaural decoder."
 msgstr ""
 
-#: modules/audio_filter/channel_mixer/spatialaudio.cpp:64
+#: modules/audio_filter/channel_mixer/spatialaudio.cpp:65
 msgid "Ambisonics renderer and binauralizer"
 msgstr ""
 
-#: modules/audio_filter/channel_mixer/spatialaudio.cpp:76
+#: modules/audio_filter/channel_mixer/spatialaudio.cpp:77
 msgid "Binauralizer"
 msgstr ""
 
@@ -9111,7 +9136,7 @@ msgstr ""
 
 #: modules/audio_filter/chorus_flanger.c:80
 #: modules/audio_filter/stereo_widen.c:57
-#: modules/gui/qt/components/extended_panels.cpp:1316
+#: modules/gui/qt/components/extended_panels.cpp:1337
 msgid "Delay time"
 msgstr "ਡੀਲੇਅ ਟਾਈਮ"
 
@@ -9139,7 +9164,7 @@ msgstr ""
 
 #: modules/audio_filter/chorus_flanger.c:89
 #: modules/audio_filter/stereo_widen.c:60
-#: modules/gui/qt/components/extended_panels.cpp:1317
+#: modules/gui/qt/components/extended_panels.cpp:1338
 msgid "Feedback gain"
 msgstr ""
 
@@ -9164,8 +9189,8 @@ msgid "Level of input signal"
 msgstr "ਇੰਪੁੱਟ ਸਿਗਨਲ ਦਾ ਲੈਵਲ"
 
 #: modules/audio_filter/compressor.c:155
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:224
-#: modules/gui/qt/components/extended_panels.cpp:1274
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:225
+#: modules/gui/qt/components/extended_panels.cpp:1295
 msgid "RMS/peak"
 msgstr ""
 
@@ -9198,8 +9223,8 @@ msgid "Set the threshold level in dB."
 msgstr ""
 
 #: modules/audio_filter/compressor.c:167
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:228
-#: modules/gui/qt/components/extended_panels.cpp:1278
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:229
+#: modules/gui/qt/components/extended_panels.cpp:1299
 msgid "Ratio"
 msgstr "ਅਨੁਪਾਤ"
 
@@ -9208,7 +9233,7 @@ msgid "Set the ratio (n:1)."
 msgstr ""
 
 #: modules/audio_filter/compressor.c:170
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:229
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:230
 msgid "Knee radius"
 msgstr ""
 
@@ -9217,7 +9242,7 @@ msgid "Set the knee radius in dB."
 msgstr ""
 
 #: modules/audio_filter/compressor.c:173
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:230
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:231
 msgid "Makeup gain"
 msgstr ""
 
@@ -9226,7 +9251,7 @@ msgid "Set the makeup gain in dB (0 ... 24)."
 msgstr ""
 
 #: modules/audio_filter/compressor.c:177
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:271
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:272
 #: modules/gui/qt/dialogs/extended.cpp:71
 msgid "Compressor"
 msgstr "ਕੰਪਰੈੱਸ਼ਰ"
@@ -9276,7 +9301,7 @@ msgid "Two pass"
 msgstr "ਟੂ ਪਾਸ"
 
 #: modules/audio_filter/equalizer.c:73
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:216
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:217
 msgid "Filter the audio twice. This provides a more intense effect."
 msgstr ""
 
@@ -9285,7 +9310,7 @@ msgid "Global gain"
 msgstr "ਗਲੋਬਲ ਗੇਨ"
 
 #: modules/audio_filter/equalizer.c:77
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:219
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:220
 msgid "Set the global gain in dB (-20 ... 20)."
 msgstr ""
 
@@ -9294,7 +9319,7 @@ msgid "Equalizer with 10 bands"
 msgstr "੧੦ ਬੈਂਡ ਨਾਲ ਇਕੂਲਾਈਜ਼ਰ"
 
 #: modules/audio_filter/equalizer.c:81
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:270
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:271
 #: modules/gui/qt/dialogs/extended.cpp:67 share/lua/http/index.html:219
 msgid "Equalizer"
 msgstr "ਇਕੂਲਾਈਜ਼ਰ"
@@ -9388,12 +9413,12 @@ msgid "Gain control filter"
 msgstr ""
 
 #: modules/audio_filter/karaoke.c:33 modules/demux/xiph_metadata.h:51
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:259
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:260
 msgid "Karaoke"
 msgstr "ਕਰਾਓਖੀ"
 
 #: modules/audio_filter/karaoke.c:34
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:260
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:261
 msgid "Simple Karaoke filter"
 msgstr ""
 
@@ -9413,7 +9438,7 @@ msgid "Maximal volume level"
 msgstr "ਵੱਧੋ-ਵੱਧ ਵਾਲੀਅਮ ਲੈਵਲ"
 
 #: modules/audio_filter/normvol.c:72
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:254
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:255
 msgid ""
 "If the average power over the last N buffers is higher than this value, the "
 "volume will be normalized. This value is a positive floating point number. A "
@@ -9421,7 +9446,7 @@ msgid ""
 msgstr ""
 
 #: modules/audio_filter/normvol.c:78 modules/audio_filter/normvol.c:79
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:253
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:254
 msgid "Volume normalizer"
 msgstr "ਵਾਲੀਅਮ ਨਾਰਮੇਲਾਈਜ਼"
 
@@ -9555,12 +9580,12 @@ msgid "Audio pitch changer"
 msgstr ""
 
 #: modules/audio_filter/scaletempo.c:55
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:262
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:263
 msgid "Audio tempo scaler synched with rate"
 msgstr ""
 
 #: modules/audio_filter/scaletempo.c:56
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:261
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:262
 msgid "Scaletempo"
 msgstr ""
 
@@ -9601,7 +9626,7 @@ msgid "Room size"
 msgstr "ਰੂਮ ਸਾਈਜ਼"
 
 #: modules/audio_filter/spatializer/spatializer.cpp:55
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:236
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:237
 msgid "Defines the virtual surface of the room emulated by the filter."
 msgstr ""
 
@@ -9610,25 +9635,25 @@ msgid "Room width"
 msgstr "ਰੂਮ ਚੌੜਾਈ"
 
 #: modules/audio_filter/spatializer/spatializer.cpp:59
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:239
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:240
 msgid "Width of the virtual room"
 msgstr "ਵੁਰਚੁਅਲ ਰੂਮ ਦੀ ਚੌੜਾਈ"
 
 #: modules/audio_filter/spatializer/spatializer.cpp:61
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:240
-#: modules/gui/qt/components/extended_panels.cpp:1298
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:241
+#: modules/gui/qt/components/extended_panels.cpp:1319
 msgid "Wet"
 msgstr "ਭਿੱਜਾ"
 
 #: modules/audio_filter/spatializer/spatializer.cpp:64
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:241
-#: modules/gui/qt/components/extended_panels.cpp:1299
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:242
+#: modules/gui/qt/components/extended_panels.cpp:1320
 msgid "Dry"
 msgstr "ਖੁਸ਼ਕ"
 
 #: modules/audio_filter/spatializer/spatializer.cpp:67
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:242
-#: modules/gui/qt/components/extended_panels.cpp:1300
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:243
+#: modules/gui/qt/components/extended_panels.cpp:1321
 msgid "Damp"
 msgstr "ਡੰਪ"
 
@@ -9637,13 +9662,13 @@ msgid "Audio Spatializer"
 msgstr ""
 
 #: modules/audio_filter/spatializer/spatializer.cpp:72
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:272
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:273
 #: modules/gui/qt/dialogs/extended.cpp:75
 msgid "Spatializer"
 msgstr ""
 
 #: modules/audio_filter/stereo_widen.c:53
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:264
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:265
 msgid ""
 "This filter enhances the stereo effect by suppressing mono (signal common to "
 "both channels) and by delaying the signal of left into right and vice versa, "
@@ -9662,7 +9687,7 @@ msgid ""
 msgstr ""
 
 #: modules/audio_filter/stereo_widen.c:64
-#: modules/gui/qt/components/extended_panels.cpp:1318
+#: modules/gui/qt/components/extended_panels.cpp:1339
 msgid "Crossfeed"
 msgstr "ਕਰੌਸਫੀਡ"
 
@@ -9674,7 +9699,7 @@ msgid ""
 msgstr ""
 
 #: modules/audio_filter/stereo_widen.c:68
-#: modules/gui/qt/components/extended_panels.cpp:1319
+#: modules/gui/qt/components/extended_panels.cpp:1340
 msgid "Dry mix"
 msgstr ""
 
@@ -9683,7 +9708,7 @@ msgid "Level of input signal of original channel."
 msgstr ""
 
 #: modules/audio_filter/stereo_widen.c:77
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:263
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:264
 msgid "Stereo Enhancer"
 msgstr ""
 
@@ -9746,7 +9771,7 @@ msgstr ""
 msgid "ALSA audio output"
 msgstr "ਅਲਸਾ ਆਡੀਓ ਆਉਟਪੁੱਟ"
 
-#: modules/audio_output/alsa.c:393 modules/audio_output/auhal.c:1095
+#: modules/audio_output/alsa.c:393 modules/audio_output/auhal.c:1179
 msgid "Audio output failed"
 msgstr "ਆਡੀਓ ਆਉਟਪੁੱਟ ਫੇਲ੍ਹ"
 
@@ -9777,35 +9802,35 @@ msgstr "ਆਖਰੀ ਆਡੀਓ ਜੰਤਰ"
 msgid "HAL AudioUnit output"
 msgstr ""
 
-#: modules/audio_output/auhal.c:462
+#: modules/audio_output/auhal.c:463
 msgid "System Sound Output Device"
 msgstr ""
 
-#: modules/audio_output/auhal.c:529
+#: modules/audio_output/auhal.c:542
 #, c-format
 msgid "%s (Encoded Output)"
 msgstr "%s (ਇੰਕੋਡ ਕੀਤੀ ਆਉਟਪੁੱਟ)"
 
-#: modules/audio_output/auhal.c:1096
-msgid ""
-"The selected audio output device is exclusively in use by another program."
-msgstr ""
-
-#: modules/audio_output/coreaudio_common.c:484
+#: modules/audio_output/auhal.c:1033
 msgid "Audio device is not configured"
 msgstr "ਆਡੀਓ ਜੰਤਰ ਸੰਰਚਿਤ ਨਹੀਂ ਹੈ"
 
-#: modules/audio_output/coreaudio_common.c:485
+#: modules/audio_output/auhal.c:1034
 msgid ""
 "You should configure your speaker layout with \"Audio Midi Setup\" in /"
 "Applications/Utilities. VLC will output Stereo only."
 msgstr ""
 
-#: modules/audio_output/directsound.c:62
+#: modules/audio_output/auhal.c:1180
+msgid ""
+"The selected audio output device is exclusively in use by another program."
+msgstr ""
+
+#: modules/audio_output/directsound.c:62 modules/audio_output/mmdevice.c:1465
 msgid "Output device"
 msgstr "ਆਉਟਪੁੱਟ ਜੰਤਰ"
 
-#: modules/audio_output/directsound.c:63
+#: modules/audio_output/directsound.c:63 modules/audio_output/mmdevice.c:1466
 msgid "Select your audio output device"
 msgstr "ਆਪਣਾ ਆਡੀਓ ਆਉਟਪੁੱਟ ਜੰਤਰ ਚੁਣੋ"
 
@@ -9819,7 +9844,7 @@ msgid ""
 "NO e.g. Stereo -> 5.1 conversion."
 msgstr ""
 
-#: modules/audio_output/directsound.c:70
+#: modules/audio_output/directsound.c:70 modules/audio_output/mmdevice.c:1469
 msgid "Audio volume in hundredths of decibels (dB)."
 msgstr ""
 
@@ -9912,37 +9937,37 @@ msgstr ""
 msgid "K Audio Interface audio output"
 msgstr ""
 
-#: modules/audio_output/mmdevice.c:1293 modules/gui/qt/ui/sprefs_audio.h:419
+#: modules/audio_output/mmdevice.c:1451 modules/gui/qt/ui/sprefs_audio.h:419
 msgid "HDMI/SPDIF audio passthrough"
 msgstr ""
 
-#: modules/audio_output/mmdevice.c:1295
+#: modules/audio_output/mmdevice.c:1453
 msgid ""
 "Change this value if you have issue with HD codecs when using a HDMI "
 "receiver."
 msgstr ""
 
-#: modules/audio_output/mmdevice.c:1302
+#: modules/audio_output/mmdevice.c:1460
 msgid "Disabled"
 msgstr "ਅਸਮਰੱਥ ਹੈ"
 
-#: modules/audio_output/mmdevice.c:1303
-msgid "Enabled (without HD codecs)"
-msgstr "ਸਮਰੱਥ ਹੈ (ਬਿਨਾਂ HD ਕੋਡਕਸ)"
+#: modules/audio_output/mmdevice.c:1461
+msgid "Enabled (AC3/DTS only)"
+msgstr ""
 
-#: modules/audio_output/mmdevice.c:1304
+#: modules/audio_output/mmdevice.c:1462
 msgid "Enabled"
 msgstr "ਸਮਰੱਥ ਹੈ"
 
-#: modules/audio_output/mmdevice.c:1309
+#: modules/audio_output/mmdevice.c:1473
 msgid "Windows Multimedia Device output"
 msgstr ""
 
-#: modules/audio_output/mmdevice.c:1315
+#: modules/audio_output/mmdevice.c:1479
 msgid "Output back-end"
 msgstr "ਆਉਟਪੁੱਟ ਬੈਕ-ਐਂਡ"
 
-#: modules/audio_output/mmdevice.c:1315
+#: modules/audio_output/mmdevice.c:1479
 msgid "Audio output back-end interface."
 msgstr ""
 
@@ -10119,7 +10144,7 @@ msgid "FFmpeg audio/video decoder"
 msgstr "FFmpeg ਆਡੀਓ/ਵਿਡੀਓ ਡੀਕੋਡਰ"
 
 #: modules/codec/avcodec/avcodec.c:82 modules/codec/gstreamer/gstdecode.c:96
-#: modules/codec/omxil/mediacodec.c:183 modules/codec/omxil/omxil.c:148
+#: modules/codec/omxil/mediacodec.c:185 modules/codec/omxil/omxil.c:148
 msgid "Decoding"
 msgstr "ਡੀਕੋਡਿੰਗ"
 
@@ -10493,7 +10518,7 @@ msgstr ""
 msgid "DirectX Video Acceleration (DXVA) 2.0"
 msgstr ""
 
-#: modules/codec/avcodec/encoder.c:370
+#: modules/codec/avcodec/encoder.c:373
 #, c-format
 msgid ""
 "It seems your Libav/FFmpeg (libavcodec) installation lacks the following "
@@ -10505,23 +10530,23 @@ msgid ""
 "Do not contact the VideoLAN project about this issue.\n"
 msgstr ""
 
-#: modules/codec/avcodec/encoder.c:866
+#: modules/codec/avcodec/encoder.c:883
 msgid "unknown"
 msgstr "ਅਣਜਾਣ"
 
-#: modules/codec/avcodec/encoder.c:866
+#: modules/codec/avcodec/encoder.c:883
 msgid "video"
 msgstr "ਵਿਡੀਓ"
 
-#: modules/codec/avcodec/encoder.c:867
+#: modules/codec/avcodec/encoder.c:884
 msgid "audio"
 msgstr "ਆਡੀਓ"
 
-#: modules/codec/avcodec/encoder.c:867
+#: modules/codec/avcodec/encoder.c:884
 msgid "subpicture"
 msgstr "ਸਬ-ਤਸਵੀਰ"
 
-#: modules/codec/avcodec/encoder.c:880
+#: modules/codec/avcodec/encoder.c:897
 #, c-format
 msgid "VLC could not open the %4.4s %s encoder."
 msgstr ""
@@ -10927,8 +10952,8 @@ msgstr "ਚਿੱਟਾ"
 msgid "Maroon"
 msgstr "ਮੈਰੂਨ"
 
-#: modules/codec/kate.c:208 modules/gui/macosx/VLCMainMenu.m:469
-#: modules/gui/macosx/VLCMainMenu.m:1104 modules/spu/marq.c:62
+#: modules/codec/kate.c:208 modules/gui/macosx/VLCMainMenu.m:468
+#: modules/gui/macosx/VLCMainMenu.m:1103 modules/spu/marq.c:62
 #: modules/spu/rss.c:70 modules/text_renderer/freetype/freetype.c:136
 #: modules/video_filter/ball.c:119 modules/video_filter/colorthres.c:65
 msgid "Red"
@@ -10940,8 +10965,8 @@ msgstr "ਲਾਲ"
 msgid "Fuchsia"
 msgstr ""
 
-#: modules/codec/kate.c:208 modules/gui/macosx/VLCMainMenu.m:471
-#: modules/gui/macosx/VLCMainMenu.m:1108 modules/spu/marq.c:63
+#: modules/codec/kate.c:208 modules/gui/macosx/VLCMainMenu.m:470
+#: modules/gui/macosx/VLCMainMenu.m:1107 modules/spu/marq.c:63
 #: modules/spu/rss.c:71 modules/text_renderer/freetype/freetype.c:136
 #: modules/video_filter/colorthres.c:65
 msgid "Yellow"
@@ -10952,8 +10977,8 @@ msgstr "ਪੀਲਾ"
 msgid "Olive"
 msgstr "ਜੈਤੂਨੀ"
 
-#: modules/codec/kate.c:208 modules/gui/macosx/VLCMainMenu.m:470
-#: modules/gui/macosx/VLCMainMenu.m:1106 modules/spu/marq.c:63
+#: modules/codec/kate.c:208 modules/gui/macosx/VLCMainMenu.m:469
+#: modules/gui/macosx/VLCMainMenu.m:1105 modules/spu/marq.c:63
 #: modules/spu/rss.c:71 modules/text_renderer/freetype/freetype.c:136
 #: modules/video_filter/ball.c:119
 msgid "Green"
@@ -10980,8 +11005,8 @@ msgstr "ਗੂੜਾ ਲਾਲ"
 msgid "Navy"
 msgstr "ਅਸਮਾਨੀ"
 
-#: modules/codec/kate.c:209 modules/gui/macosx/VLCMainMenu.m:472
-#: modules/gui/macosx/VLCMainMenu.m:1110 modules/spu/marq.c:64
+#: modules/codec/kate.c:209 modules/gui/macosx/VLCMainMenu.m:471
+#: modules/gui/macosx/VLCMainMenu.m:1109 modules/spu/marq.c:64
 #: modules/spu/rss.c:72 modules/text_renderer/freetype/freetype.c:137
 #: modules/video_filter/ball.c:120 modules/video_filter/colorthres.c:65
 msgid "Blue"
@@ -11817,7 +11842,7 @@ msgstr ""
 
 #: modules/codec/speex.c:59 modules/codec/speex.c:907
 #: modules/gui/macosx/VLCOpenWindowController.m:195
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:258
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:259
 #: modules/gui/qt/ui/sprefs_video.h:328 modules/gui/qt/ui/video_effects.h:1246
 msgid "Mode"
 msgstr "ਮੋਡ"
@@ -12330,11 +12355,11 @@ msgstr ""
 msgid "Ulead DV audio decoder"
 msgstr ""
 
-#: modules/codec/videotoolbox.m:80
+#: modules/codec/videotoolbox.m:81
 msgid "Use Hardware decoders only"
 msgstr ""
 
-#: modules/codec/videotoolbox.m:88
+#: modules/codec/videotoolbox.m:89
 msgid "VideoToolbox video decoder"
 msgstr ""
 
@@ -13149,9 +13174,9 @@ msgid "Fast"
 msgstr "ਤੇਜ਼"
 
 #: modules/codec/x264.c:435 modules/gui/macosx/VLCMainMenu.m:290
-#: modules/gui/macosx/VLCMainMenu.m:393
+#: modules/gui/macosx/VLCMainMenu.m:392
 #: modules/gui/macosx/VLCSimplePrefsController.m:696
-#: modules/gui/qt/components/simple_preferences.cpp:673
+#: modules/gui/qt/components/simple_preferences.cpp:687
 #: modules/misc/gnutls.c:779 modules/text_renderer/freetype/freetype.c:124
 #: modules/text_renderer/freetype/freetype.c:143
 msgid "Normal"
@@ -13272,27 +13297,27 @@ msgstr "VBI ਅਤੇ ਟੈਲੀਟੈਕਸਟ ਡੀਕੋਡਰ"
 msgid "VBI & Teletext"
 msgstr "VBI ਅਤੇ ਡੀਕੋਡਰ"
 
-#: modules/control/dbus/dbus.c:136
+#: modules/control/dbus/dbus.c:137
 msgid "DBus"
 msgstr "DBus"
 
-#: modules/control/dbus/dbus.c:138
+#: modules/control/dbus/dbus.c:139
 msgid "D-Bus control interface"
 msgstr "ਡੀਬੱਸ ਕੰਟਰੋਲ ਇੰਟਰਫੇਸ"
 
 #: modules/control/dbus/dbus_root.c:81 modules/gui/macosx/VLCMainWindow.m:182
-#: modules/gui/macosx/VLCMainWindow.m:665
-#: modules/gui/macosx/VLCMainWindow.m:671
-#: modules/gui/macosx/VLCMainWindow.m:1275
+#: modules/gui/macosx/VLCMainWindow.m:662
+#: modules/gui/macosx/VLCMainWindow.m:668
+#: modules/gui/macosx/VLCMainWindow.m:1272
 #: modules/gui/macosx/VLCStatusBarIcon.m:378 modules/gui/ncurses.c:1026
-#: modules/gui/qt/dialogs/help.cpp:91 modules/gui/qt/main_interface.cpp:1267
-#: modules/gui/qt/main_interface.cpp:1271
-#: modules/gui/qt/main_interface.cpp:1310
-#: modules/gui/qt/main_interface.cpp:1312
-#: modules/gui/qt/main_interface.cpp:1421
-#: modules/gui/qt/main_interface.cpp:1438
-#: modules/gui/qt/main_interface.cpp:1446
-#: modules/gui/qt/main_interface.cpp:1469 modules/lua/libs/httpd.c:80
+#: modules/gui/qt/dialogs/help.cpp:91 modules/gui/qt/main_interface.cpp:1261
+#: modules/gui/qt/main_interface.cpp:1265
+#: modules/gui/qt/main_interface.cpp:1304
+#: modules/gui/qt/main_interface.cpp:1306
+#: modules/gui/qt/main_interface.cpp:1415
+#: modules/gui/qt/main_interface.cpp:1432
+#: modules/gui/qt/main_interface.cpp:1440
+#: modules/gui/qt/main_interface.cpp:1463 modules/lua/libs/httpd.c:80
 #: modules/notify/osx_notifications.m:302
 #: modules/video_output/wayland/shell.c:348
 #: modules/video_output/wayland/xdg-shell.c:291
@@ -13311,7 +13336,7 @@ msgid ""
 "annoying when you want to stop VLC and no video window is open."
 msgstr ""
 
-#: modules/control/dummy.c:53
+#: modules/control/dummy.c:50
 msgid "Dummy interface"
 msgstr "ਫ਼ਰਜ਼ੀ ਇੰਟਰਫੇਸ"
 
@@ -13357,7 +13382,7 @@ msgstr "ਗਲੋਬਲ ਹਾਟ-ਕੀ ਇੰਟਰਫੇਸ"
 #: modules/control/hotkeys.c:100
 #: modules/gui/macosx/VLCSimplePrefsController.m:237
 #: modules/gui/qt/components/preferences_widgets.cpp:1145
-#: modules/gui/qt/components/simple_preferences.cpp:233
+#: modules/gui/qt/components/simple_preferences.cpp:241
 msgid "Hotkeys"
 msgstr "ਹਾਟ-ਸਵਿੱਚਾਂ"
 
@@ -13496,11 +13521,6 @@ msgstr ""
 #, c-format
 msgid "Subtitle text scale %d%%"
 msgstr ""
-
-#: modules/control/hotkeys.c:1511
-#, c-format
-msgid "Volume %ld%%"
-msgstr "ਵਾਲੀਅਮ %ld%%"
 
 #: modules/control/hotkeys.c:1516
 #, c-format
@@ -13692,311 +13712,311 @@ msgstr "RC"
 msgid "Remote control interface"
 msgstr "ਰਿਮੋਟ ਕੰਟਰੋਲ ਇੰਟਰਫੇਸ"
 
-#: modules/control/oldrc.c:356
+#: modules/control/oldrc.c:369
 msgid "Remote control interface initialized. Type `help' for help."
 msgstr ""
 
-#: modules/control/oldrc.c:755
+#: modules/control/oldrc.c:768
 #, c-format
 msgid "Unknown command `%s'. Type `help' for help."
 msgstr ""
 
-#: modules/control/oldrc.c:773
+#: modules/control/oldrc.c:786
 msgid "+----[ Remote control commands ]"
 msgstr "+----[ ਰਿਮੋਟ ਕੰਟਰੋਲ ਕਮਾਂਡ ]"
 
-#: modules/control/oldrc.c:775
+#: modules/control/oldrc.c:788
 msgid "| add XYZ  . . . . . . . . . . . . add XYZ to playlist"
 msgstr "| add XYZ  . . . . . . . . . . . . add XYZ to playlist"
 
-#: modules/control/oldrc.c:776
+#: modules/control/oldrc.c:789
 msgid "| enqueue XYZ  . . . . . . . . . queue XYZ to playlist"
 msgstr "| enqueue XYZ  . . . . . . . . . queue XYZ to playlist"
 
-#: modules/control/oldrc.c:777
+#: modules/control/oldrc.c:790
 msgid "| playlist . . . . .  show items currently in playlist"
 msgstr "| playlist . . . . .  show items currently in playlist"
 
-#: modules/control/oldrc.c:778
+#: modules/control/oldrc.c:791
 msgid "| play . . . . . . . . . . . . . . . . . . play stream"
 msgstr "| play . . . . . . . . . . . . . . . . . . play stream"
 
-#: modules/control/oldrc.c:779
+#: modules/control/oldrc.c:792
 msgid "| stop . . . . . . . . . . . . . . . . . . stop stream"
 msgstr "| stop . . . . . . . . . . . . . . . . . . stop stream"
 
-#: modules/control/oldrc.c:780
+#: modules/control/oldrc.c:793
 msgid "| next . . . . . . . . . . . . . .  next playlist item"
 msgstr "| next . . . . . . . . . . . . . .  next playlist item"
 
-#: modules/control/oldrc.c:781
+#: modules/control/oldrc.c:794
 msgid "| prev . . . . . . . . . . . .  previous playlist item"
 msgstr "| prev . . . . . . . . . . . .  previous playlist item"
 
-#: modules/control/oldrc.c:782
+#: modules/control/oldrc.c:795
 msgid "| goto . . . . . . . . . . . . . .  goto item at index"
 msgstr "| goto . . . . . . . . . . . . . .  goto item at index"
 
-#: modules/control/oldrc.c:783
+#: modules/control/oldrc.c:796
 msgid "| repeat [on|off] . . . .  toggle playlist item repeat"
 msgstr "| repeat [on|off] . . . .  toggle playlist item repeat"
 
-#: modules/control/oldrc.c:784
+#: modules/control/oldrc.c:797
 msgid "| loop [on|off] . . . . . . . . . toggle playlist loop"
 msgstr "| loop [on|off] . . . . . . . . . toggle playlist loop"
 
-#: modules/control/oldrc.c:785
+#: modules/control/oldrc.c:798
 msgid "| random [on|off] . . . . . . .  toggle random jumping"
 msgstr "| random [on|off] . . . . . . .  toggle random jumping"
 
-#: modules/control/oldrc.c:786
+#: modules/control/oldrc.c:799
 msgid "| clear . . . . . . . . . . . . . . clear the playlist"
 msgstr "| clear . . . . . . . . . . . . . . clear the playlist"
 
-#: modules/control/oldrc.c:787
+#: modules/control/oldrc.c:800
 msgid "| status . . . . . . . . . . . current playlist status"
 msgstr "| status . . . . . . . . . . . current playlist status"
 
-#: modules/control/oldrc.c:788
+#: modules/control/oldrc.c:801
 msgid "| title [X]  . . . . . . set/get title in current item"
 msgstr "| title [X]  . . . . . . set/get title in current item"
 
-#: modules/control/oldrc.c:789
+#: modules/control/oldrc.c:802
 msgid "| title_n  . . . . . . . .  next title in current item"
 msgstr "| title_n  . . . . . . . .  next title in current item"
 
-#: modules/control/oldrc.c:790
+#: modules/control/oldrc.c:803
 msgid "| title_p  . . . . . .  previous title in current item"
 msgstr "| title_p  . . . . . .  previous title in current item"
 
-#: modules/control/oldrc.c:791
+#: modules/control/oldrc.c:804
 msgid "| chapter [X]  . . . . set/get chapter in current item"
 msgstr "| chapter [X]  . . . . set/get chapter in current item"
 
-#: modules/control/oldrc.c:792
+#: modules/control/oldrc.c:805
 msgid "| chapter_n  . . . . . .  next chapter in current item"
 msgstr "| chapter_n  . . . . . .  next chapter in current item"
 
-#: modules/control/oldrc.c:793
+#: modules/control/oldrc.c:806
 msgid "| chapter_p  . . . .  previous chapter in current item"
 msgstr "| chapter_p  . . . .  previous chapter in current item"
 
-#: modules/control/oldrc.c:795
+#: modules/control/oldrc.c:808
 msgid "| seek X . . . seek in seconds, for instance `seek 12'"
 msgstr "| seek X . . . seek in seconds, for instance `seek 12'"
 
-#: modules/control/oldrc.c:796
+#: modules/control/oldrc.c:809
 msgid "| pause  . . . . . . . . . . . . . . . .  toggle pause"
 msgstr "| pause  . . . . . . . . . . . . . . . .  toggle pause"
 
-#: modules/control/oldrc.c:797
+#: modules/control/oldrc.c:810
 msgid "| fastforward  . . . . . . . .  .  set to maximum rate"
 msgstr "| fastforward  . . . . . . . .  .  set to maximum rate"
 
-#: modules/control/oldrc.c:798
+#: modules/control/oldrc.c:811
 msgid "| rewind  . . . . . . . . . . . .  set to minimum rate"
 msgstr "| rewind  . . . . . . . . . . . .  set to minimum rate"
 
-#: modules/control/oldrc.c:799
+#: modules/control/oldrc.c:812
 msgid "| faster . . . . . . . . . .  faster playing of stream"
 msgstr "| faster . . . . . . . . . .  faster playing of stream"
 
-#: modules/control/oldrc.c:800
+#: modules/control/oldrc.c:813
 msgid "| slower . . . . . . . . . .  slower playing of stream"
 msgstr "| slower . . . . . . . . . .  slower playing of stream"
 
-#: modules/control/oldrc.c:801
+#: modules/control/oldrc.c:814
 msgid "| normal . . . . . . . . . .  normal playing of stream"
 msgstr "| normal . . . . . . . . . .  normal playing of stream"
 
-#: modules/control/oldrc.c:802
+#: modules/control/oldrc.c:815
 msgid "| frame. . . . . . . . . .  play frame by frame"
 msgstr "| frame. . . . . . . . . .  play frame by frame"
 
-#: modules/control/oldrc.c:803
+#: modules/control/oldrc.c:816
 msgid "| f [on|off] . . . . . . . . . . . . toggle fullscreen"
 msgstr "| f [on|off] . . . . . . . . . . . . toggle fullscreen"
 
-#: modules/control/oldrc.c:804
+#: modules/control/oldrc.c:817
 msgid "| info . . . . .  information about the current stream"
 msgstr "| info . . . . .  information about the current stream"
 
-#: modules/control/oldrc.c:805
+#: modules/control/oldrc.c:818
 msgid "| stats  . . . . . . . .  show statistical information"
 msgstr "| stats  . . . . . . . .  show statistical information"
 
-#: modules/control/oldrc.c:806
+#: modules/control/oldrc.c:819
 msgid "| get_time . . seconds elapsed since stream's beginning"
 msgstr "| get_time . . seconds elapsed since stream's beginning"
 
-#: modules/control/oldrc.c:807
+#: modules/control/oldrc.c:820
 msgid "| is_playing . . . .  1 if a stream plays, 0 otherwise"
 msgstr "| is_playing . . . .  1 if a stream plays, 0 otherwise"
 
-#: modules/control/oldrc.c:808
+#: modules/control/oldrc.c:821
 msgid "| get_title . . . . .  the title of the current stream"
 msgstr "| get_title . . . . .  the title of the current stream"
 
-#: modules/control/oldrc.c:809
+#: modules/control/oldrc.c:822
 msgid "| get_length . . . .  the length of the current stream"
 msgstr "| get_length . . . .  the length of the current stream"
 
-#: modules/control/oldrc.c:811
+#: modules/control/oldrc.c:824
 msgid "| volume [X] . . . . . . . . . .  set/get audio volume"
 msgstr "| volume [X] . . . . . . . . . .  set/get audio volume"
 
-#: modules/control/oldrc.c:812
+#: modules/control/oldrc.c:825
 msgid "| volup [X]  . . . . . . .  raise audio volume X steps"
 msgstr "| volup [X]  . . . . . . .  raise audio volume X steps"
 
-#: modules/control/oldrc.c:813
+#: modules/control/oldrc.c:826
 msgid "| voldown [X]  . . . . . .  lower audio volume X steps"
 msgstr "| voldown [X]  . . . . . .  lower audio volume X steps"
 
-#: modules/control/oldrc.c:814
+#: modules/control/oldrc.c:827
 msgid "| adev [device]  . . . . . . . .  set/get audio device"
 msgstr ""
 
-#: modules/control/oldrc.c:815
+#: modules/control/oldrc.c:828
 msgid "| achan [X]. . . . . . . . . .  set/get audio channels"
 msgstr "| achan [X]. . . . . . . . . .  set/get audio channels"
 
-#: modules/control/oldrc.c:816
+#: modules/control/oldrc.c:829
 msgid "| atrack [X] . . . . . . . . . . . set/get audio track"
 msgstr "| atrack [X] . . . . . . . . . . . set/get audio track"
 
-#: modules/control/oldrc.c:817
+#: modules/control/oldrc.c:830
 msgid "| vtrack [X] . . . . . . . . . . . set/get video track"
 msgstr "| vtrack [X] . . . . . . . . . . . set/get video track"
 
-#: modules/control/oldrc.c:818
+#: modules/control/oldrc.c:831
 msgid "| vratio [X]  . . . . . . . set/get video aspect ratio"
 msgstr "| vratio [X]  . . . . . . . set/get video aspect ratio"
 
-#: modules/control/oldrc.c:819
+#: modules/control/oldrc.c:832
 msgid "| vcrop [X]  . . . . . . . . . . .  set/get video crop"
 msgstr "| vcrop [X]  . . . . . . . . . . .  set/get video crop"
 
-#: modules/control/oldrc.c:820
+#: modules/control/oldrc.c:833
 msgid "| vzoom [X]  . . . . . . . . . . .  set/get video zoom"
 msgstr "| vzoom [X]  . . . . . . . . . . .  set/get video zoom"
 
-#: modules/control/oldrc.c:821
+#: modules/control/oldrc.c:834
 msgid "| snapshot . . . . . . . . . . . . take video snapshot"
 msgstr "| snapshot . . . . . . . . . . . . take video snapshot"
 
-#: modules/control/oldrc.c:822
+#: modules/control/oldrc.c:835
 msgid "| strack [X] . . . . . . . . .  set/get subtitle track"
 msgstr ""
 
-#: modules/control/oldrc.c:823
+#: modules/control/oldrc.c:836
 msgid "| key [hotkey name] . . . . . .  simulate hotkey press"
 msgstr "| key [hotkey name] . . . . . .  simulate hotkey press"
 
-#: modules/control/oldrc.c:825
+#: modules/control/oldrc.c:838
 msgid "| help . . . . . . . . . . . . . . . this help message"
 msgstr "| help . . . . . . . . . . . . . . . this help message"
 
-#: modules/control/oldrc.c:826
+#: modules/control/oldrc.c:839
 msgid "| logout . . . . . . .  exit (if in socket connection)"
 msgstr "| logout . . . . . . .  exit (if in socket connection)"
 
-#: modules/control/oldrc.c:827
+#: modules/control/oldrc.c:840
 msgid "| quit . . . . . . . . . . . . . . . . . . .  quit vlc"
 msgstr "| quit . . . . . . . . . . . . . . . . . . .  quit vlc"
 
-#: modules/control/oldrc.c:829
+#: modules/control/oldrc.c:842
 msgid "+----[ end of help ]"
 msgstr "+----[ end of help ]"
 
-#: modules/control/oldrc.c:956
+#: modules/control/oldrc.c:969
 msgid "Press pause to continue."
 msgstr ""
 
-#: modules/control/oldrc.c:1177 modules/control/oldrc.c:1426
-#: modules/control/oldrc.c:1470
+#: modules/control/oldrc.c:1190 modules/control/oldrc.c:1439
+#: modules/control/oldrc.c:1483
 msgid "Type 'pause' to continue."
 msgstr ""
 
-#: modules/control/oldrc.c:1266
+#: modules/control/oldrc.c:1279
 msgid "Error: `goto' needs an argument greater than zero."
 msgstr ""
 
-#: modules/control/oldrc.c:1276
+#: modules/control/oldrc.c:1289
 #, c-format
 msgid "Playlist has only %u element"
 msgid_plural "Playlist has only %u elements"
 msgstr[0] ""
 msgstr[1] ""
 
-#: modules/control/oldrc.c:1722 modules/gui/ncurses.c:808
+#: modules/control/oldrc.c:1735 modules/gui/ncurses.c:808
 msgid "+-[Incoming]"
 msgstr "+-[ਆ ਰਿਹਾ ਹੈ]"
 
-#: modules/control/oldrc.c:1723 modules/gui/ncurses.c:810
+#: modules/control/oldrc.c:1736 modules/gui/ncurses.c:810
 #, c-format
 msgid "| input bytes read : %8.0f KiB"
 msgstr "| ਇੰਪੁੱਟ ਬਾਈਟ ਪੜ੍ਹੇ : %8.0f KiB"
 
-#: modules/control/oldrc.c:1725 modules/gui/ncurses.c:812
+#: modules/control/oldrc.c:1738 modules/gui/ncurses.c:812
 #, c-format
 msgid "| input bitrate    :   %6.0f kb/s"
 msgstr "| ਇੰਪੁੱਟ ਬਿੱਟਰੇਟ    :   %6.0f kb/s"
 
-#: modules/control/oldrc.c:1727 modules/gui/ncurses.c:814
+#: modules/control/oldrc.c:1740 modules/gui/ncurses.c:814
 #, c-format
 msgid "| demux bytes read : %8.0f KiB"
 msgstr "| demux ਬਾਈਟ ਪੜ੍ਹੇ: %8.0f KiB"
 
-#: modules/control/oldrc.c:1729 modules/gui/ncurses.c:816
+#: modules/control/oldrc.c:1742 modules/gui/ncurses.c:816
 #, c-format
 msgid "| demux bitrate    :   %6.0f kb/s"
 msgstr "| demux ਬਿੱਟਰੇਟ    :   %6.0f kb/s"
 
-#: modules/control/oldrc.c:1731
+#: modules/control/oldrc.c:1744
 #, c-format
 msgid "| demux corrupted  :    %5<PRIi64>"
 msgstr ""
 
-#: modules/control/oldrc.c:1733
+#: modules/control/oldrc.c:1746
 #, c-format
 msgid "| discontinuities  :    %5<PRIi64>"
 msgstr "| ਨਾ-ਲਗਾਤਾਰ  :    %5<PRIi64>"
 
-#: modules/control/oldrc.c:1737 modules/gui/ncurses.c:822
+#: modules/control/oldrc.c:1750 modules/gui/ncurses.c:822
 msgid "+-[Video Decoding]"
 msgstr "+-[ਵਿਡੀਓ ਡੀਕੋਡਿੰਗ]"
 
-#: modules/control/oldrc.c:1738 modules/gui/ncurses.c:824
+#: modules/control/oldrc.c:1751 modules/gui/ncurses.c:824
 #, c-format
 msgid "| video decoded    :    %5<PRIi64>"
 msgstr "| ਵਿਡੀਓ ਡੀਕੋਡ ਕੀਤਾ    :    %5<PRIi64>"
 
-#: modules/control/oldrc.c:1740 modules/gui/ncurses.c:826
+#: modules/control/oldrc.c:1753 modules/gui/ncurses.c:826
 #, c-format
 msgid "| frames displayed :    %5<PRIi64>"
 msgstr "| ਵੇਖਾਏ ਫਰੇਮ :    %5<PRIi64>"
 
-#: modules/control/oldrc.c:1742 modules/gui/ncurses.c:828
+#: modules/control/oldrc.c:1755 modules/gui/ncurses.c:828
 #, c-format
 msgid "| frames lost      :    %5<PRIi64>"
 msgstr "| ਫਰੇਮ ਗੁਆਚੇ      :    %5<PRIi64>"
 
-#: modules/control/oldrc.c:1746 modules/gui/ncurses.c:834
+#: modules/control/oldrc.c:1759 modules/gui/ncurses.c:834
 msgid "+-[Audio Decoding]"
 msgstr "+-[ਆਡੀਓ ਡੀਕੋਡਿੰਗ]"
 
-#: modules/control/oldrc.c:1747 modules/gui/ncurses.c:836
+#: modules/control/oldrc.c:1760 modules/gui/ncurses.c:836
 #, c-format
 msgid "| audio decoded    :    %5<PRIi64>"
 msgstr "| ਆਡੀਓ ਡੀਕੋਡ ਕੀਤੀ    :    %5<PRIi64>"
 
-#: modules/control/oldrc.c:1749 modules/gui/ncurses.c:838
+#: modules/control/oldrc.c:1762 modules/gui/ncurses.c:838
 #, c-format
 msgid "| buffers played   :    %5<PRIi64>"
 msgstr "| ਚਲਾਏ ਬਫ਼ਰ   :    %5<PRIi64>"
 
-#: modules/control/oldrc.c:1751 modules/gui/ncurses.c:840
+#: modules/control/oldrc.c:1764 modules/gui/ncurses.c:840
 #, c-format
 msgid "| buffers lost     :    %5<PRIi64>"
 msgstr "| ਗੁਆਚੇ ਬਫ਼ਰ     :    %5<PRIi64>"
@@ -14105,8 +14125,7 @@ msgstr ""
 msgid "Avformat muxer"
 msgstr "Avformat ਮੁਕਸਰ"
 
-#: modules/demux/avformat/avformat.c:56
-#: modules/stream_out/chromecast/cast.cpp:167 modules/stream_out/rtp.c:87
+#: modules/demux/avformat/avformat.c:56 modules/stream_out/rtp.c:87
 msgid "Muxer"
 msgstr "ਮੁਕਸਰ"
 
@@ -14160,7 +14179,7 @@ msgstr ""
 msgid "AVI demuxer"
 msgstr "AVI ਡੀਮੁਕਸਰ"
 
-#: modules/demux/avi/avi.c:828 modules/demux/mp4/mp4.c:1674
+#: modules/demux/avi/avi.c:832 modules/demux/mp4/mp4.c:1674
 msgid ""
 "Because this file index is broken or missing, seeking will not work "
 "correctly.\n"
@@ -14170,27 +14189,27 @@ msgid ""
 "What do you want to do?"
 msgstr ""
 
-#: modules/demux/avi/avi.c:836
+#: modules/demux/avi/avi.c:840
 msgid "Do not play"
 msgstr "ਨਾ ਚਲਾਓ"
 
-#: modules/demux/avi/avi.c:837
+#: modules/demux/avi/avi.c:841
 msgid "Build index then play"
 msgstr "ਇੰਡੈਕਸ ਬਣਾਉ, ਫੇਰ ਚਲਾਉ"
 
-#: modules/demux/avi/avi.c:838
+#: modules/demux/avi/avi.c:842
 msgid "Play as is"
 msgstr "ਇਸ ਵਜੋਂ ਚਲਾਓ"
 
-#: modules/demux/avi/avi.c:839 modules/demux/mp4/mp4.c:1685
+#: modules/demux/avi/avi.c:843 modules/demux/mp4/mp4.c:1685
 msgid "Broken or missing Index"
 msgstr ""
 
-#: modules/demux/avi/avi.c:2714
+#: modules/demux/avi/avi.c:2719
 msgid "Broken or missing AVI Index"
 msgstr ""
 
-#: modules/demux/avi/avi.c:2715
+#: modules/demux/avi/avi.c:2720
 msgid "Fixing AVI Index..."
 msgstr "AVI ਇੰਡੈਕਸ ਠੀਕ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ..."
 
@@ -14242,7 +14261,7 @@ msgstr ""
 msgid "Seek prevention demux filter"
 msgstr ""
 
-#: modules/demux/flac.c:50
+#: modules/demux/flac.c:51
 msgid "FLAC demuxer"
 msgstr "FLAC ਡੀਮੁਕਸਰ"
 
@@ -14647,11 +14666,11 @@ msgstr "MPEG-4 ਵਿਡੀਓ"
 msgid "Desired frame rate for the stream."
 msgstr ""
 
-#: modules/demux/mpeg/h26x.c:53
+#: modules/demux/mpeg/h26x.c:53 modules/demux/mpeg/h26x.c:55
 msgid "H264 video demuxer"
 msgstr "H264 ਵਿਡੀਓ ਡੀਮੁਕਸਰ"
 
-#: modules/demux/mpeg/h26x.c:63
+#: modules/demux/mpeg/h26x.c:64 modules/demux/mpeg/h26x.c:66
 msgid "HEVC/H.265 video demuxer"
 msgstr ""
 
@@ -14780,8 +14799,8 @@ msgstr ""
 msgid "Spoken subtitles for the visually impaired"
 msgstr ""
 
-#: modules/demux/mpeg/ts_psi.c:607 modules/gui/macosx/VLCMainMenu.m:466
-#: modules/gui/qt/dialogs/toolbar.cpp:532
+#: modules/demux/mpeg/ts_psi.c:607 modules/gui/macosx/VLCMainMenu.m:465
+#: modules/gui/qt/dialogs/toolbar.cpp:541
 msgid "Teletext"
 msgstr "ਟੈਲੀਟੈਕਸਟ"
 
@@ -15214,7 +15233,7 @@ msgid "Credits"
 msgstr "ਮਾਣ"
 
 #: modules/gui/macosx/VLCAboutWindowController.m:104
-#: modules/gui/macosx/VLCMainMenu.m:491 modules/gui/qt/dialogs/help.cpp:119
+#: modules/gui/macosx/VLCMainMenu.m:490 modules/gui/qt/dialogs/help.cpp:119
 msgid "License"
 msgstr "ਲਾਈਸੈਂਸ"
 
@@ -15318,150 +15337,155 @@ msgstr "ਅਣ-ਇੰਸਟਾਲ"
 msgid "Skins"
 msgstr "ਸਕਿਨ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:215
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:211
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:199
+msgid "Apply profile at next launch"
+msgstr ""
+
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:216
 #: modules/gui/qt/ui/equalizer.h:134
 msgid "2 Pass"
 msgstr "2 ਪਾਸ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:218
-#: modules/gui/qt/components/extended_panels.cpp:1111
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:219
+#: modules/gui/qt/components/extended_panels.cpp:1132
 #: modules/gui/qt/ui/equalizer.h:136
 msgid "Preamp"
 msgstr "ਪ੍ਰੀਐਮਪ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:222
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:223
 msgid "Enable dynamic range compressor"
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:223
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:234
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:224
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:235
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:49
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:209
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:210
 #: modules/gui/qt/dialogs/gototime.cpp:66
 msgid "Reset"
 msgstr "ਰੀਸੈੱਟ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:225
-#: modules/gui/qt/components/extended_panels.cpp:1275
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:226
+#: modules/gui/qt/components/extended_panels.cpp:1296
 msgid "Attack"
 msgstr "ਹਮਲਾ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:226
-#: modules/gui/qt/components/extended_panels.cpp:1276
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:227
+#: modules/gui/qt/components/extended_panels.cpp:1297
 msgid "Release"
 msgstr "ਰੀਲਿਜ਼"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:227
-#: modules/gui/qt/components/extended_panels.cpp:1277
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:228
+#: modules/gui/qt/components/extended_panels.cpp:1298
 msgid "Threshold"
 msgstr "ਥਰੈਸ਼ਹੋਲਡ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:233
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:234
 msgid "Enable Spatializer"
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:245
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:246
 msgid "Headphone virtualization"
 msgstr "ਹੈੱਡਫੋਨ ਵੁਰਚੁਲਾਈਜੇਸ਼ਨ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:252
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:253
 msgid "Volume normalization"
 msgstr "ਵਾਲੀਅਮ ਨਾਰਮੇਲਾਈਜ਼"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:258
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:259
 msgid "Maximum level"
 msgstr "ਵੱਧੋ-ਵੱਧ ਲੈਵਲ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:273
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:274
 msgid "Filter"
 msgstr "ਫਿਲਟਰ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:274
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:276
 #: modules/gui/macosx/VLCMainWindowControlsBar.m:84
 #: modules/gui/macosx/VLCSimplePrefsController.m:267
 #: modules/gui/qt/dialogs/extended.cpp:96
 msgid "Audio Effects"
 msgstr "ਆਡੀਓ ਪਰਭਾਵ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:325
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:394
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:327
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:393
 msgid "Duplicate current profile..."
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:330
-#: modules/gui/macosx/VLCConvertAndSaveWindowController.m:1037
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:332
+#: modules/gui/macosx/VLCConvertAndSaveWindowController.m:1044
 msgid "Organize Profiles..."
 msgstr "....ਪਰੋਫਾਇਲ ਪਰਬੰਧ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:509
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:790
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:511
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:789
 msgid "Duplicate current profile for a new profile"
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:510
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:512
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:474
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:791
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:790
 msgid "Enter a name for the new profile:"
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:512
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:824
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:514
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:826
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:377
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:476
-#: modules/gui/macosx/VLCMainMenu.m:1165 modules/gui/macosx/VLCOutput.m:411
+#: modules/gui/macosx/VLCMainMenu.m:1164 modules/gui/macosx/VLCOutput.m:414
 #: modules/gui/macosx/VLCSimplePrefsController.m:306
 #: modules/gui/macosx/VLCSimplePrefsController.m:380
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:793
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:792
 #: modules/gui/macosx/prefs.m:188
 #: modules/gui/qt/components/sout/profile_selector.cpp:443
 #: modules/gui/qt/ui/vlm.h:301
 msgid "Save"
 msgstr "ਸੰਭਾਲੋ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:532
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:814
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:534
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:813
 msgid "Please enter a unique name for the new profile."
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:533
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:815
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:535
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:814
 msgid "Multiple profiles with the same name are not allowed."
-msgstr ""
-
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:566
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:866
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:858
-msgid "Remove a preset"
-msgstr ""
-
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:567
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:867
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:859
-msgid "Select the preset you would like to remove:"
 msgstr ""
 
 #: modules/gui/macosx/VLCAudioEffectsWindowController.m:568
 #: modules/gui/macosx/VLCAudioEffectsWindowController.m:868
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:857
+msgid "Remove a preset"
+msgstr ""
+
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:569
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:869
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:858
+msgid "Select the preset you would like to remove:"
+msgstr ""
+
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:570
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:870
 #: modules/gui/macosx/VLCBookmarksWindowController.m:81
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:338
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:860
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:859
 #: modules/gui/qt/ui/open_file.h:155
 msgid "Remove"
 msgstr "ਹਟਾਓ"
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:645
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:647
 msgid "Add new Preset..."
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:650
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:652
 msgid "Organize Presets..."
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:821
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:823
 msgid "Save current selection as new preset"
 msgstr ""
 
-#: modules/gui/macosx/VLCAudioEffectsWindowController.m:822
+#: modules/gui/macosx/VLCAudioEffectsWindowController.m:824
 msgid "Enter a name for the new preset:"
 msgstr ""
 
@@ -15489,7 +15513,7 @@ msgstr "ਸੋਧ"
 #: modules/gui/macosx/VLCBookmarksWindowController.m:85
 #: modules/gui/macosx/VLCBookmarksWindowController.m:91
 #: modules/gui/qt/dialogs/bookmarks.cpp:77
-#: modules/gui/qt/dialogs/toolbar.cpp:484
+#: modules/gui/qt/dialogs/toolbar.cpp:493
 msgid "Time"
 msgstr "ਟਾਈਮ"
 
@@ -15503,16 +15527,16 @@ msgstr "ਟਾਈਮ"
 #: modules/gui/macosx/VLCCoreDialogProvider.m:194
 #: modules/gui/macosx/VLCCoreDialogProvider.m:236
 #: modules/gui/macosx/VLCOpenWindowController.m:363
-#: modules/gui/macosx/VLCOutput.m:60 modules/gui/macosx/VLCPlaylistInfo.m:342
+#: modules/gui/macosx/VLCOutput.m:60 modules/gui/macosx/VLCPlaylistInfo.m:341
 #: modules/gui/macosx/VLCSimplePrefsController.m:282
 #: modules/gui/macosx/VLCTimeSelectionPanelController.m:51
-#: modules/gui/qt/components/open_panels.cpp:1363
-#: modules/stream_out/chromecast/cast.cpp:854
+#: modules/gui/qt/components/open_panels.cpp:1365
+#: modules/stream_out/chromecast/cast.cpp:1201
 msgid "OK"
 msgstr "ਠੀਕ ਹੈ"
 
 #: modules/gui/macosx/VLCBookmarksWindowController.m:131
-#: modules/gui/macosx/VLCMainMenu.m:1155
+#: modules/gui/macosx/VLCMainMenu.m:1154
 msgid "Untitled"
 msgstr "ਬਿਨ-ਟਾਈਟਲ"
 
@@ -15621,7 +15645,7 @@ msgstr "ਆਉਟਪੁੱਟ ਟਿਕਾਣਾ ਚੁਣੋ"
 #: modules/gui/macosx/VLCSimplePrefsController.m:367
 #: modules/gui/macosx/prefs_widgets.m:1121
 #: modules/gui/qt/components/preferences_widgets.cpp:264
-#: modules/gui/qt/components/simple_preferences.cpp:447
+#: modules/gui/qt/components/simple_preferences.cpp:455
 #: modules/gui/qt/components/sout/sout_widgets.cpp:135
 #: modules/gui/qt/ui/open.h:282 modules/gui/qt/ui/open_disk.h:307
 #: modules/gui/qt/ui/open_file.h:148 modules/gui/qt/ui/sprefs_audio.h:417
@@ -15644,7 +15668,7 @@ msgstr "ਫਾਇਲ ਵਜੋਂ ਸੰਭਾਲੋ"
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:149
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:392
 #: modules/gui/macosx/VLCOutput.m:65 modules/gui/macosx/VLCOutput.m:194
-#: modules/gui/macosx/VLCOutput.m:310 modules/gui/qt/dialogs/sout.cpp:94
+#: modules/gui/macosx/VLCOutput.m:313 modules/gui/qt/dialogs/sout.cpp:94
 msgid "Stream"
 msgstr "ਸਟਰੀਮ"
 
@@ -15717,10 +15741,10 @@ msgstr ""
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:186
 #: modules/gui/macosx/VLCOpenWindowController.m:197
 #: modules/gui/macosx/VLCOutput.m:68
-#: modules/gui/qt/components/sout/sout_widgets.cpp:239
-#: modules/gui/qt/components/sout/sout_widgets.cpp:326
-#: modules/gui/qt/components/sout/sout_widgets.cpp:368
-#: modules/gui/qt/components/sout/sout_widgets.cpp:423
+#: modules/gui/qt/components/sout/sout_widgets.cpp:241
+#: modules/gui/qt/components/sout/sout_widgets.cpp:328
+#: modules/gui/qt/components/sout/sout_widgets.cpp:370
+#: modules/gui/qt/components/sout/sout_widgets.cpp:425
 msgid "Address"
 msgstr "ਐਡਰੈੱਸ"
 
@@ -15732,11 +15756,11 @@ msgstr "TTL"
 #: modules/gui/macosx/VLCOpenWindowController.m:185
 #: modules/gui/macosx/VLCOpenWindowController.m:187
 #: modules/gui/macosx/VLCOutput.m:69
-#: modules/gui/qt/components/sout/sout_widgets.cpp:185
-#: modules/gui/qt/components/sout/sout_widgets.cpp:240
-#: modules/gui/qt/components/sout/sout_widgets.cpp:281
-#: modules/gui/qt/components/sout/sout_widgets.cpp:327
-#: modules/gui/qt/components/sout/sout_widgets.cpp:424 modules/lua/vlc.c:67
+#: modules/gui/qt/components/sout/sout_widgets.cpp:187
+#: modules/gui/qt/components/sout/sout_widgets.cpp:242
+#: modules/gui/qt/components/sout/sout_widgets.cpp:283
+#: modules/gui/qt/components/sout/sout_widgets.cpp:329
+#: modules/gui/qt/components/sout/sout_widgets.cpp:426 modules/lua/vlc.c:67
 #: modules/stream_out/rtp.c:114
 #: share/lua/http/dialogs/stream_config_window.html:32
 #: share/lua/http/dialogs/stream_window.html:91
@@ -15749,17 +15773,17 @@ msgid "SAP Announcement"
 msgstr ""
 
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:192
-#: modules/gui/macosx/VLCOutput.m:105 modules/gui/macosx/VLCOutput.m:503
+#: modules/gui/macosx/VLCOutput.m:105 modules/gui/macosx/VLCOutput.m:506
 msgid "HTTP Announcement"
 msgstr ""
 
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:193
-#: modules/gui/macosx/VLCOutput.m:104 modules/gui/macosx/VLCOutput.m:499
+#: modules/gui/macosx/VLCOutput.m:104 modules/gui/macosx/VLCOutput.m:502
 msgid "RTSP Announcement"
 msgstr ""
 
 #: modules/gui/macosx/VLCConvertAndSaveWindowController.m:194
-#: modules/gui/macosx/VLCOutput.m:106 modules/gui/macosx/VLCOutput.m:507
+#: modules/gui/macosx/VLCOutput.m:106 modules/gui/macosx/VLCOutput.m:510
 msgid "Export SDP as file"
 msgstr ""
 
@@ -15824,11 +15848,11 @@ msgstr ""
 msgid "A SDP export is requested, but no URL is provided."
 msgstr ""
 
-#: modules/gui/macosx/VLCConvertAndSaveWindowController.m:1035
+#: modules/gui/macosx/VLCConvertAndSaveWindowController.m:1042
 #: modules/gui/macosx/VLCSimplePrefsController.m:690
 #: modules/gui/macosx/VLCSimplePrefsController.m:718
 #: modules/gui/macosx/VLCSimplePrefsController.m:1251
-#: modules/gui/qt/components/simple_preferences.cpp:670
+#: modules/gui/qt/components/simple_preferences.cpp:684
 msgid "Custom"
 msgstr "ਕਸਟਮ"
 
@@ -15870,7 +15894,7 @@ msgstr "ਪੂਰੀ ਸਕਰੀਨ ਮੋਡ ਛੱਡੋ"
 
 #: modules/gui/macosx/VLCFSPanelController.m:127
 #: modules/gui/macosx/VLCMainWindowControlsBar.m:76
-#: modules/gui/qt/dialogs/toolbar.cpp:468 modules/gui/qt/ui/sprefs_audio.h:411
+#: modules/gui/qt/dialogs/toolbar.cpp:477 modules/gui/qt/ui/sprefs_audio.h:411
 msgid "Volume"
 msgstr "ਵਾਲੀਅਮ"
 
@@ -16043,7 +16067,7 @@ msgid ""
 "This option allows the interface to change its icon on various occasions."
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:111 modules/gui/macosx/VLCMainMenu.m:1461
+#: modules/gui/macosx/macosx.m:111 modules/gui/macosx/VLCMainMenu.m:1460
 msgid "Lock Aspect Ratio"
 msgstr "ਅਕਾਰ ਰੇਸ਼ੋ ਲਾਕ ਕਰੋ"
 
@@ -16082,84 +16106,76 @@ msgstr ""
 msgid "Shows the audio effects button in the main window."
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:125 modules/gui/macosx/VLCMainMenu.m:381
-msgid "Show Sidebar"
-msgstr "ਬਾਹੀ ਵੇਖਾਓ"
-
-#: modules/gui/macosx/macosx.m:126
-msgid "Shows a sidebar in the main window listing media sources."
-msgstr ""
-
-#: modules/gui/macosx/macosx.m:128
+#: modules/gui/macosx/macosx.m:125
 #: modules/gui/macosx/VLCSimplePrefsController.m:325
 msgid "Control external music players"
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:129
+#: modules/gui/macosx/macosx.m:126
 msgid "VLC will pause and resume supported music players on playback."
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:131
+#: modules/gui/macosx/macosx.m:128
 msgid "Use large text for list views"
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:136
+#: modules/gui/macosx/macosx.m:133
 msgid "Do nothing"
 msgstr "ਕੁਝ ਨਾ ਕਰੋ"
 
-#: modules/gui/macosx/macosx.m:136
+#: modules/gui/macosx/macosx.m:133
 msgid "Pause iTunes / Spotify"
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:136
+#: modules/gui/macosx/macosx.m:133
 msgid "Pause and resume iTunes / Spotify"
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:139
+#: modules/gui/macosx/macosx.m:136
 msgid "Continue playback where you left off"
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:140
+#: modules/gui/macosx/macosx.m:137
 msgid ""
 "VLC will store playback positions of the last 30 items you played. If you re-"
 "open one of those, playback will continue."
 msgstr ""
 
-#: modules/gui/macosx/macosx.m:145 modules/gui/qt/qt.cpp:206
+#: modules/gui/macosx/macosx.m:142 modules/gui/qt/qt.cpp:206
 msgid "Ask"
 msgstr "ਪੁੱਛੋ"
 
-#: modules/gui/macosx/macosx.m:145 modules/gui/qt/qt.cpp:200
-#: modules/gui/qt/qt.cpp:206 modules/keystore/keychain.m:49
+#: modules/gui/macosx/macosx.m:142 modules/gui/qt/qt.cpp:200
+#: modules/gui/qt/qt.cpp:206 modules/keystore/keychain.m:50
 msgid "Always"
 msgstr "ਹਮੇਸ਼ਾ"
 
-#: modules/gui/macosx/macosx.m:145 modules/gui/qt/qt.cpp:200
+#: modules/gui/macosx/macosx.m:142 modules/gui/qt/qt.cpp:200
 #: modules/gui/qt/qt.cpp:206 modules/gui/qt/qt.cpp:213
 msgid "Never"
 msgstr "ਕਦੇ ਨਹੀਂ"
 
-#: modules/gui/macosx/macosx.m:148 modules/gui/qt/qt.cpp:186
+#: modules/gui/macosx/macosx.m:145 modules/gui/qt/qt.cpp:186
 msgid "Maximum Volume displayed"
 msgstr "ਵੱਧੋ-ਵੱਧ ਵਾਲੀਅਮ ਵੇਖਾਓ"
 
-#: modules/gui/macosx/macosx.m:152
+#: modules/gui/macosx/macosx.m:149
 msgid "Mac OS X interface"
 msgstr "ਮੈਕ OS X ਇੰਟਰਫੇਸ"
 
-#: modules/gui/macosx/macosx.m:159
+#: modules/gui/macosx/macosx.m:156
 msgid "Appearance"
 msgstr "ਦਿੱਖ"
 
-#: modules/gui/macosx/macosx.m:171
+#: modules/gui/macosx/macosx.m:167
 msgid "Behavior"
 msgstr "ਰਵੱਈਆ"
 
-#: modules/gui/macosx/macosx.m:184
+#: modules/gui/macosx/macosx.m:180
 msgid "Apple Remote and media keys"
 msgstr "ਐਪਲ ਰਿਮੋਟ ਅਤੇ ਮੀਡਿਆ ਸਵਿੱਚਾਂ"
 
-#: modules/gui/macosx/macosx.m:199
+#: modules/gui/macosx/macosx.m:196
 msgid "Video output"
 msgstr "ਵਿਡੀਓ ਆਉਟਪੁੱਟ"
 
@@ -16269,7 +16285,7 @@ msgstr "...ਬਦਲੋ / ਸਟਰੀਮ"
 msgid "Save Playlist..."
 msgstr "ਪਲੇਅ-ਲਿਸਟ ਸੰਭਾਲੋ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:364 modules/gui/macosx/VLCPlaylist.m:236
+#: modules/gui/macosx/VLCMainMenu.m:364 modules/gui/macosx/VLCPlaylist.m:234
 msgid "Reveal in Finder"
 msgstr ""
 
@@ -16285,7 +16301,7 @@ msgstr "ਕਾਪੀ ਕਰੋ"
 msgid "Paste"
 msgstr "ਚੇਪੋ"
 
-#: modules/gui/macosx/VLCMainMenu.m:371 modules/gui/macosx/VLCPlaylist.m:234
+#: modules/gui/macosx/VLCMainMenu.m:371 modules/gui/macosx/VLCPlaylist.m:232
 msgid "Select All"
 msgstr "ਸਭ ਚੁਣੋ"
 
@@ -16297,225 +16313,229 @@ msgstr "ਲੱਭੋ"
 msgid "View"
 msgstr "ਵੇਖਾਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:383
+#: modules/gui/macosx/VLCMainMenu.m:381
+msgid "Show Sidebar"
+msgstr "ਬਾਹੀ ਵੇਖਾਓ"
+
+#: modules/gui/macosx/VLCMainMenu.m:382
 msgid "Playlist Table Columns"
 msgstr ""
 
-#: modules/gui/macosx/VLCMainMenu.m:385
+#: modules/gui/macosx/VLCMainMenu.m:384
 msgid "Playback"
 msgstr "ਪਲੇਅਬੈਕ"
 
-#: modules/gui/macosx/VLCMainMenu.m:391
+#: modules/gui/macosx/VLCMainMenu.m:390
 msgid "Playback Speed"
 msgstr "ਪਲੇਅਬੈਕ ਸਪੀਡ"
 
-#: modules/gui/macosx/VLCMainMenu.m:395
+#: modules/gui/macosx/VLCMainMenu.m:394
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:48
 msgid "Track Synchronization"
 msgstr "ਟਰੈਕ ਸੈਕਰੋਨਾਈਜ਼ੇਸ਼ਨਨ"
 
-#: modules/gui/macosx/VLCMainMenu.m:401
+#: modules/gui/macosx/VLCMainMenu.m:400
 #: modules/gui/qt/components/controller.hpp:110
 msgid "A→B Loop"
 msgstr "A→B ਲੂਪ"
 
-#: modules/gui/macosx/VLCMainMenu.m:402
+#: modules/gui/macosx/VLCMainMenu.m:401
 msgid "Quit after Playback"
 msgstr "ਚਲਾਉਣ ਬਾਅਦ ਬੰਦ ਕਰੋ"
 
-#: modules/gui/macosx/VLCMainMenu.m:403
+#: modules/gui/macosx/VLCMainMenu.m:402
 msgid "Step Forward"
 msgstr "ਅੱਗੇ ਜਾਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:404
+#: modules/gui/macosx/VLCMainMenu.m:403
 msgid "Step Backward"
 msgstr "ਪਿੱਛੇ ਜਾਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:405
+#: modules/gui/macosx/VLCMainMenu.m:404
 #: modules/gui/macosx/VLCTimeSelectionPanelController.m:53
 msgid "Jump to Time"
 msgstr "ਸਮੇਂ ਉੱਤੇ ਜਾਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:406
+#: modules/gui/macosx/VLCMainMenu.m:405
 #, fuzzy
 msgid "Renderer"
 msgstr "ਟੈਕਸਟ ਰੈਂਡਰਰ"
 
-#: modules/gui/macosx/VLCMainMenu.m:407
+#: modules/gui/macosx/VLCMainMenu.m:406
 msgid "No renderer"
 msgstr ""
 
-#: modules/gui/macosx/VLCMainMenu.m:416
+#: modules/gui/macosx/VLCMainMenu.m:415
 msgid "Increase Volume"
 msgstr "ਵਾਲੀਅਮ ਵਧਾਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:417
+#: modules/gui/macosx/VLCMainMenu.m:416
 msgid "Decrease Volume"
 msgstr "ਵਾਲੀਅਮ ਘਟਾਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:423 modules/gui/macosx/VLCMainMenu.m:424
+#: modules/gui/macosx/VLCMainMenu.m:422 modules/gui/macosx/VLCMainMenu.m:423
 msgid "Audio Device"
 msgstr "ਆਡੀਓ ਜੰਤਰ"
 
-#: modules/gui/macosx/VLCMainMenu.m:429
+#: modules/gui/macosx/VLCMainMenu.m:428
 msgid "Half Size"
 msgstr "ਅੱਧਾ ਸਾਈਜ਼"
 
-#: modules/gui/macosx/VLCMainMenu.m:430
+#: modules/gui/macosx/VLCMainMenu.m:429
 msgid "Normal Size"
 msgstr "ਆਮ ਸਾਈਜ਼"
 
-#: modules/gui/macosx/VLCMainMenu.m:431
+#: modules/gui/macosx/VLCMainMenu.m:430
 msgid "Double Size"
 msgstr "ਡਬਲ ਸਾਈਜ਼"
 
-#: modules/gui/macosx/VLCMainMenu.m:432
+#: modules/gui/macosx/VLCMainMenu.m:431
 msgid "Fit to Screen"
 msgstr "ਸਕਰੀਨ ਉੱਤੇ ਫਿੱਟ"
 
-#: modules/gui/macosx/VLCMainMenu.m:434
+#: modules/gui/macosx/VLCMainMenu.m:433
 #: modules/gui/macosx/VLCSimplePrefsController.m:357
 msgid "Float on Top"
 msgstr "ਉੱਤੇ ਤੈਰਦਾ ਰੱਖੋ"
 
-#: modules/gui/macosx/VLCMainMenu.m:442 modules/gui/macosx/VLCMainMenu.m:443
+#: modules/gui/macosx/VLCMainMenu.m:441 modules/gui/macosx/VLCMainMenu.m:442
 #: modules/gui/macosx/VLCSimplePrefsController.m:364
 #: modules/gui/qt/ui/sprefs_video.h:319
 msgid "Fullscreen Video Device"
 msgstr "ਪੂਰੀ ਸਕਰੀਨ ਵਿਡੀਓ ਜੰਤਰ"
 
-#: modules/gui/macosx/VLCMainMenu.m:448 modules/gui/macosx/VLCMainMenu.m:449
+#: modules/gui/macosx/VLCMainMenu.m:447 modules/gui/macosx/VLCMainMenu.m:448
 #: modules/video_filter/postproc.c:201
 msgid "Post processing"
 msgstr "ਪੋਸਟ ਪਰੋਸੈਸਿੰਗ"
 
-#: modules/gui/macosx/VLCMainMenu.m:452
+#: modules/gui/macosx/VLCMainMenu.m:451
 msgid "Add Subtitle File..."
 msgstr "...ਸਬ-ਟਾਈਟਲ ਫਾਇਲ ਜੋੜੋ"
 
-#: modules/gui/macosx/VLCMainMenu.m:453 modules/gui/macosx/VLCMainMenu.m:454
+#: modules/gui/macosx/VLCMainMenu.m:452 modules/gui/macosx/VLCMainMenu.m:453
 msgid "Subtitles Track"
 msgstr "ਸਬ-ਟਾਈਟਲ ਟਰੈਕ"
 
-#: modules/gui/macosx/VLCMainMenu.m:455
+#: modules/gui/macosx/VLCMainMenu.m:454
 msgid "Text Size"
 msgstr "ਟੈਕਸਟ ਆਕਾਰ"
 
-#: modules/gui/macosx/VLCMainMenu.m:456
+#: modules/gui/macosx/VLCMainMenu.m:455
 msgid "Text Color"
 msgstr "ਟੈਕਸਟ ਰੰਗ"
 
-#: modules/gui/macosx/VLCMainMenu.m:457
+#: modules/gui/macosx/VLCMainMenu.m:456
 msgid "Outline Thickness"
 msgstr ""
 
-#: modules/gui/macosx/VLCMainMenu.m:463 modules/gui/macosx/VLCMainMenu.m:464
+#: modules/gui/macosx/VLCMainMenu.m:462 modules/gui/macosx/VLCMainMenu.m:463
 msgid "Background Opacity"
 msgstr ""
 
-#: modules/gui/macosx/VLCMainMenu.m:465
+#: modules/gui/macosx/VLCMainMenu.m:464
 msgid "Background Color"
 msgstr "ਬੈਕਗਰਾਊਂਡ ਰੰਗ"
 
-#: modules/gui/macosx/VLCMainMenu.m:467
+#: modules/gui/macosx/VLCMainMenu.m:466
 msgid "Transparent"
 msgstr "ਟਰਾਂਸਪੇਰੈਂਟ"
 
-#: modules/gui/macosx/VLCMainMenu.m:468 modules/gui/macosx/VLCMainMenu.m:1102
+#: modules/gui/macosx/VLCMainMenu.m:467 modules/gui/macosx/VLCMainMenu.m:1101
 msgid "Index"
 msgstr "ਇੰਡੈਕਸ"
 
-#: modules/gui/macosx/VLCMainMenu.m:474
+#: modules/gui/macosx/VLCMainMenu.m:473
 msgid "Window"
 msgstr "ਵਿੰਡੋ"
 
-#: modules/gui/macosx/VLCMainMenu.m:475
+#: modules/gui/macosx/VLCMainMenu.m:474
 msgid "Minimize"
 msgstr "ਘੱਟੋ-ਘੱਟ"
 
-#: modules/gui/macosx/VLCMainMenu.m:477
+#: modules/gui/macosx/VLCMainMenu.m:476
 msgid "Player..."
 msgstr "ਪਲੇਅਰ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:478
+#: modules/gui/macosx/VLCMainMenu.m:477
 msgid "Main Window..."
 msgstr "ਮੁੱਖ ਵਿੰਡੋ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:479
+#: modules/gui/macosx/VLCMainMenu.m:478
 msgid "Audio Effects..."
 msgstr "ਆਡੀਓ ਪਰਭਾਵ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:480
+#: modules/gui/macosx/VLCMainMenu.m:479
 msgid "Video Effects..."
 msgstr "...ਵਿਡੀਓ ਪਰਭਾਵ"
 
-#: modules/gui/macosx/VLCMainMenu.m:481
+#: modules/gui/macosx/VLCMainMenu.m:480
 msgid "Bookmarks..."
 msgstr "ਬੁੱਕਮਾਰਕ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:482
+#: modules/gui/macosx/VLCMainMenu.m:481
 msgid "Playlist..."
 msgstr "ਪਲੇਅ-ਲਿਸਟ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:483 modules/gui/macosx/VLCPlaylist.m:235
+#: modules/gui/macosx/VLCMainMenu.m:482 modules/gui/macosx/VLCPlaylist.m:233
 msgid "Media Information..."
 msgstr "ਮੀਡਿਆ ਜਾਣਕਾਰੀ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:484
+#: modules/gui/macosx/VLCMainMenu.m:483
 msgid "Messages..."
 msgstr "ਸੁਨੇਹੇ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:485
+#: modules/gui/macosx/VLCMainMenu.m:484
 msgid "Errors and Warnings..."
 msgstr "ਗਲਤੀਆਂ ਅਤੇ ਚੇਤਾਵਨੀਆਂ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:487
+#: modules/gui/macosx/VLCMainMenu.m:486
 msgid "Bring All to Front"
 msgstr "ਸਭ ਅੱਗੇ ਲਿਆਓ"
 
-#: modules/gui/macosx/VLCMainMenu.m:489 modules/gui/qt/dialogs/help.cpp:54
+#: modules/gui/macosx/VLCMainMenu.m:488 modules/gui/qt/dialogs/help.cpp:54
 #: modules/gui/qt/menus.cpp:950 modules/gui/qt/menus.cpp:1137
 msgid "Help"
 msgstr "ਮੱਦਦ"
 
-#: modules/gui/macosx/VLCMainMenu.m:490
+#: modules/gui/macosx/VLCMainMenu.m:489
 msgid "VLC media player Help..."
 msgstr "VLC ਮੀਡਿਆ ਪਲੇਅਰ ਮੱਦਦ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:492
+#: modules/gui/macosx/VLCMainMenu.m:491
 msgid "Online Documentation..."
 msgstr "ਆਨਲਾਈਨ ਡੌਕੂਮੈਂਟੇਸ਼ਨ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:493
+#: modules/gui/macosx/VLCMainMenu.m:492
 msgid "VideoLAN Website..."
 msgstr "VideoLAN ਵੈੱਬਸਾਈਟ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:494
+#: modules/gui/macosx/VLCMainMenu.m:493
 msgid "Make a donation..."
 msgstr "ਦਾਨ ਦਿਓ.."
 
-#: modules/gui/macosx/VLCMainMenu.m:495
+#: modules/gui/macosx/VLCMainMenu.m:494
 msgid "Online Forum..."
 msgstr "ਆਨਲਾਈਨ ਫੋਰਮ..."
 
-#: modules/gui/macosx/VLCMainMenu.m:1159
+#: modules/gui/macosx/VLCMainMenu.m:1158
 msgid "File Format:"
 msgstr "ਫਾਇਲ ਫਾਰਮੈਟ:"
 
-#: modules/gui/macosx/VLCMainMenu.m:1160
+#: modules/gui/macosx/VLCMainMenu.m:1159
 msgid "Extended M3U"
 msgstr "ਐਕਸਟੈਂਡਡ M3U"
 
-#: modules/gui/macosx/VLCMainMenu.m:1161
+#: modules/gui/macosx/VLCMainMenu.m:1160
 msgid "XML Shareable Playlist Format (XSPF)"
 msgstr "XML ਸ਼ੇਅਰੇਬਲ ਪਲੇਅਲਿਸਟ ਫਾਰਮੈਟ (XSPF)"
 
-#: modules/gui/macosx/VLCMainMenu.m:1162
-#: modules/gui/qt/dialogs_provider.cpp:642
+#: modules/gui/macosx/VLCMainMenu.m:1161
+#: modules/gui/qt/dialogs_provider.cpp:646
 msgid "HTML playlist"
 msgstr "HTML ਪਲੇਅਲਿਸਟ"
 
-#: modules/gui/macosx/VLCMainMenu.m:1164
+#: modules/gui/macosx/VLCMainMenu.m:1163
 msgid "Save Playlist"
 msgstr "ਪਲੇਅ-ਲਿਸਟ ਸੰਭਾਲੋ"
 
@@ -16581,23 +16601,23 @@ msgid ""
 "trusted services in an anonymized form."
 msgstr ""
 
-#: modules/gui/macosx/VLCMainWindow.m:295
+#: modules/gui/macosx/VLCMainWindow.m:293
 msgid "LIBRARY"
 msgstr "ਲਾਇਬਰੇਰੀ"
 
-#: modules/gui/macosx/VLCMainWindow.m:300
+#: modules/gui/macosx/VLCMainWindow.m:298
 msgid "MY COMPUTER"
 msgstr "ਮੇਰਾ ਕੰਪਿਊਟਰ"
 
-#: modules/gui/macosx/VLCMainWindow.m:301
+#: modules/gui/macosx/VLCMainWindow.m:299
 msgid "DEVICES"
 msgstr "ਜੰਤ"
 
-#: modules/gui/macosx/VLCMainWindow.m:302
+#: modules/gui/macosx/VLCMainWindow.m:300
 msgid "LOCAL NETWORK"
 msgstr "ਲੋਕਲ ਨੈੱਟਵਰ"
 
-#: modules/gui/macosx/VLCMainWindow.m:303
+#: modules/gui/macosx/VLCMainWindow.m:301
 msgid "INTERNET"
 msgstr "ਇੰਟਰਨੈੱਟ"
 
@@ -16727,7 +16747,7 @@ msgid "Enable DVD menus"
 msgstr "DVD ਮੇਨੂ ਚਾਲੂ ਕਰੋ"
 
 #: modules/gui/macosx/VLCOpenWindowController.m:186
-#: modules/stream_out/chromecast/cast.cpp:205
+#: modules/stream_out/chromecast/cast.cpp:225
 msgid "IP Address"
 msgstr "IP ਐਡਰੈੱਸ"
 
@@ -16888,7 +16908,7 @@ msgstr "ਬਿੱਟਰੇਟ (kb/s)"
 msgid "Stream Announcing"
 msgstr "ਸਟਰੀਮ ਐਲਾਨ"
 
-#: modules/gui/macosx/VLCOutput.m:410
+#: modules/gui/macosx/VLCOutput.m:413
 #: modules/gui/qt/components/preferences_widgets.cpp:302
 msgid "Save File"
 msgstr "ਫਾਇਲ ਸੰਭਾਲੋ"
@@ -16911,11 +16931,11 @@ msgstr "URI"
 msgid "File Size"
 msgstr "ਫਾਈਲ ਆਕਾਰ"
 
-#: modules/gui/macosx/VLCPlaylist.m:232
+#: modules/gui/macosx/VLCPlaylist.m:230
 msgid "Expand All"
 msgstr "ਸਭ ਫੈਲਾਓ"
 
-#: modules/gui/macosx/VLCPlaylist.m:233
+#: modules/gui/macosx/VLCPlaylist.m:231
 msgid "Collapse All"
 msgstr "ਸਭ ਸਮੇਟੋ"
 
@@ -16941,49 +16961,49 @@ msgstr "ਸਧਾਰਨ"
 msgid "Codec Details"
 msgstr "Codec ਵੇਰਵਾ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:86
+#: modules/gui/macosx/VLCPlaylistInfo.m:85
 msgid "Read at media"
 msgstr "ਮੀਡਿਆ ਤੋਂ ਪੜ੍ਹੋ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:87
+#: modules/gui/macosx/VLCPlaylistInfo.m:86
 #: modules/gui/qt/components/info_panels.cpp:578
 msgid "Input bitrate"
 msgstr "ਇੰਪੁੱਟ ਬਿੱਟਰੇਟ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:88
+#: modules/gui/macosx/VLCPlaylistInfo.m:87
 msgid "Demuxed"
 msgstr "ਡੀਮੁਕਸ ਕੀਤਾ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:89
+#: modules/gui/macosx/VLCPlaylistInfo.m:88
 msgid "Stream bitrate"
 msgstr "ਸਟਰੀਮ ਬਿੱਟਰੇਟ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:92
-#: modules/gui/macosx/VLCPlaylistInfo.m:97
+#: modules/gui/macosx/VLCPlaylistInfo.m:91
+#: modules/gui/macosx/VLCPlaylistInfo.m:96
 msgid "Decoded blocks"
 msgstr "ਡੀਕੋਡ ਕੀਤੇ ਬਲਾਕ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:93
+#: modules/gui/macosx/VLCPlaylistInfo.m:92
 msgid "Displayed frames"
 msgstr "ਵੇਖਾਏ ਫਰੇਮ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:94
+#: modules/gui/macosx/VLCPlaylistInfo.m:93
 msgid "Lost frames"
 msgstr "ਗੁੰਮ ਫਰੇਮ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:98
+#: modules/gui/macosx/VLCPlaylistInfo.m:97
 msgid "Played buffers"
 msgstr "ਚਲਾਏ ਬਫ਼ਰ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:99
+#: modules/gui/macosx/VLCPlaylistInfo.m:98
 msgid "Lost buffers"
 msgstr "ਗੁੰਮ ਬਫ਼ਰ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:340
+#: modules/gui/macosx/VLCPlaylistInfo.m:339
 msgid "Error while saving meta"
 msgstr "ਮੇਟਾ ਸੰਭਾਲਣ ਦੌਰਾਨ ਗਲਤੀ ਹੈ"
 
-#: modules/gui/macosx/VLCPlaylistInfo.m:341
+#: modules/gui/macosx/VLCPlaylistInfo.m:340
 msgid "VLC was unable to save the meta data."
 msgstr "VLC ਮੇਟਾ ਡਾਟਾ ਸੰਭਾਲਣ ਲਈ ਅਸਮਰੱਥ ਹੈ।"
 
@@ -17012,27 +17032,27 @@ msgid "Playback of \"%@\" will continue at %@"
 msgstr ""
 
 #: modules/gui/macosx/VLCSimplePrefsController.m:227
-#: modules/gui/qt/components/simple_preferences.cpp:223
-#: modules/gui/qt/components/simple_preferences.cpp:697
+#: modules/gui/qt/components/simple_preferences.cpp:231
+#: modules/gui/qt/components/simple_preferences.cpp:711
 #: modules/gui/qt/dialogs/plugins.cpp:375
 msgid "Interface Settings"
 msgstr "ਇੰਟਰਫੇਸ ਸੈਟਿੰਗ"
 
 #: modules/gui/macosx/VLCSimplePrefsController.m:229
-#: modules/gui/qt/components/simple_preferences.cpp:225
-#: modules/gui/qt/components/simple_preferences.cpp:422
+#: modules/gui/qt/components/simple_preferences.cpp:233
+#: modules/gui/qt/components/simple_preferences.cpp:430
 msgid "Audio Settings"
 msgstr "ਆਡਿਓ ਸੈਟਿੰਗ"
 
 #: modules/gui/macosx/VLCSimplePrefsController.m:231
-#: modules/gui/qt/components/simple_preferences.cpp:227
-#: modules/gui/qt/components/simple_preferences.cpp:355
+#: modules/gui/qt/components/simple_preferences.cpp:235
+#: modules/gui/qt/components/simple_preferences.cpp:363
 msgid "Video Settings"
 msgstr "ਵਿਡੀਓ ਸੈਟਿੰਗ"
 
 #: modules/gui/macosx/VLCSimplePrefsController.m:233
-#: modules/gui/qt/components/simple_preferences.cpp:229
-#: modules/gui/qt/components/simple_preferences.cpp:838
+#: modules/gui/qt/components/simple_preferences.cpp:237
+#: modules/gui/qt/components/simple_preferences.cpp:852
 msgid "Subtitle & On Screen Display Settings"
 msgstr "ਸਬ-ਟਾਈਟਲ ਤੇ ਸਕਰੀਨ-ਉੱਤੇ ਵੇਖਾਉਣ ਸੈਟਿੰਗਾਂ"
 
@@ -17256,7 +17276,7 @@ msgid "Video snapshots"
 msgstr "ਵਿਡੀਓ ਸਨੈਪਸ਼ਾਟ"
 
 #: modules/gui/macosx/VLCSimplePrefsController.m:368
-#: modules/meta_engine/folder.c:69
+#: modules/meta_engine/folder.c:70
 msgid "Folder"
 msgstr "ਫੋਲਡਰ"
 
@@ -17409,12 +17429,12 @@ msgid "sec."
 msgstr "ਸਕਿੰਟ"
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:50
-#: modules/gui/qt/components/extended_panels.cpp:1391 modules/gui/qt/qt.cpp:213
+#: modules/gui/qt/components/extended_panels.cpp:1412 modules/gui/qt/qt.cpp:213
 msgid "Audio/Video"
 msgstr "ਆਡੀਓ/ਵਿਡੀਓ"
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:51
-#: modules/gui/qt/components/extended_panels.cpp:1395
+#: modules/gui/qt/components/extended_panels.cpp:1416
 msgid "Audio track synchronization:"
 msgstr ""
 
@@ -17428,12 +17448,12 @@ msgid "A positive value means that the audio is ahead of the video"
 msgstr ""
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:54
-#: modules/gui/qt/components/extended_panels.cpp:1403
+#: modules/gui/qt/components/extended_panels.cpp:1424
 msgid "Subtitles/Video"
 msgstr "ਸਬ-ਟਾਈਟਲ/ਵਿਡੀਓ"
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:55
-#: modules/gui/qt/components/extended_panels.cpp:1407
+#: modules/gui/qt/components/extended_panels.cpp:1428
 msgid "Subtitle track synchronization:"
 msgstr ""
 
@@ -17442,7 +17462,7 @@ msgid "A positive value means that the subtitles are ahead of the video"
 msgstr ""
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:58
-#: modules/gui/qt/components/extended_panels.cpp:1414
+#: modules/gui/qt/components/extended_panels.cpp:1435
 msgid "Subtitle speed:"
 msgstr ""
 
@@ -17451,26 +17471,26 @@ msgid "fps"
 msgstr "fps"
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:60
-#: modules/gui/qt/components/extended_panels.cpp:1428
+#: modules/gui/qt/components/extended_panels.cpp:1449
 msgid "Subtitle duration factor:"
 msgstr ""
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:68
-#: modules/gui/qt/components/extended_panels.cpp:1539
+#: modules/gui/qt/components/extended_panels.cpp:1560
 msgid ""
 "Extend subtitle duration by this value.\n"
 "Set 0 to disable."
 msgstr ""
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:72
-#: modules/gui/qt/components/extended_panels.cpp:1544
+#: modules/gui/qt/components/extended_panels.cpp:1565
 msgid ""
 "Multiply subtitle duration by this value.\n"
 "Set 0 to disable."
 msgstr ""
 
 #: modules/gui/macosx/VLCTrackSynchronizationWindowController.m:76
-#: modules/gui/qt/components/extended_panels.cpp:1549
+#: modules/gui/qt/components/extended_panels.cpp:1570
 msgid ""
 "Recalculate subtitle duration according\n"
 "to their content and this value.\n"
@@ -17492,9 +17512,9 @@ msgid "Geometry"
 msgstr "ਜੁਮੈਟਰੀ"
 
 #: modules/gui/macosx/VLCVideoEffectsWindowController.m:195
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:251
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:269
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:272
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:252
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:270
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:273
 #: modules/spu/marq.c:115 modules/spu/rss.c:152
 #: modules/video_filter/colorthres.c:55 modules/gui/qt/ui/video_effects.h:1241
 #: modules/gui/qt/ui/video_effects.h:1247
@@ -17502,240 +17522,240 @@ msgstr "ਜੁਮੈਟਰੀ"
 msgid "Color"
 msgstr "ਰੰਗ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:202
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:203
 msgid "Image Adjust"
 msgstr "ਚਿੱਤਰ ਅਡਜੱਸਟ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:206
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:207
 #: modules/gui/qt/ui/video_effects.h:1218
 msgid "Brightness Threshold"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:210
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:211
 #: modules/video_filter/sharpen.c:69 modules/gui/qt/ui/video_effects.h:1222
 msgid "Sharpen"
 msgstr "ਉਘੜਵਾਂ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:211
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:212
 #: modules/gui/qt/ui/video_effects.h:1223
 #: modules/gui/qt/ui/video_effects.h:1296
 msgid "Sigma"
 msgstr "ਸਿਗਮਾ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:212
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:213
 #: modules/gui/qt/ui/video_effects.h:1224
 msgid "Banding removal"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:213
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:214
 #: modules/video_filter/gradfun.c:50 modules/gui/qt/ui/video_effects.h:1225
 msgid "Radius"
 msgstr "ਵਿਆਸ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:214
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:215
 #: modules/gui/qt/ui/video_effects.h:1226
 msgid "Film Grain"
 msgstr "ਫਿਲਮ ਗਰੇਨ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:215
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:216
 #: modules/video_filter/grain.c:53 modules/gui/qt/ui/video_effects.h:1227
 msgid "Variance"
 msgstr "ਵੇਰੀਐਂਸ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:220
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:221
 #: modules/gui/qt/ui/video_effects.h:1235
 msgid "Synchronize top and bottom"
 msgstr "ਉੱਤੇ ਤੇ ਹੇਠਾਂ ਸੈਕਰੋਨਾਈਜ਼"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:221
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:222
 #: modules/gui/qt/ui/video_effects.h:1236
 msgid "Synchronize left and right"
 msgstr "ਖੱਬੇ ਤੇ ਸੱਜੇ ਸੈਕਰਨਾਈਜ਼"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:223
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:224
 #: modules/gui/qt/ui/video_effects.h:1261
 msgid "Transform"
 msgstr "ਟਰਾਂਸਫਰਮ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:225
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:226
 #: modules/video_filter/transform.c:52
 msgid "Rotate by 90 degrees"
 msgstr "੯੦ ਡਿਗਰੀ ਘੁੰਮਾਓ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:228
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:229
 #: modules/video_filter/transform.c:53
 msgid "Rotate by 180 degrees"
 msgstr "੧੮੦ ਡਿਗਰੀ ਘੁੰਮਾਉ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:231
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:232
 #: modules/video_filter/transform.c:53
 msgid "Rotate by 270 degrees"
 msgstr "੨੭੦ ਡਿਗਰੀ ਘੁੰਮਾਉ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:234
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:235
 #: modules/video_filter/transform.c:54
 msgid "Flip horizontally"
 msgstr "ਹਰੀਜੱਟਲ ਫਲਿੱਪ ਕਰੋ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:237
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:238
 #: modules/video_filter/transform.c:54
 msgid "Flip vertically"
 msgstr "ਵਰਟੀਕਲ ਫਲਿੱਪ ਕਰੋ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:240
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:241
 msgid "Magnification/Zoom"
 msgstr "ਵੱਡਦਰਸ਼ਨ/ਜ਼ੂਮ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:241
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:242
 #: modules/gui/qt/ui/video_effects.h:1264
 msgid "Puzzle game"
 msgstr "ਬੁਝਾਰਤ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:242
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:247
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:243
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:248
 #: share/lua/http/dialogs/mosaic_window.html:96
 #: modules/gui/qt/ui/video_effects.h:1259
 #: modules/gui/qt/ui/video_effects.h:1265
 msgid "Rows"
 msgstr "ਕਤਾਰਾਂ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:243
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:248
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:244
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:249
 #: share/lua/http/dialogs/mosaic_window.html:114
 #: modules/gui/qt/ui/video_effects.h:1260
 #: modules/gui/qt/ui/video_effects.h:1266
 msgid "Columns"
 msgstr "ਕਾਲਮ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:244
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:245
 #: modules/video_splitter/clone.c:57 modules/gui/qt/ui/video_effects.h:1306
 msgid "Clone"
 msgstr "ਕਲੋਨ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:245
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:246
 #: modules/video_splitter/clone.c:39 modules/gui/qt/ui/video_effects.h:1307
 msgid "Number of clones"
 msgstr "ਕਲੋਨਾਂ ਦੀ ਗਿਣਤੀ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:246
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:247
 #: modules/gui/qt/ui/video_effects.h:1258
 msgid "Wall"
 msgstr "ਵਾਲ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:250
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:251
 #: modules/video_filter/colorthres.c:71 modules/gui/qt/ui/video_effects.h:1249
 msgid "Color threshold"
 msgstr "ਰੰਗ ਥਰੈਸ਼ਹੋਲਡ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:254
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:255
 #: modules/gui/qt/ui/video_effects.h:1253
 msgid "Similarity"
 msgstr "ਸਮਾਨਤਾ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:256
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:257
 #: modules/gui/qt/ui/video_effects.h:1255
 msgid "Intensity"
 msgstr "ਇਨਟੈਨਸਟੀ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:257
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:260
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:258
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:261
 #: modules/video_filter/gradient.c:76 modules/video_filter/gradient.c:82
 #: modules/gui/qt/ui/video_effects.h:1245
 msgid "Gradient"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:263
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:264
 #: modules/video_filter/gradient.c:76
 msgid "Edge"
 msgstr "ਕੋਨਾ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:266
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:267
 #: modules/video_filter/gradient.c:76
 msgid "Hough"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:270
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:271
 #: modules/gui/qt/ui/video_effects.h:1248
 msgid "Cartoon"
 msgstr "ਕਾਰਟੂਨ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:271
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:272
 #: modules/gui/qt/ui/video_effects.h:1240
 msgid "Color extraction"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:274
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:275
 msgid "Invert colors"
 msgstr "ਉਲਟ ਰੰਗ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:275
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:276
 #: modules/video_filter/posterize.c:69 modules/gui/qt/ui/video_effects.h:1244
 msgid "Posterize"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:276
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:277
 #: modules/video_filter/posterize.c:61
 msgid "Posterize level"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:277
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:278
 #: modules/video_filter/motionblur.c:60 modules/gui/qt/ui/video_effects.h:1297
 msgid "Motion blur"
 msgstr "ਮੋਸ਼ਨ ਬਲੱਰ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:278
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:279
 #: modules/gui/qt/ui/video_effects.h:1298
 msgid "Factor"
 msgstr "ਫੈਕਟਰ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:279
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:280
 #: modules/video_filter/motiondetect.c:49
 msgid "Motion Detect"
 msgstr "ਹਿੱਲਜੁੱਲ ਖੋਜੋ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:280
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:281
 #: modules/gui/qt/ui/video_effects.h:1293
 msgid "Water effect"
 msgstr "ਪਾਣੀ ਪਰਭਾਵ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:282
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:283
 #: modules/meta_engine/ID3Genres.h:100 modules/video_filter/psychedelic.c:55
 #: modules/gui/qt/ui/video_effects.h:1291
 msgid "Psychedelic"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:283
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:284
 #: modules/video_filter/anaglyph.c:72
 msgid "Anaglyph"
 msgstr ""
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:284
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:285
 #: modules/gui/qt/ui/video_effects.h:1278
 msgid "Add text"
 msgstr "ਟੈਕਸਟ ਸ਼ਾਮਲ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:285
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:286
 #: modules/logger/file.c:193 modules/spu/marq.c:88
 #: modules/gui/qt/ui/video_effects.h:1280
 msgid "Text"
 msgstr "ਟੈਕਸਟ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:306
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:307
 #: modules/gui/qt/ui/video_effects.h:1268
 msgid "Add logo"
 msgstr "ਲੋਗੋ ਸ਼ਾਮਲ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:307
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:308
 #: modules/gui/qt/ui/video_effects.h:1269
 msgid "Logo"
 msgstr "ਲੋਗੋ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:328
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:329
 #: modules/spu/mosaic.c:87 modules/stream_out/mosaic_bridge.c:124
 msgid "Transparency"
 msgstr "ਟਰਾਂਸਪਰੇਸੀ"
 
-#: modules/gui/macosx/VLCVideoEffectsWindowController.m:399
+#: modules/gui/macosx/VLCVideoEffectsWindowController.m:398
 msgid "Organize profiles..."
 msgstr "...ਪਰੋਫਾਈਲਾਂ ਦਾ ਪਰਬੰਧ ਕਰੋ"
 
@@ -18240,21 +18260,21 @@ msgstr "ਆਕਾਰ ਅਨੁਪਾਤ"
 msgid "No EPG Data Available"
 msgstr ""
 
-#: modules/gui/qt/components/extended_panels.cpp:362
-#: modules/gui/qt/components/extended_panels.cpp:373
+#: modules/gui/qt/components/extended_panels.cpp:380
+#: modules/gui/qt/components/extended_panels.cpp:393
 msgid "Image Files"
 msgstr "ਚਿੱਤਰ ਫ਼ਾਇਲਾਂ"
 
-#: modules/gui/qt/components/extended_panels.cpp:364 modules/spu/logo.c:49
+#: modules/gui/qt/components/extended_panels.cpp:382 modules/spu/logo.c:49
 msgid "Logo filenames"
 msgstr "ਲੋਗੋ ਫਾਇਲ ਨਾਂ"
 
-#: modules/gui/qt/components/extended_panels.cpp:375
+#: modules/gui/qt/components/extended_panels.cpp:395
 #: modules/video_filter/erase.c:55
 msgid "Image mask"
 msgstr "ਚਿੱਤਰ ਮਾਸਕ"
 
-#: modules/gui/qt/components/extended_panels.cpp:624
+#: modules/gui/qt/components/extended_panels.cpp:645
 msgid ""
 "No v4l2 instance found.\n"
 "Please check that the device has been opened with VLC and is playing.\n"
@@ -18262,133 +18282,133 @@ msgid ""
 "Controls will automatically appear here."
 msgstr ""
 
-#: modules/gui/qt/components/extended_panels.cpp:1086
-#: modules/gui/qt/components/extended_panels.cpp:1087
-#: modules/gui/qt/components/extended_panels.cpp:1088
-#: modules/gui/qt/components/extended_panels.cpp:1089
-#: modules/gui/qt/components/extended_panels.cpp:1090
-#: modules/gui/qt/components/extended_panels.cpp:1091
-#: modules/gui/qt/components/extended_panels.cpp:1092
-#: modules/gui/qt/components/extended_panels.cpp:1093
-#: modules/gui/qt/components/extended_panels.cpp:1094
-#: modules/gui/qt/components/extended_panels.cpp:1095
-#: modules/gui/qt/components/extended_panels.cpp:1099
-#: modules/gui/qt/components/extended_panels.cpp:1100
-#: modules/gui/qt/components/extended_panels.cpp:1101
-#: modules/gui/qt/components/extended_panels.cpp:1102
-#: modules/gui/qt/components/extended_panels.cpp:1103
-#: modules/gui/qt/components/extended_panels.cpp:1104
-#: modules/gui/qt/components/extended_panels.cpp:1105
-#: modules/gui/qt/components/extended_panels.cpp:1106
 #: modules/gui/qt/components/extended_panels.cpp:1107
 #: modules/gui/qt/components/extended_panels.cpp:1108
+#: modules/gui/qt/components/extended_panels.cpp:1109
+#: modules/gui/qt/components/extended_panels.cpp:1110
 #: modules/gui/qt/components/extended_panels.cpp:1111
-#: modules/gui/qt/components/extended_panels.cpp:1277
-#: modules/gui/qt/components/extended_panels.cpp:1279
-#: modules/gui/qt/components/extended_panels.cpp:1280
+#: modules/gui/qt/components/extended_panels.cpp:1112
+#: modules/gui/qt/components/extended_panels.cpp:1113
+#: modules/gui/qt/components/extended_panels.cpp:1114
+#: modules/gui/qt/components/extended_panels.cpp:1115
+#: modules/gui/qt/components/extended_panels.cpp:1116
+#: modules/gui/qt/components/extended_panels.cpp:1120
+#: modules/gui/qt/components/extended_panels.cpp:1121
+#: modules/gui/qt/components/extended_panels.cpp:1122
+#: modules/gui/qt/components/extended_panels.cpp:1123
+#: modules/gui/qt/components/extended_panels.cpp:1124
+#: modules/gui/qt/components/extended_panels.cpp:1125
+#: modules/gui/qt/components/extended_panels.cpp:1126
+#: modules/gui/qt/components/extended_panels.cpp:1127
+#: modules/gui/qt/components/extended_panels.cpp:1128
+#: modules/gui/qt/components/extended_panels.cpp:1129
+#: modules/gui/qt/components/extended_panels.cpp:1132
+#: modules/gui/qt/components/extended_panels.cpp:1298
+#: modules/gui/qt/components/extended_panels.cpp:1300
+#: modules/gui/qt/components/extended_panels.cpp:1301
 msgid "dB"
 msgstr "dB"
 
-#: modules/gui/qt/components/extended_panels.cpp:1087
+#: modules/gui/qt/components/extended_panels.cpp:1108
 msgid "170 Hz"
 msgstr "170 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1088
+#: modules/gui/qt/components/extended_panels.cpp:1109
 msgid "310 Hz"
 msgstr "310 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1089
+#: modules/gui/qt/components/extended_panels.cpp:1110
 msgid "600 Hz"
 msgstr "600 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1090
-#: modules/gui/qt/components/extended_panels.cpp:1104
+#: modules/gui/qt/components/extended_panels.cpp:1111
+#: modules/gui/qt/components/extended_panels.cpp:1125
 msgid "1 KHz"
 msgstr "1 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1091
+#: modules/gui/qt/components/extended_panels.cpp:1112
 msgid "3 KHz"
 msgstr "3 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1092
+#: modules/gui/qt/components/extended_panels.cpp:1113
 msgid "6 KHz"
 msgstr "6 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1093
+#: modules/gui/qt/components/extended_panels.cpp:1114
 msgid "12 KHz"
 msgstr "12 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1094
+#: modules/gui/qt/components/extended_panels.cpp:1115
 msgid "14 KHz"
 msgstr "14 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1095
-#: modules/gui/qt/components/extended_panels.cpp:1108
+#: modules/gui/qt/components/extended_panels.cpp:1116
+#: modules/gui/qt/components/extended_panels.cpp:1129
 msgid "16 KHz"
 msgstr "16 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1099
+#: modules/gui/qt/components/extended_panels.cpp:1120
 msgid "31 Hz"
 msgstr "31 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1100
+#: modules/gui/qt/components/extended_panels.cpp:1121
 msgid "63 Hz"
 msgstr "63 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1101
+#: modules/gui/qt/components/extended_panels.cpp:1122
 msgid "125 Hz"
 msgstr "125 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1102
+#: modules/gui/qt/components/extended_panels.cpp:1123
 msgid "250 Hz"
 msgstr "250 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1103
+#: modules/gui/qt/components/extended_panels.cpp:1124
 msgid "500 Hz"
 msgstr "500 Hz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1105
+#: modules/gui/qt/components/extended_panels.cpp:1126
 msgid "2 KHz"
 msgstr "2 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1106
+#: modules/gui/qt/components/extended_panels.cpp:1127
 msgid "4 KHz"
 msgstr "4 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1107
+#: modules/gui/qt/components/extended_panels.cpp:1128
 msgid "8 KHz"
 msgstr "8 KHz"
 
-#: modules/gui/qt/components/extended_panels.cpp:1275
-#: modules/gui/qt/components/extended_panels.cpp:1276
+#: modules/gui/qt/components/extended_panels.cpp:1296
+#: modules/gui/qt/components/extended_panels.cpp:1297
 msgid "ms"
 msgstr "ms"
 
-#: modules/gui/qt/components/extended_panels.cpp:1279
+#: modules/gui/qt/components/extended_panels.cpp:1300
 msgid ""
 "Knee\n"
 "radius"
 msgstr ""
 
-#: modules/gui/qt/components/extended_panels.cpp:1280
+#: modules/gui/qt/components/extended_panels.cpp:1301
 msgid ""
 "Makeup\n"
 "gain"
 msgstr ""
 
-#: modules/gui/qt/components/extended_panels.cpp:1333
+#: modules/gui/qt/components/extended_panels.cpp:1354
 msgid "Adjust pitch"
 msgstr ""
 
-#: modules/gui/qt/components/extended_panels.cpp:1367
+#: modules/gui/qt/components/extended_panels.cpp:1388
 msgid "(Hastened)"
 msgstr ""
 
-#: modules/gui/qt/components/extended_panels.cpp:1369
+#: modules/gui/qt/components/extended_panels.cpp:1390
 msgid "(Delayed)"
 msgstr "(ਡਿਲੇਅ)"
 
-#: modules/gui/qt/components/extended_panels.cpp:1456
+#: modules/gui/qt/components/extended_panels.cpp:1477
 msgid "Force update of this dialog's values"
 msgstr ""
 
@@ -18493,41 +18513,41 @@ msgstr ""
 msgid "Revert to normal play speed"
 msgstr ""
 
-#: modules/gui/qt/components/interface_widgets.cpp:818
+#: modules/gui/qt/components/interface_widgets.cpp:819
 msgid "Download cover art"
 msgstr "ਕਵਰ ਆਰਟ ਡਾਊਨਲੋਡ ਕਰੋ"
 
-#: modules/gui/qt/components/interface_widgets.cpp:822
+#: modules/gui/qt/components/interface_widgets.cpp:823
 msgid "Add cover art from file"
 msgstr "ਕਵਰ ਆਰਟ ਨੂੰ ਫਾਇਲ ਤੋਂ ਜੋੜੋ"
 
-#: modules/gui/qt/components/interface_widgets.cpp:888
+#: modules/gui/qt/components/interface_widgets.cpp:889
 msgid "Choose Cover Art"
 msgstr "ਕਵਰ ਆਰਟ ਚੁਣੋ"
 
-#: modules/gui/qt/components/interface_widgets.cpp:889
+#: modules/gui/qt/components/interface_widgets.cpp:890
 msgid "Image Files (*.gif *.jpg *.jpeg *.png)"
 msgstr "ਚਿੱਤਰ ਫਾਇਲਾਂ (*.gif *.jpg *.jpeg *.png)"
 
-#: modules/gui/qt/components/interface_widgets.cpp:913
-#: modules/gui/qt/dialogs/toolbar.cpp:564
+#: modules/gui/qt/components/interface_widgets.cpp:917
+#: modules/gui/qt/dialogs/toolbar.cpp:573
 msgid "Elapsed time"
 msgstr "ਲੱਗਾ ਸਮਾਂ"
 
-#: modules/gui/qt/components/interface_widgets.cpp:917
-#: modules/gui/qt/dialogs/toolbar.cpp:568
+#: modules/gui/qt/components/interface_widgets.cpp:921
+#: modules/gui/qt/dialogs/toolbar.cpp:577
 msgid "Total/Remaining time"
 msgstr "ਕੁੱਲ/ਬਾਕੀ ਸਮਾਂ"
 
-#: modules/gui/qt/components/interface_widgets.cpp:919
+#: modules/gui/qt/components/interface_widgets.cpp:923
 msgid "Click to toggle between total and remaining time"
 msgstr ""
 
-#: modules/gui/qt/components/interface_widgets.cpp:925
+#: modules/gui/qt/components/interface_widgets.cpp:929
 msgid "Click to toggle between elapsed and remaining time"
 msgstr ""
 
-#: modules/gui/qt/components/interface_widgets.cpp:927
+#: modules/gui/qt/components/interface_widgets.cpp:931
 msgid "Double click to jump to a chosen time position"
 msgstr ""
 
@@ -18561,64 +18581,64 @@ msgstr "ਡਿਸਕ ਬਾਹਰ ਕੱਢੋ"
 msgid "Entry"
 msgstr "ਐਂਟਰੀ"
 
-#: modules/gui/qt/components/open_panels.cpp:876
+#: modules/gui/qt/components/open_panels.cpp:878
 msgid "Channels:"
 msgstr "ਚੈਨਲ:"
 
-#: modules/gui/qt/components/open_panels.cpp:887
+#: modules/gui/qt/components/open_panels.cpp:889
 msgid "Selected ports:"
 msgstr "ਚੁਣੀਆਂ ਪੋਰਟਾਂ:"
 
-#: modules/gui/qt/components/open_panels.cpp:890
+#: modules/gui/qt/components/open_panels.cpp:892
 msgid ".*"
 msgstr ".*"
 
-#: modules/gui/qt/components/open_panels.cpp:897
+#: modules/gui/qt/components/open_panels.cpp:899
 msgid "Use VLC pace"
 msgstr ""
 
-#: modules/gui/qt/components/open_panels.cpp:917
+#: modules/gui/qt/components/open_panels.cpp:919
 msgid "TV - digital"
 msgstr "ਟੀਵੀ - ਡਿਜ਼ਿਟ"
 
-#: modules/gui/qt/components/open_panels.cpp:920
+#: modules/gui/qt/components/open_panels.cpp:922
 msgid "Tuner card"
 msgstr "ਟਿਊਨਰ ਕਾਰਡ"
 
-#: modules/gui/qt/components/open_panels.cpp:921
+#: modules/gui/qt/components/open_panels.cpp:923
 msgid "Delivery system"
 msgstr "ਡਿਲਵਰੀ ਸਿਸਟ"
 
-#: modules/gui/qt/components/open_panels.cpp:951
+#: modules/gui/qt/components/open_panels.cpp:953
 msgid "Transponder/multiplex frequency"
 msgstr ""
 
-#: modules/gui/qt/components/open_panels.cpp:961
+#: modules/gui/qt/components/open_panels.cpp:963
 msgid "Transponder symbol rate"
 msgstr ""
 
-#: modules/gui/qt/components/open_panels.cpp:994
+#: modules/gui/qt/components/open_panels.cpp:996
 msgid "Bandwidth"
 msgstr "ਬੈਂਡਵਿਡਥ"
 
-#: modules/gui/qt/components/open_panels.cpp:1038
+#: modules/gui/qt/components/open_panels.cpp:1040
 msgid "TV - analog"
 msgstr "ਟੀਵੀ - ਐਨਾਲਾਗ"
 
-#: modules/gui/qt/components/open_panels.cpp:1041
+#: modules/gui/qt/components/open_panels.cpp:1043
 msgid "Device name"
 msgstr "ਜੰਤਰ ਨਾਂ"
 
-#: modules/gui/qt/components/open_panels.cpp:1101
+#: modules/gui/qt/components/open_panels.cpp:1103
 msgid "Your display will be opened and played in order to stream or save it."
 msgstr ""
 
 #. xgettext: frames per second
-#: modules/gui/qt/components/open_panels.cpp:1115
+#: modules/gui/qt/components/open_panels.cpp:1117
 msgid " f/s"
 msgstr " f/s"
 
-#: modules/gui/qt/components/open_panels.cpp:1330
+#: modules/gui/qt/components/open_panels.cpp:1332
 msgid "Advanced Options"
 msgstr "ਮਾਹਰ ਚੋਣਾਂ"
 
@@ -18818,21 +18838,21 @@ msgstr ""
 msgid "Key: "
 msgstr "ਸਵਿੱਚ:"
 
-#: modules/gui/qt/components/simple_preferences.cpp:231
-#: modules/gui/qt/components/simple_preferences.cpp:598
+#: modules/gui/qt/components/simple_preferences.cpp:239
+#: modules/gui/qt/components/simple_preferences.cpp:612
 msgid "Input & Codecs Settings"
 msgstr "ਇੰਪੁੱਟ ਤੇ Codecs ਸੈਟਿੰਗ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:233
-#: modules/gui/qt/components/simple_preferences.cpp:882
+#: modules/gui/qt/components/simple_preferences.cpp:241
+#: modules/gui/qt/components/simple_preferences.cpp:896
 msgid "Configure Hotkeys"
 msgstr "ਹਾਟ-ਕੀ ਸੰਰਚਨਾ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:430
+#: modules/gui/qt/components/simple_preferences.cpp:438
 msgid "Device:"
 msgstr "ਜੰਤਰ:"
 
-#: modules/gui/qt/components/simple_preferences.cpp:603
+#: modules/gui/qt/components/simple_preferences.cpp:617
 msgid ""
 "If this property is blank, different values\n"
 "for DVD, VCD, and CDDA are set.\n"
@@ -18840,58 +18860,58 @@ msgid ""
 "individually in the advanced preferences."
 msgstr ""
 
-#: modules/gui/qt/components/simple_preferences.cpp:671
+#: modules/gui/qt/components/simple_preferences.cpp:685
 msgid "Lowest latency"
 msgstr "ਘੱਟ ਲੇਟਨਸੀ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:672
+#: modules/gui/qt/components/simple_preferences.cpp:686
 msgid "Low latency"
 msgstr "ਘੱਟ ਲੇਟਨਸੀ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:674
+#: modules/gui/qt/components/simple_preferences.cpp:688
 msgid "High latency"
 msgstr "ਉੱਚ ਲੇਟਨਸੀ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:675
+#: modules/gui/qt/components/simple_preferences.cpp:689
 msgid "Higher latency"
 msgstr "ਉੱਚ ਲੇਟਨਸੀ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:723
+#: modules/gui/qt/components/simple_preferences.cpp:737
 msgid "This is VLC's skinnable interface. You can download other skins at"
 msgstr ""
 
-#: modules/gui/qt/components/simple_preferences.cpp:725
+#: modules/gui/qt/components/simple_preferences.cpp:739
 msgid "VLC skins website"
 msgstr "VLC ਸਕਿਨ ਵੈੱਬਸਾਈਟ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:749
+#: modules/gui/qt/components/simple_preferences.cpp:763
 msgid "System's default"
 msgstr "ਸਿਸਟਮ ਡਿਫਾਲਟ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:1283
+#: modules/gui/qt/components/simple_preferences.cpp:1301
 msgid "File associations"
 msgstr "ਫਾਇਲ ਸਬੰਧ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:1292
+#: modules/gui/qt/components/simple_preferences.cpp:1310
 #: modules/gui/qt/dialogs_provider.hpp:42
 msgid "Audio Files"
 msgstr "ਆਡੀਓ ਫਾਇਲਾਂ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:1293
+#: modules/gui/qt/components/simple_preferences.cpp:1311
 #: modules/gui/qt/dialogs_provider.hpp:41
 msgid "Video Files"
 msgstr "ਵਿਡੀਓ ਫਾਇਲਾਂ "
 
-#: modules/gui/qt/components/simple_preferences.cpp:1294
+#: modules/gui/qt/components/simple_preferences.cpp:1312
 #: modules/gui/qt/dialogs_provider.hpp:43
 msgid "Playlist Files"
 msgstr "ਪਲੇਅ-ਲਿਸਟ ਫਾਇਲਾਂ"
 
-#: modules/gui/qt/components/simple_preferences.cpp:1359
+#: modules/gui/qt/components/simple_preferences.cpp:1377
 msgid "&Apply"
 msgstr "ਲਾਗੂ ਕਰੋ(&A)"
 
-#: modules/gui/qt/components/simple_preferences.cpp:1360
+#: modules/gui/qt/components/simple_preferences.cpp:1378
 #: modules/gui/qt/dialogs/convert.cpp:137
 #: modules/gui/qt/dialogs/gototime.cpp:49 modules/gui/qt/dialogs/open.cpp:108
 #: modules/gui/qt/dialogs/openurl.cpp:60
@@ -18967,56 +18987,56 @@ msgstr "ਇਹ ਮੋਡਿਊਲ ਟਰਾਂਸਕੋਡ ਕੀਤੀ ਸਟ�
 msgid "Filename"
 msgstr "ਫਾਇਲ ਨਾਂ"
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:172
+#: modules/gui/qt/components/sout/sout_widgets.cpp:173
 #: modules/gui/qt/dialogs/convert.cpp:161
 msgid "Save file..."
 msgstr "ਫਾਇਲ ਸੰਭਾਲੋ..."
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:173
+#: modules/gui/qt/components/sout/sout_widgets.cpp:174
 msgid ""
 "Containers (*.ps *.ts *.mpg *.ogg *.asf *.mp4 *.mov *.wav *.raw *.flv *.webm)"
 msgstr ""
 "ਕੰਨਟੇਨਰ (*.ps *.ts *.mpg *.ogg *.asf *.mp4 *.mov *.wav *.raw *.flv *.webm)"
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:182
+#: modules/gui/qt/components/sout/sout_widgets.cpp:184
 msgid "This module outputs the transcoded stream to a network via HTTP."
 msgstr ""
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:184
-#: modules/gui/qt/components/sout/sout_widgets.cpp:280
+#: modules/gui/qt/components/sout/sout_widgets.cpp:186
+#: modules/gui/qt/components/sout/sout_widgets.cpp:282
 msgid "Path"
 msgstr "ਪਾਥ"
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:236
+#: modules/gui/qt/components/sout/sout_widgets.cpp:238
 msgid ""
 "This module outputs the transcoded stream to a network via the mms protocol."
 msgstr ""
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:278
+#: modules/gui/qt/components/sout/sout_widgets.cpp:280
 msgid "This module outputs the transcoded stream to a network via RTSP."
 msgstr ""
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:324
+#: modules/gui/qt/components/sout/sout_widgets.cpp:326
 msgid "This module outputs the transcoded stream to a network via UDP."
 msgstr ""
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:366
+#: modules/gui/qt/components/sout/sout_widgets.cpp:368
 msgid "This module outputs the transcoded stream to a network via RTP."
 msgstr ""
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:373
+#: modules/gui/qt/components/sout/sout_widgets.cpp:375
 msgid "Base port"
 msgstr "ਬੇਸ ਪੋਰਟ"
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:421
+#: modules/gui/qt/components/sout/sout_widgets.cpp:423
 msgid "This module outputs the transcoded stream to an Icecast server."
 msgstr ""
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:440
+#: modules/gui/qt/components/sout/sout_widgets.cpp:442
 msgid "Mount Point"
 msgstr "ਮਾਊਂਟ ਪੁਆਇੰਟ"
 
-#: modules/gui/qt/components/sout/sout_widgets.cpp:441
+#: modules/gui/qt/components/sout/sout_widgets.cpp:443
 msgid "Login:pass"
 msgstr "ਲਾਗਇਨ:ਪਾਸ"
 
@@ -19154,7 +19174,7 @@ msgstr "v4l2 ਕੰਟਰੋਲ"
 msgid "&Save"
 msgstr "ਸੰਭਾਲੋ(&S)"
 
-#: modules/gui/qt/dialogs/external.cpp:219
+#: modules/gui/qt/dialogs/external.cpp:216
 msgid "Store the Password"
 msgstr "ਪਾਸਵਰਡ ਸੰਭਾਲੋ"
 
@@ -19627,47 +19647,47 @@ msgstr "ਪਰੋਫਾਇਲ ਨਾਂ"
 msgid "Please enter the new profile name."
 msgstr "ਨਵਾਂ ਪਰੋਫਾਇਲ ਨਾਂ ਦਿਓ ਜੀ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:414
+#: modules/gui/qt/dialogs/toolbar.cpp:423
 msgid "Spacer"
 msgstr "ਸਪੇਸਰ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:421
+#: modules/gui/qt/dialogs/toolbar.cpp:430
 msgid "Expanding Spacer"
 msgstr "ਸਪੇਸਰ ਫੈਲਾਇਆ ਜਾ ਰਿਹਾ ਹੈ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:453
+#: modules/gui/qt/dialogs/toolbar.cpp:462
 msgid "Splitter"
 msgstr "ਸਪਲਿੱਟਰ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:460
+#: modules/gui/qt/dialogs/toolbar.cpp:469
 msgid "Time Slider"
 msgstr "ਟਾਈਮ ਸਲਾਈਡਰ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:473
+#: modules/gui/qt/dialogs/toolbar.cpp:482
 msgid "Small Volume"
 msgstr "ਛੋਟਾ ਵਾਲੀਅਮ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:510
+#: modules/gui/qt/dialogs/toolbar.cpp:519
 msgid "DVD menus"
 msgstr "DVD ਮੇਨੂ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:524
+#: modules/gui/qt/dialogs/toolbar.cpp:533
 msgid "Teletext transparency"
 msgstr ""
 
-#: modules/gui/qt/dialogs/toolbar.cpp:539
+#: modules/gui/qt/dialogs/toolbar.cpp:548
 msgid "Advanced Buttons"
 msgstr "ਮਾਹਰ ਬਟਨ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:552
+#: modules/gui/qt/dialogs/toolbar.cpp:561
 msgid "Playback Buttons"
 msgstr "ਪਲੇਅਬੈਕ ਬਟਨ"
 
-#: modules/gui/qt/dialogs/toolbar.cpp:556
+#: modules/gui/qt/dialogs/toolbar.cpp:565
 msgid "Aspect ratio selector"
 msgstr ""
 
-#: modules/gui/qt/dialogs/toolbar.cpp:560
+#: modules/gui/qt/dialogs/toolbar.cpp:569
 msgid "Speed selector"
 msgstr ""
 
@@ -19743,27 +19763,27 @@ msgstr "ਡਾਇਰੈਕਟਰੀ ਖੋਲ੍ਹੋ"
 msgid "Open Folder"
 msgstr "ਫੋਲਡਰ ਖੋਲ੍ਹੋ"
 
-#: modules/gui/qt/dialogs_provider.cpp:616
+#: modules/gui/qt/dialogs_provider.cpp:620
 msgid "Open playlist..."
 msgstr "ਪਲੇਅਲਿਸਟ ਖੋਲ੍ਹੋ..."
 
-#: modules/gui/qt/dialogs_provider.cpp:639
+#: modules/gui/qt/dialogs_provider.cpp:643
 msgid "XSPF playlist"
 msgstr "XSPF ਪਲੇਅਲਿਸਟ"
 
-#: modules/gui/qt/dialogs_provider.cpp:640
+#: modules/gui/qt/dialogs_provider.cpp:644
 msgid "M3U playlist"
 msgstr "M3U ਪਲੇਅਲਿਸਟ"
 
-#: modules/gui/qt/dialogs_provider.cpp:641
+#: modules/gui/qt/dialogs_provider.cpp:645
 msgid "M3U8 playlist"
 msgstr "M3U8 ਪਲੇਅਲਿਸਟ"
 
-#: modules/gui/qt/dialogs_provider.cpp:659
+#: modules/gui/qt/dialogs_provider.cpp:663
 msgid "Save playlist as..."
 msgstr "ਪਲੇਅ-ਲਿਸਟ ਇੰਝ ਸੰਭਾਲੋ..."
 
-#: modules/gui/qt/dialogs_provider.cpp:809
+#: modules/gui/qt/dialogs_provider.cpp:813
 msgid "Open subtitles..."
 msgstr "ਸਬ-ਟਾਈਟਲ ਖੋਲ੍ਹੋ..."
 
@@ -19797,11 +19817,11 @@ msgstr "ਕੀ ਤੁਸੀਂ ਉੱਥੋਂ ਹੀ ਵਾਪਿਸ ਚਲਾ�
 msgid "&Continue"
 msgstr "ਜਾਰੀ ਰੱਖੋ(&C)"
 
-#: modules/gui/qt/main_interface.cpp:1422
+#: modules/gui/qt/main_interface.cpp:1416
 msgid "Control menu for the player"
 msgstr "ਪਲੇਅਰ ਲਈ ਕੰਟਰੋਲ ਮੇਨੂ"
 
-#: modules/gui/qt/main_interface.cpp:1466
+#: modules/gui/qt/main_interface.cpp:1460
 msgid "Paused"
 msgstr "ਵਿਰਾਮ ਕੀਤਾ"
 
@@ -20503,7 +20523,7 @@ msgstr ""
 msgid "Set the image gamma, between 0.01 and 10. Defaults to 1."
 msgstr ""
 
-#: modules/hw/d3d9/d3d9_filters.c:429
+#: modules/hw/d3d9/d3d9_filters.c:454
 msgid "Direct3D9 adjust filter"
 msgstr ""
 
@@ -20666,68 +20686,68 @@ msgstr ""
 msgid "Secrets are stored encrypted on a file"
 msgstr ""
 
-#: modules/keystore/keychain.m:40
+#: modules/keystore/keychain.m:41
 msgid "No"
 msgstr "ਨਹੀਂ"
 
-#: modules/keystore/keychain.m:40
+#: modules/keystore/keychain.m:41
 msgid "Any"
 msgstr "ਕੋਈ ਵੀ"
 
-#: modules/keystore/keychain.m:46
+#: modules/keystore/keychain.m:47
 msgid "System default"
 msgstr "ਸਿਸਟਮ ਡਿਫਾਲਟ"
 
-#: modules/keystore/keychain.m:47
+#: modules/keystore/keychain.m:48
 msgid "After first unlock"
 msgstr ""
 
-#: modules/keystore/keychain.m:48
+#: modules/keystore/keychain.m:49
 msgid "After first unlock, on this device only"
 msgstr ""
 
-#: modules/keystore/keychain.m:50
+#: modules/keystore/keychain.m:51
 msgid "When passcode set, on this device only"
 msgstr ""
 
-#: modules/keystore/keychain.m:51
+#: modules/keystore/keychain.m:52
 msgid "Always, on this device only"
 msgstr ""
 
-#: modules/keystore/keychain.m:52
+#: modules/keystore/keychain.m:53
 msgid "When unlocked"
 msgstr ""
 
-#: modules/keystore/keychain.m:53
+#: modules/keystore/keychain.m:54
 msgid "When unlocked, on this device only"
 msgstr ""
 
-#: modules/keystore/keychain.m:56
+#: modules/keystore/keychain.m:57
 msgid "Synchronize stored items"
 msgstr ""
 
-#: modules/keystore/keychain.m:57
+#: modules/keystore/keychain.m:58
 msgid ""
 "Synchronizes stored items via iCloud Keychain if enabled in the user domain."
 msgstr ""
 
-#: modules/keystore/keychain.m:59
+#: modules/keystore/keychain.m:60
 msgid "Accessibility type for all future passwords saved to the Keychain"
 msgstr ""
 
-#: modules/keystore/keychain.m:61
+#: modules/keystore/keychain.m:62
 msgid "Keychain access group"
 msgstr ""
 
-#: modules/keystore/keychain.m:62
+#: modules/keystore/keychain.m:63
 msgid "Keychain access group as defined by the app entitlements."
 msgstr ""
 
-#: modules/keystore/keychain.m:108
+#: modules/keystore/keychain.m:109
 msgid "Keychain keystore"
 msgstr ""
 
-#: modules/keystore/keychain.m:109
+#: modules/keystore/keychain.m:110
 msgid "Keystore for iOS, Mac OS X and tvOS"
 msgstr ""
 
@@ -20881,11 +20901,11 @@ msgstr "syslog"
 msgid "System logger (syslog)"
 msgstr ""
 
-#: modules/lua/extension.c:1192
+#: modules/lua/extension.c:1194
 msgid "Extension not responding!"
 msgstr ""
 
-#: modules/lua/extension.c:1193
+#: modules/lua/extension.c:1195
 #, c-format
 msgid ""
 "Extension '%s' does not respond.\n"
@@ -21021,15 +21041,15 @@ msgstr "ਲੁਆ ਇਕਸਟੈਨਸ਼ਨ"
 msgid "Lua SD Module"
 msgstr "ਲੁਆ SD ਮੋਡੀਊਲ"
 
-#: modules/meta_engine/folder.c:70
+#: modules/meta_engine/folder.c:71
 msgid "Folder meta data"
 msgstr "ਫੋਲਡਰ ਮੇਟਾ ਡਾਟਾ"
 
-#: modules/meta_engine/folder.c:72
+#: modules/meta_engine/folder.c:73
 msgid "Album art filename"
 msgstr "ਐਲਬਮ ਕਲਾ ਫਾਇਲ ਨਾਂ"
 
-#: modules/meta_engine/folder.c:72
+#: modules/meta_engine/folder.c:73
 msgid "Filename to look for album art in current directory"
 msgstr ""
 
@@ -21668,7 +21688,7 @@ msgid ""
 msgstr ""
 
 #: modules/misc/gnutls.c:502 modules/misc/gnutls.c:523
-#: modules/misc/securetransport.c:344
+#: modules/misc/securetransport.c:346
 msgid "Abort"
 msgstr "ਅਧੂਰਾ ਛੱਡੋ"
 
@@ -21677,7 +21697,7 @@ msgid "View certificate"
 msgstr "ਸਰਟੀਫਿਕੇਟ ਵੇਖੋ"
 
 #: modules/misc/gnutls.c:503 modules/misc/gnutls.c:524
-#: modules/misc/securetransport.c:346
+#: modules/misc/securetransport.c:348
 msgid "Insecure site"
 msgstr "ਅਸੁਰੱਖਿਅਤ ਸਾਈਟ"
 
@@ -21848,7 +21868,7 @@ msgstr ""
 msgid "TLS server support for OS X"
 msgstr ""
 
-#: modules/misc/securetransport.c:336
+#: modules/misc/securetransport.c:338
 #, c-format
 msgid ""
 "You attempted to reach %s. However the security certificate presented by the "
@@ -21859,7 +21879,7 @@ msgid ""
 "If in doubt, abort now.\n"
 msgstr ""
 
-#: modules/misc/securetransport.c:345
+#: modules/misc/securetransport.c:347
 msgid "Accept certificate temporarily"
 msgstr ""
 
@@ -22334,7 +22354,7 @@ msgstr ""
 
 #: modules/services_discovery/bonjour.m:44
 #: modules/services_discovery/bonjour.m:62
-#: modules/services_discovery/bonjour.m:370
+#: modules/services_discovery/bonjour.m:398
 msgid "Bonjour Network Discovery"
 msgstr ""
 
@@ -22540,7 +22560,7 @@ msgstr ""
 
 #: modules/services_discovery/upnp.cpp:114
 #: modules/services_discovery/upnp.cpp:121
-#: modules/services_discovery/upnp.cpp:258
+#: modules/services_discovery/upnp.cpp:257
 msgid "Universal Plug'n'Play"
 msgstr "ਯੂਨੀਵਰਸਲ ਪਲੱਗ ਐਂਡ ਪਲੇਅ"
 
@@ -23430,108 +23450,92 @@ msgstr ""
 msgid "Chromaprint stream output"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:162
+#: modules/stream_out/chromecast/cast.cpp:188
 msgid "HTTP port"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:163
+#: modules/stream_out/chromecast/cast.cpp:189
 msgid ""
 "This sets the HTTP port of the local server used to stream the media to the "
 "Chromecast."
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:166
-msgid "The Chromecast receiver can receive video."
-msgstr ""
-
-#: modules/stream_out/chromecast/cast.cpp:168
-msgid "This sets the muxer used to stream to the Chromecast."
-msgstr ""
-
-#: modules/stream_out/chromecast/cast.cpp:169
-msgid "MIME content type"
-msgstr ""
-
-#: modules/stream_out/chromecast/cast.cpp:170
-msgid "This sets the media MIME content type sent to the Chromecast."
-msgstr ""
-
-#: modules/stream_out/chromecast/cast.cpp:171
-#: modules/stream_out/chromecast/cast.cpp:855
+#: modules/stream_out/chromecast/cast.cpp:191
+#: modules/stream_out/chromecast/cast.cpp:1202
 #, fuzzy
 msgid "Performance warning"
 msgstr "ਕਾਰਗੁਜ਼ਾਰੀ ਚੋਣਾਂ"
 
-#: modules/stream_out/chromecast/cast.cpp:172
+#: modules/stream_out/chromecast/cast.cpp:192
 msgid "Display a performance warning when transcoding"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:173
+#: modules/stream_out/chromecast/cast.cpp:193
 #, fuzzy
 msgid "Enable Audio passthrough"
 msgstr "ਆਡੀਓ ਸਟਰੀਮ ਆਉਟਪੁੱਟ ਯੋਗ"
 
-#: modules/stream_out/chromecast/cast.cpp:174
+#: modules/stream_out/chromecast/cast.cpp:194
 msgid "Disable if your receiver does not support Dolby®."
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:196
+#: modules/stream_out/chromecast/cast.cpp:216
 msgid "High (high quality and high bandwidth)"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:197
+#: modules/stream_out/chromecast/cast.cpp:217
 msgid "Medium (medium quality and medium bandwidth)"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:198
+#: modules/stream_out/chromecast/cast.cpp:218
 msgid "Low (low quality and low bandwidth)"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:199
+#: modules/stream_out/chromecast/cast.cpp:219
 msgid "Low CPU (low quality but high bandwidth)"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:202
+#: modules/stream_out/chromecast/cast.cpp:222
 #, fuzzy
 msgid "Conversion quality"
 msgstr "ਰੈਡਰਿੰਗ ਕੁਆਲਟੀ"
 
-#: modules/stream_out/chromecast/cast.cpp:203
+#: modules/stream_out/chromecast/cast.cpp:223
 msgid "Change this option to increase conversion speed or quality."
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:206
+#: modules/stream_out/chromecast/cast.cpp:226
 msgid "IP Address of the Chromecast."
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:207
+#: modules/stream_out/chromecast/cast.cpp:227
 msgid "Chromecast port"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:208
+#: modules/stream_out/chromecast/cast.cpp:228
 msgid "The port used to talk to the Chromecast."
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:214
+#: modules/stream_out/chromecast/cast.cpp:238
 msgid "Chromecast"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:215
+#: modules/stream_out/chromecast/cast.cpp:239
 msgid "Chromecast stream output"
 msgstr ""
 
-#: modules/stream_out/chromecast/cast.cpp:854
+#: modules/stream_out/chromecast/cast.cpp:1201
 #, fuzzy
 msgid "Ok, Don't warn me again"
 msgstr "ਫੇਰ ਨਾ ਪੁੱਛੋ"
 
-#: modules/stream_out/chromecast/cast.cpp:856
+#: modules/stream_out/chromecast/cast.cpp:1203
 msgid ""
 "Casting this video requires conversion. This conversion can use all the "
 "available power and could quickly drain your battery."
 msgstr ""
 
-#: modules/stream_out/chromecast/chromecast_demux.cpp:339
+#: modules/stream_out/chromecast/chromecast_demux.cpp:540
 msgid "Chromecast demux wrapper"
 msgstr ""
 
@@ -24435,7 +24439,7 @@ msgstr ""
 msgid "YUV 10-bits planar to semiplanar 10-bits conversions"
 msgstr ""
 
-#: modules/video_chroma/i420_nv12.c:163
+#: modules/video_chroma/i420_nv12.c:237
 msgid "YUV planar to semiplanar conversions"
 msgstr ""
 
@@ -24624,9 +24628,7 @@ msgid "Ball speed"
 msgstr "ਬਾਲ ਸਪੀਡ"
 
 #: modules/video_filter/ball.c:104
-msgid ""
-"Set ball speed, the displacement value                                 in "
-"number of pixels by frame."
+msgid "Set ball speed, the displacement value in number of pixels by frame."
 msgstr ""
 
 #: modules/video_filter/ball.c:107
@@ -24634,9 +24636,7 @@ msgid "Ball size"
 msgstr "ਬਾਲ ਸਾਈਜ਼"
 
 #: modules/video_filter/ball.c:108
-msgid ""
-"Set ball size giving its radius in number                                 of "
-"pixels"
+msgid "Set ball size giving its radius in number of pixels"
 msgstr ""
 
 #: modules/video_filter/ball.c:111
@@ -24835,16 +24835,16 @@ msgstr "ਕੈਨਵਸ"
 msgid "Canvas video filter"
 msgstr "ਕੈਨਵਸ ਵਿਡੀਓ ਫਿਲਟਰ"
 
-#: modules/video_filter/ci_filters.m:760
+#: modules/video_filter/ci_filters.m:755
 msgid "Use a specific Core Image Filter"
 msgstr ""
 
-#: modules/video_filter/ci_filters.m:762
+#: modules/video_filter/ci_filters.m:757
 msgid ""
 "Example: 'CICrystallize', 'CIBumpDistortion', 'CIThermal', 'CIComicEffect'"
 msgstr ""
 
-#: modules/video_filter/ci_filters.m:768
+#: modules/video_filter/ci_filters.m:763
 msgid "Mac OS X hardware video filters"
 msgstr ""
 
@@ -25915,11 +25915,11 @@ msgstr ""
 msgid "GNU/Linux framebuffer video output"
 msgstr "GNU/Linux ਫਰੇਮਬਫ਼ਰ ਵਿਡੀਓ ਆਉਟਪੁੱਟ"
 
-#: modules/video_output/glx.c:261
+#: modules/video_output/glx.c:271
 msgid "GLX"
 msgstr "GLX"
 
-#: modules/video_output/glx.c:262
+#: modules/video_output/glx.c:272
 msgid "GLX extension for OpenGL"
 msgstr ""
 
@@ -26115,7 +26115,7 @@ msgstr ""
 msgid "DirectX (DirectDraw) video output"
 msgstr "DirectX (ਡਿਰੈਕਟਡਰਾਅ) ਵਿਡੀਓ ਆਉਟਪੁੱਟ"
 
-#: modules/video_output/win32/directdraw.c:248
+#: modules/video_output/win32/directdraw.c:245
 msgid "Wallpaper"
 msgstr "ਵਾਲਪੇਪਰ"
 
@@ -27925,6 +27925,12 @@ msgstr "AAAA; "
 msgid "Media Manager List"
 msgstr "ਮੀਡਿਆ ਮੈਨੇਜਰ ਲਿਸਟ"
 
+#~ msgid "Debug logging"
+#~ msgstr "ਡੀਬੱਗ ਲਾਗ"
+
+#~ msgid "Enabled (without HD codecs)"
+#~ msgstr "ਸਮਰੱਥ ਹੈ (ਬਿਨਾਂ HD ਕੋਡਕਸ)"
+
 #~ msgid "Inhibit the power management daemon during playback"
 #~ msgstr "ਚਲਾਉਣ ਦੌਰਾਨ ਊਰਜਾ (ਪਾਵਰ) ਪਰਬੰਧ ਡੈਮਨ ਇੰਹੈਬਿਟ ਕਰੋ"
 
@@ -28079,9 +28085,6 @@ msgstr "ਮੀਡਿਆ ਮੈਨੇਜਰ ਲਿਸਟ"
 
 #~ msgid "Magazine"
 #~ msgstr "ਮੈਗਜ਼ੀਨ"
-
-#~ msgid "Password for target device."
-#~ msgstr "ਟਾਰਗੇਟ ਜੰਤਰ ਲਈ ਪਾਸਵਰਡ।"
 
 #~ msgid "RAOP"
 #~ msgstr "RAOP"

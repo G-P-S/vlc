@@ -862,9 +862,14 @@ static int ThreadDisplayPreparePicture(vout_thread_t *vout, bool reuse, bool fra
             decoded = picture_fifo_Pop(vout->p->decoder_fifo);
             if (decoded) {
                 if (is_late_dropped && !decoded->b_force) {
+                    mtime_t late_threshold;
+                    if (decoded->format.i_frame_rate && decoded->format.i_frame_rate_base)
+                        late_threshold = ((CLOCK_FREQ/2) * decoded->format.i_frame_rate_base) / decoded->format.i_frame_rate;
+                    else
+                        late_threshold = VOUT_DISPLAY_LATE_THRESHOLD;
                     const mtime_t predicted = mdate() + 0; /* TODO improve */
                     const mtime_t late = predicted - decoded->date;
-                    if (late > VOUT_DISPLAY_LATE_THRESHOLD) {
+                    if (late > late_threshold) {
                         msg_Warn(vout, "picture is too late to be displayed (missing %"PRId64" ms)", late/1000);
                         picture_Release(decoded);
                         vout_statistic_AddLost(&vout->p->statistic, 1);
@@ -903,6 +908,60 @@ static int ThreadDisplayPreparePicture(vout_thread_t *vout, bool reuse, bool fra
     else
         vout->p->displayed.next    = picture;
     return VLC_SUCCESS;
+}
+
+static picture_t *ConvertRGB32AndBlendBufferNew(filter_t *filter)
+{
+    return picture_NewFromFormat(&filter->fmt_out.video);
+}
+
+static picture_t *ConvertRGB32AndBlend(vout_thread_t *vout, picture_t *pic,
+                                     subpicture_t *subpic)
+{
+    /* This function will convert the pic to RGB32 and blend the subpic to it.
+     * The returned pic can't be used to display since the chroma will be
+     * different than the "vout display" one, but it can be used for snapshots.
+     * */
+
+    assert(vout->p->spu_blend);
+
+    filter_owner_t owner = {
+        .video = {
+            .buffer_new = ConvertRGB32AndBlendBufferNew,
+        },
+    };
+    filter_chain_t *filterc = filter_chain_NewVideo(vout, false, &owner);
+    if (!filterc)
+        return NULL;
+
+    es_format_t src = vout->p->spu_blend->fmt_out;
+    es_format_t dst = src;
+    dst.video.i_chroma = VLC_CODEC_RGB32;
+    video_format_FixRgb(&dst.video);
+
+    if (filter_chain_AppendConverter(filterc, &src, &dst) != 0)
+    {
+        filter_chain_Delete(filterc);
+        return NULL;
+    }
+
+    picture_Hold(pic);
+    pic = filter_chain_VideoFilter(filterc, pic);
+    filter_chain_Delete(filterc);
+
+    if (pic)
+    {
+        filter_t *swblend = filter_NewBlend(VLC_OBJECT(vout), &dst.video);
+        if (swblend)
+        {
+            bool success = picture_BlendSubpicture(pic, swblend, subpic) > 0;
+            filter_DeleteBlend(swblend);
+            if (success)
+                return pic;
+        }
+        picture_Release(pic);
+    }
+    return NULL;
 }
 
 static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
@@ -1009,6 +1068,7 @@ static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
      */
     bool is_direct = vout->p->decoder_pool == vout->p->display_pool;
     picture_t *todisplay = filtered;
+    picture_t *snap_pic = todisplay;
     if (do_early_spu && subpic) {
         if (vout->p->spu_blend) {
             picture_t *blent = picture_pool_Get(vout->p->private_pool);
@@ -1017,9 +1077,20 @@ static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
                 picture_Copy(blent, filtered);
                 if (picture_BlendSubpicture(blent, vout->p->spu_blend, subpic)) {
                     picture_Release(todisplay);
-                    todisplay = blent;
+                    snap_pic = todisplay = blent;
                 } else
+                {
+                    /* Blending failed, likely because the picture is opaque or
+                     * read-only. Try to convert the opaque picture to a
+                     * software RGB32 one before blending it. */
+                    if (do_snapshot)
+                    {
+                        picture_t *copy = ConvertRGB32AndBlend(vout, blent, subpic);
+                        if (copy)
+                            snap_pic = copy;
+                    }
                     picture_Release(blent);
+                }
             }
         }
         subpicture_Delete(subpic);
@@ -1045,14 +1116,19 @@ static int ThreadDisplayRenderPicture(vout_thread_t *vout, bool is_forced)
         VideoFormatCopyCropAr(&direct->format, &todisplay->format);
         picture_Copy(direct, todisplay);
         picture_Release(todisplay);
-        todisplay = direct;
+        snap_pic = todisplay = direct;
     }
 
     /*
      * Take a snapshot if requested
      */
     if (do_snapshot)
-        vout_snapshot_Set(&vout->p->snapshot, &vd->source, todisplay);
+    {
+        assert(snap_pic);
+        vout_snapshot_Set(&vout->p->snapshot, &vd->source, snap_pic);
+        if (snap_pic != todisplay)
+            picture_Release(snap_pic);
+    }
 
     /* Render the direct buffer */
     vout_UpdateDisplaySourceProperties(vd, &todisplay->format);
@@ -1391,7 +1467,7 @@ static void ThreadExecuteCropBorder(vout_thread_t *vout,
                                     unsigned left, unsigned top,
                                     unsigned right, unsigned bottom)
 {
-    msg_Err(vout, "ThreadExecuteCropBorder %d.%d %dx%d", left, top, right, bottom);
+    msg_Dbg(vout, "ThreadExecuteCropBorder %d.%d %dx%d", left, top, right, bottom);
     vout_SetDisplayCrop(vout->p->display.vd, 0, 0,
                         left, top, -(int)right, -(int)bottom);
 }

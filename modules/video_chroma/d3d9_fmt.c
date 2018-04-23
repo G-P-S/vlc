@@ -67,6 +67,7 @@ HRESULT D3D9_CreateDevice(vlc_object_t *o, d3d9_handle_t *hd3d, HWND hwnd,
        msg_Err(o, "Could not read adapter capabilities. (hr=0x%0lx)", hr);
        return hr;
     }
+    msg_Dbg(o, "D3D9 device caps 0x%0lX / 0x%0lX", out->caps.DevCaps, out->caps.DevCaps2);
 
     /* TODO: need to test device capabilities and select the right render function */
     if (!(out->caps.DevCaps2 & D3DDEVCAPS2_CAN_STRETCHRECT_FROM_TEXTURES)) {
@@ -101,31 +102,37 @@ HRESULT D3D9_CreateDevice(vlc_object_t *o, d3d9_handle_t *hd3d, HWND hwnd,
                 d3dai.VendorId, d3dai.DeviceId, d3dai.Revision );
     }
 
-    DWORD creationFlags = D3DCREATE_MULTITHREADED;
-    if ( (out->caps.DevCaps & D3DDEVCAPS_DRAWPRIMTLVERTEX) &&
-         (out->caps.DevCaps & D3DDEVCAPS_HWRASTERIZATION) ) {
-        creationFlags |= D3DCREATE_HARDWARE_VERTEXPROCESSING;
-    } else if (out->caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT) {
-        creationFlags |= D3DCREATE_MIXED_VERTEXPROCESSING;
-    } else {
-        creationFlags |= D3DCREATE_SOFTWARE_VERTEXPROCESSING;
-    }
+    DWORD thread_modes[] = { D3DCREATE_MULTITHREADED, 0 };
+    DWORD vertex_modes[] = { D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE,
+                             D3DCREATE_HARDWARE_VERTEXPROCESSING,
+                             D3DCREATE_MIXED_VERTEXPROCESSING,
+                             D3DCREATE_SOFTWARE_VERTEXPROCESSING };
 
-    if (hd3d->use_ex)
-        hr = IDirect3D9Ex_CreateDeviceEx(hd3d->objex, AdapterToUse,
-                                         DeviceType, hwnd,
-                                         creationFlags,
-                                         &out->pp, NULL, &out->devex);
-    else
-        hr = IDirect3D9_CreateDevice(hd3d->obj, AdapterToUse,
-                                     DeviceType, hwnd,
-                                     creationFlags,
-                                     &out->pp, &out->dev);
-
-    if (SUCCEEDED(hr))
+    for (size_t t = 0; t < ARRAY_SIZE(thread_modes); t++)
     {
-        out->owner = true;
+        for (size_t v = 0; v < ARRAY_SIZE(vertex_modes); v++)
+        {
+            DWORD creationFlags = thread_modes[t] | vertex_modes[v];
+            if (hd3d->use_ex)
+                hr = IDirect3D9Ex_CreateDeviceEx(hd3d->objex, AdapterToUse,
+                                                 DeviceType, hwnd,
+                                                 creationFlags,
+                                                 &out->pp, NULL, &out->devex);
+            else
+                hr = IDirect3D9_CreateDevice(hd3d->obj, AdapterToUse,
+                                             DeviceType, hwnd,
+                                             creationFlags,
+                                             &out->pp, &out->dev);
+            if (SUCCEEDED(hr))
+            {
+                out->owner = true;
+                return hr;
+            }
+        }
     }
+
+    msg_Err(o, "failed to create the D3D9%s device %d/%d. (hr=0x%lX)",
+               hd3d->use_ex?"Ex":"", AdapterToUse, DeviceType, hr);
     return hr;
 }
 
@@ -249,32 +256,4 @@ int D3D9_Create(vlc_object_t *o, d3d9_handle_t *hd3d)
 error:
     D3D9_Destroy( hd3d );
     return VLC_EGENERIC;
-}
-
-int D3D9CheckDriverVersion(d3d9_handle_t *hd3d, d3d9_device_t *d3d_dev,
-                           UINT vendorId, const struct wddm_version *min_ver)
-{
-    D3DADAPTER_IDENTIFIER9 identifier;
-    HRESULT hr = IDirect3D9_GetAdapterIdentifier(hd3d->obj, d3d_dev->adapterId, 0, &identifier);
-    if (FAILED(hr))
-        return VLC_EGENERIC;
-
-    if (vendorId && identifier.VendorId != vendorId)
-        return VLC_SUCCESS;
-
-    int wddm, d3d_features, revision, build;
-    wddm         = (int) (identifier.DriverVersion.HighPart >> 16 & 0xFFFF);
-    d3d_features = (int) (identifier.DriverVersion.HighPart >>  0 & 0xFFFF);
-    revision     = (int) (identifier.DriverVersion.LowPart  >> 16 & 0xFFFF);
-    build        = (int) (identifier.DriverVersion.LowPart  >>  0 & 0xFFFF);
-
-    bool newer =
-           wddm > min_ver->wddm ||
-          (wddm == min_ver->wddm && (d3d_features > min_ver->d3d_features ||
-                                    (d3d_features == min_ver->d3d_features &&
-                                                (revision > min_ver->revision ||
-                                                (revision == min_ver->revision &&
-                                                       build > min_ver->build)))));
-
-    return newer ? VLC_SUCCESS : VLC_EGENERIC;
 }

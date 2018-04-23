@@ -67,7 +67,7 @@ int vlc_open (const char *filename, int flags, ...)
     va_end (ap);
 
 #ifdef O_CLOEXEC
-    return open(filename, flags, mode | O_CLOEXEC);
+    return open(filename, flags | O_CLOEXEC, mode);
 #else
     int fd = open(filename, flags, mode);
     if (fd != -1)
@@ -87,7 +87,7 @@ int vlc_openat (int dir, const char *filename, int flags, ...)
     va_end (ap);
 
 #ifdef HAVE_OPENAT
-    return openat(dir, filename, flags, mode | O_CLOEXEC);
+    return openat(dir, filename, flags | O_CLOEXEC, mode);
 #else
     VLC_UNUSED (dir);
     VLC_UNUSED (filename);
@@ -112,7 +112,7 @@ int vlc_mkstemp (char *template)
 int vlc_memfd (void)
 {
     int fd;
-#ifdef O_TMPFILE
+#if O_TMPFILE
     fd = vlc_open ("/tmp", O_RDWR|O_TMPFILE, S_IRUSR|S_IWUSR);
     if (fd != -1)
         return fd;

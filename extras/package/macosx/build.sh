@@ -192,16 +192,13 @@ spopd
 #   enabled. (e.g. ffmpeg)
 # - This will fail the build if a partially available symbol is added later on
 #   in contribs and not mentioned in the list of symbols above.
-CFLAGS="-Werror=partial-availability "
-CXXFLAGS="-Werror=partial-availability "
-OBJCFLAGS="-Werror=partial-availability "
+export CFLAGS="-Werror=partial-availability"
+export CXXFLAGS="-Werror=partial-availability"
+export OBJCFLAGS="-Werror=partial-availability"
 
-CFLAGS+="-isysroot "$SDKROOT" -mmacosx-version-min="$MINIMAL_OSX_VERSION" -DMACOSX_DEPLOYMENT_TARGET="$MINIMAL_OSX_VERSION
-LDFLAGS+="-Wl,-syslibroot,"$SDKROOT" -mmacosx-version-min="$MINIMAL_OSX_VERSION" -isysroot "$SDKROOT" -DMACOSX_DEPLOYMENT_TARGET="$MINIMAL_OSX_VERSION
-
-export CFLAGS=${CFLAGS}
-export CXXFLAGS=${CXXFLAGS}
-export LDFLAGS=${LDFLAGS}
+export EXTRA_CFLAGS="-isysroot $SDKROOT -mmacosx-version-min=$MINIMAL_OSX_VERSION -DMACOSX_DEPLOYMENT_TARGET=$MINIMAL_OSX_VERSION"
+export EXTRA_LDFLAGS="-Wl,-syslibroot,$SDKROOT -mmacosx-version-min=$MINIMAL_OSX_VERSION -isysroot $SDKROOT -DMACOSX_DEPLOYMENT_TARGET=$MINIMAL_OSX_VERSION"
+export XCODE_FLAGS="MACOSX_DEPLOYMENT_TARGET=$MINIMAL_OSX_VERSION -sdk macosx$OSX_VERSION WARNING_CFLAGS=-Werror=partial-availability"
 
 info "Building contribs"
 spushd "${vlcroot}/contrib"
@@ -230,6 +227,10 @@ spopd
 unset CFLAGS
 unset CXXFLAGS
 unset OBJCFLAGS
+
+unset EXTRA_CFLAGS
+unset EXTRA_LDFLAGS
+unset XCODE_FLAGS
 
 # Enable debug symbols by default
 export CFLAGS="-g"
@@ -293,6 +294,12 @@ if [ "$PACKAGETYPE" = "u" ]; then
     info "Copying app with debug symbols into VLC-debug.app and stripping"
     rm -rf VLC-debug.app
     cp -Rp VLC.app VLC-debug.app
+
+    # Workaround for breakpad symbol parsing:
+    # Symbols must be uploaded for libvlc(core).dylib, not libvlc(core).x.dylib
+    (cd VLC-debug.app/Contents/MacOS/lib/ && rm libvlccore.dylib && mv libvlccore.*.dylib libvlccore.dylib)
+    (cd VLC-debug.app/Contents/MacOS/lib/ && rm libvlc.dylib && mv libvlc.*.dylib libvlc.dylib)
+
 
     find VLC.app/ -name "*.dylib" -exec strip -x {} \;
     find VLC.app/ -type f -name "VLC" -exec strip -x {} \;
