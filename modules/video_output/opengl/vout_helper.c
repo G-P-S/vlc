@@ -1650,6 +1650,8 @@ static void TextureCropForStereo(vout_display_opengl_t *vgl,
     float stereoCoefs[2];
     float stereoOffsets[2];
 
+    // disable this part, we want the source frame without any stereo processing
+    /*
     switch (vgl->fmt.multiview_mode)
     {
     case MULTIVIEW_STEREO_TB:
@@ -1671,6 +1673,7 @@ static void TextureCropForStereo(vout_display_opengl_t *vgl,
     default:
         break;
     }
+    */
 }
 
 int vout_display_opengl_Display(vout_display_opengl_t *vgl,
